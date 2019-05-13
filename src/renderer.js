@@ -1,6 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import { MemoryRouter } from "react-router-dom";
 
 import App from "./components/App";
 
-ReactDOM.render(<App />, document.getElementById("root"));
+import "./style.css";
+
+ReactDOM.render(
+  <MemoryRouter>
+    <App />
+  </MemoryRouter>,
+  document.getElementById("root")
+);

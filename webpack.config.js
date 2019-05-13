@@ -29,6 +29,16 @@ const cssRule = {
   use: ["style-loader", "css-loader"]
 };
 
+const fileRule = {
+  test: /\.(png|jpe?g|gif|ttf|woff2?|eot)$/,
+  use: "file-loader"
+};
+
+const rawRule = {
+  test: /\.(txt|sql)$/i,
+  use: "raw-loader"
+};
+
 const htmlPlugin = new HtmlWebPackPlugin({
   template: APP_DIR + "/index.html",
   filename: "index.html"
@@ -49,7 +59,7 @@ const mainConfig = {
     path: BUILD_DIR
   },
   module: {
-    rules: [jsRule]
+    rules: [jsRule, fileRule, rawRule]
   },
   node: nodeSettings,
   externals: externalsList,
@@ -67,7 +77,7 @@ const rendererConfig = {
     path: BUILD_DIR
   },
   module: {
-    rules: [jsRule, htmlRule, cssRule]
+    rules: [jsRule, htmlRule, cssRule, fileRule, rawRule]
   },
   plugins: [htmlPlugin],
   node: nodeSettings,
