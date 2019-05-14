@@ -1,11 +1,14 @@
 import fs from "fs";
+import path from "path";
 import sqlite3 from "better-sqlite3";
+
+import Config from "./../controller/Config";
 
 import schema from "./schema.sql";
 
 class Database {
   constructor() {
-    const dbPath = "./sqlite.db";
+    const dbPath = path.resolve(Config.getUserDataPath() + "database.db");
     const dbFileExists = fs.existsSync(dbPath);
     this.db = new sqlite3(dbPath);
     if (!dbFileExists) {

@@ -46,6 +46,10 @@ class Config {
     writeConfigFile();
   }
 
+  getUserDataPath() {
+    return userDataPath;
+  }
+
   isDev() {
     return isDev;
   }
