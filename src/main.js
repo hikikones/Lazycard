@@ -14,14 +14,12 @@ function createWindow() {
     }
   });
 
-  const isDev = Config.get("isDev");
-
-  const indexUrl = isDev
+  const indexUrl = Config.isDev()
     ? "http://localhost:9000/"
     : `file://${__dirname}/index.html`;
   window.loadURL(indexUrl);
 
-  if (isDev) {
+  if (Config.isDev()) {
     window.webContents.openDevTools();
   }
 
