@@ -8,7 +8,7 @@ import schema from "./schema.sql";
 
 class Database {
   constructor() {
-    const dbPath = path.resolve(Config.getUserDataPath() + "database.db");
+    const dbPath = path.resolve(Config.getUserDataPath(), "database.db");
     const dbFileExists = fs.existsSync(dbPath);
     this.db = new sqlite3(dbPath);
     if (!dbFileExists) {
