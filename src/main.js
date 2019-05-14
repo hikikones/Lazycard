@@ -2,10 +2,6 @@ const { app, BrowserWindow } = require("electron");
 
 import Config from "./controller/Config";
 
-const isDev = process.env.NODE_ENV === "development";
-
-Config.set("isDev", isDev);
-
 let window;
 
 function createWindow() {
@@ -17,6 +13,8 @@ function createWindow() {
       nodeIntegration: true
     }
   });
+
+  const isDev = Config.get("isDev");
 
   const indexUrl = isDev
     ? "http://localhost:9000/"

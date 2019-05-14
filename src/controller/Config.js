@@ -2,6 +2,11 @@ const electron = require("electron");
 const path = require("path");
 const fs = require("fs");
 
+const isDev = process.env.NODE_ENV === "development";
+const userDataPath = isDev
+  ? path.join((electron.app || electron.remote.app).getPath("userData"), "dev")
+  : (electron.app || electron.remote.app).getPath("userData");
+
 function parseDataFile(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath));
@@ -19,20 +24,31 @@ function parseDataFile(filePath) {
 
 class Config {
   constructor() {
-    this.path = (electron.app || electron.remote.app).getPath("userData");
-    this.configFile = path.join(this.path, "config.json");
+    if (!fs.existsSync(userDataPath)){
+      fs.mkdirSync(userDataPath);
+    }
+    this.data = parseDataFile(this.getConfigFile());
+    this.set("isDev", isDev, false);
 
-    this.data = parseDataFile(this.configFile);
+    console.log("isDev: " + isDev);
+    console.log(userDataPath);
   }
 
   get(key) {
     return this.data[key];
   }
 
-  set(key, val) {
+  set(key, val, write = true) {
     this.data[key] = val;
-    fs.writeFileSync(this.configFile, JSON.stringify(this.data));
+    if (write) {
+      fs.writeFileSync(this.getConfigFile(), JSON.stringify(this.data));
+    }
   }
+
+  getConfigFile() {
+    return path.join(userDataPath, "config.json");
+  }
+
 }
 
 export default new Config();

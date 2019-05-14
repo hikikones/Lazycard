@@ -64,8 +64,7 @@ const mainConfig = {
   node: nodeSettings,
   externals: externalsList,
   devServer: {
-    contentBase: BUILD_DIR,
-    port: 9000
+    contentBase: BUILD_DIR
   }
 };
 
