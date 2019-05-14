@@ -5,10 +5,19 @@ const fs = require("fs");
 const isDev = process.env.NODE_ENV === "development";
 const userDataPath = isDev
   ? path.join((electron.app || electron.remote.app).getPath("userData"), "dev")
-  : (electron.app || electron.remote.app).getPath("userData");
+  : path.join(
+      (electron.app || electron.remote.app).getPath("userData"),
+      "user"
+    );
 
 if (!fs.existsSync(userDataPath)) {
   fs.mkdirSync(userDataPath);
+}
+
+const imagesPath = path.join(userDataPath, "images");
+
+if (!fs.existsSync(imagesPath)) {
+  fs.mkdirSync(imagesPath);
 }
 
 const defaultConfig = {
@@ -48,6 +57,10 @@ class Config {
 
   getUserDataPath() {
     return userDataPath;
+  }
+
+  getImagesPath() {
+    return imagesPath;
   }
 
   isDev() {

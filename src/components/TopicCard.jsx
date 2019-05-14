@@ -1,16 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import path from "path";
+import React from "react";
+import { Link } from "react-router-dom";
 
-import db from './../model/database';
+import db from "./../model/database";
+import Config from "./../controller/Config";
 
-import TopicTreeView from './TopicTreeView';
+import TopicTreeView from "./TopicTreeView";
 
 export default class Topic extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       showDropdown: false,
-      renderTopic: true,
+      renderTopic: true
     };
     this.toggleDropdown = this.toggleDropdown.bind(this);
     this.delete = this.delete.bind(this);
@@ -20,7 +22,8 @@ export default class Topic extends React.Component {
     if (!topic.image) {
       return null;
     }
-    return <img src={topic.image} alt="" />;
+    const image = path.join(Config.getImagesPath(), topic.image);
+    return <img src={image} alt="" />;
   }
 
   renderTopics(topic) {
@@ -47,7 +50,11 @@ export default class Topic extends React.Component {
         >
           <i className="material-icons">more_vert</i>
         </button>
-        <div className={this.state.showDropdown ? 'dropdown-show' : 'dropdown-hide'}>
+        <div
+          className={
+            this.state.showDropdown ? "dropdown-show" : "dropdown-hide"
+          }
+        >
           <hr />
           <input
             type="submit"
