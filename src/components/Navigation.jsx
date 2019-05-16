@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React from "react";
+import { NavLink } from "react-router-dom";
 
 export default class Navigation extends React.Component {
   render() {
@@ -24,6 +24,11 @@ export default class Navigation extends React.Component {
           <li>
             <NavLink to="/card/submit/0/0">
               <i className="material-icons">add_circle</i>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/settings">
+              <i className="material-icons">settings</i>
             </NavLink>
           </li>
         </ul>

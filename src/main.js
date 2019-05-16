@@ -1,5 +1,7 @@
 const { app, BrowserWindow } = require("electron");
 
+import db from "./model/database";
+
 import Config from "./controller/Config";
 
 let window;
@@ -10,7 +12,8 @@ function createWindow() {
     width,
     height,
     webPreferences: {
-      nodeIntegration: true
+      nodeIntegration: true,
+      webSecurity: !Config.isDev()
     }
   });
 
@@ -32,7 +35,7 @@ app.on("ready", createWindow);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    app.quit();
+    db.backup(app.quit);
   }
 });
 

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import sqlite3 from "better-sqlite3";
+import archiver from "archiver";
 
 import Config from "./../controller/Config";
 
@@ -14,6 +15,7 @@ class Database {
     if (!dbFileExists) {
       this.db.exec(schema);
     }
+    // TODO - Main and renderer process both create an instance. This should not happen.
   }
 
   // TOPICS
@@ -160,6 +162,21 @@ class Database {
 
   deleteCard(cardId) {
     this.db.prepare("DELETE FROM cards WHERE id = ?").run(cardId);
+  }
+
+  // BACKUP
+  backup(callback) {
+    var output = fs.createWriteStream(Config.get("backup"));
+    var archive = archiver("zip");
+
+    output.on("close", function() {
+      callback();
+    });
+
+    archive.pipe(output);
+    archive.file(this.db.name, { name: "database.db" });
+    archive.directory(Config.getImagesPath() + "/", "images");
+    archive.finalize();
   }
 }
 

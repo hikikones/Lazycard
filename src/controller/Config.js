@@ -24,7 +24,8 @@ const defaultConfig = {
   windowBounds: {
     width: 1600,
     height: 1200
-  }
+  },
+  backup: path.join(userDataPath, "backup.zip")
 };
 
 function getConfigFile() {
@@ -46,6 +47,7 @@ function writeConfigFile() {
 }
 
 class Config {
+  // TODO - Main and renderer process both create an instance. This should not happen.
   get(key) {
     return config[key];
   }

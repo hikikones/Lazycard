@@ -1,13 +1,14 @@
-import React from 'react';
-import db from './../model/database';
+import React from "react";
+import db from "./../model/database";
 
-import TopicCard from './TopicCard';
-import Card from './Card';
+import TopicCard from "./TopicCard";
+import Card from "./Card";
 
 export default class Topics extends React.Component {
   renderTopics(topicId) {
-    const topics = topicId === 0 ? db.getRootTopics() : db.getSubtopics(topicId);
-    const title = topicId === 0 ? 'Topics' : db.getTopic(topicId).name;
+    const topics =
+      topicId === 0 ? db.getRootTopics() : db.getSubtopics(topicId);
+    const title = topicId === 0 ? "Topics" : db.getTopic(topicId).name;
     const topicList = topics.map(t => <TopicCard key={t.id} topic={t} />);
     return (
       <div>

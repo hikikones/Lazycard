@@ -1,11 +1,12 @@
-import React from 'react';
-import { Switch, Route } from 'react-router-dom';
+import React from "react";
+import { Switch, Route } from "react-router-dom";
 
-import Home from './Home';
-import Topics from './Topics';
-import TopicReview from './TopicReview';
-import TopicSubmit from './TopicSubmit';
-import CardSubmit from './CardSubmit';
+import Home from "./Home";
+import Topics from "./Topics";
+import TopicReview from "./TopicReview";
+import TopicSubmit from "./TopicSubmit";
+import CardSubmit from "./CardSubmit";
+import Settings from "./Settings";
 
 export default class Main extends React.Component {
   render() {
@@ -15,9 +16,22 @@ export default class Main extends React.Component {
           <Switch>
             <Route exact path="/" component={Home} />
             <Route exact path="/topic/:topic_id" component={Topics} />
-            <Route exact path="/topic/submit/:topic_id" component={TopicSubmit} />
-            <Route exact path="/topic/review/:topic_id" component={TopicReview} />
-            <Route exact path="/card/submit/:card_id/:topic_id" component={CardSubmit} />
+            <Route
+              exact
+              path="/topic/submit/:topic_id"
+              component={TopicSubmit}
+            />
+            <Route
+              exact
+              path="/topic/review/:topic_id"
+              component={TopicReview}
+            />
+            <Route
+              exact
+              path="/card/submit/:card_id/:topic_id"
+              component={CardSubmit}
+            />
+            <Route exact path="/settings" component={Settings} />
           </Switch>
         </div>
       </main>
