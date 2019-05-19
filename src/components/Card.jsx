@@ -1,7 +1,22 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { Link } from "react-router-dom";
+import path from "path";
+import ReactHtmlParser, { convertNodeToElement } from "react-html-parser";
 
-import db from './../model/database';
+import db from "./../model/database";
+import Config from "./../controller/Config";
+
+const options = {
+  decodeEntities: true,
+  transform
+};
+
+function transform(node, index) {
+  if (node.type === "tag" && node.name === "img") {
+    node.attribs.src = path.join(Config.getImagesPath(), node.attribs.src);
+    return convertNodeToElement(node, index, transform);
+  }
+}
 
 export default class Card extends React.Component {
   constructor(props) {
@@ -12,7 +27,7 @@ export default class Card extends React.Component {
       cardId: this.props.card.id,
       topicId: this.props.card.topic_id,
       showDropdown: false,
-      renderCard: true,
+      renderCard: true
     };
     this.toggleDropdown = this.toggleDropdown.bind(this);
     this.delete = this.delete.bind(this);
@@ -33,12 +48,16 @@ export default class Card extends React.Component {
     }
 
     const cardHTML = `${this.state.frontHTML}<hr/>${this.state.backHTML}`;
+    const cardHTMLReact = ReactHtmlParser(cardHTML, options);
 
     return (
       <div className="card card-content">
         {/* eslint-disable react/no-danger */}
-        <div dangerouslySetInnerHTML={{ __html: cardHTML }} />
-        <Link to={`/card/submit/${this.state.cardId}/${this.state.topicId}`} className="button">
+        <div>{cardHTMLReact}</div>
+        <Link
+          to={`/card/submit/${this.state.cardId}/${this.state.topicId}`}
+          className="button"
+        >
           EDIT
         </Link>
 
@@ -49,9 +68,18 @@ export default class Card extends React.Component {
         >
           <i className="material-icons">more_vert</i>
         </button>
-        <div className={this.state.showDropdown ? 'dropdown-show' : 'dropdown-hide'}>
+        <div
+          className={
+            this.state.showDropdown ? "dropdown-show" : "dropdown-hide"
+          }
+        >
           <hr />
-          <input type="submit" value="Delete" className="button" onClick={this.delete} />
+          <input
+            type="submit"
+            value="Delete"
+            className="button"
+            onClick={this.delete}
+          />
         </div>
       </div>
     );

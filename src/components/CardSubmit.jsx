@@ -1,30 +1,30 @@
-import path from "path";
 import React from "react";
-import db from "./../model/database";
+import path from "path";
+import ReactHtmlParser, { convertNodeToElement } from "react-html-parser";
 
+import db from "./../model/database";
 import Config from "./../controller/Config";
 
 import TopicsSelect from "./TopicsSelect";
 
-const md = require("markdown-it")({
-  modifyToken: function(token, env) {
-    switch (token.type) {
-      case "image":
-        token.attrObj.src = path.join(
-          Config.getImagesPath(),
-          token.attrObj.src
-        );
-        break;
-    }
-  }
-});
+const md = require("markdown-it")();
 const prism = require("markdown-it-prism");
 const mk = require("@iktakahiro/markdown-it-katex");
-const tk = require("markdown-it-modify-token");
 
 md.use(prism);
 md.use(mk);
-md.use(tk);
+
+const options = {
+  decodeEntities: true,
+  transform
+};
+
+function transform(node, index) {
+  if (node.type === "tag" && node.name === "img") {
+    node.attribs.src = path.join(Config.getImagesPath(), node.attribs.src);
+    return convertNodeToElement(node, index, transform);
+  }
+}
 
 export default class TopicSubmit extends React.Component {
   constructor(props) {
@@ -39,7 +39,8 @@ export default class TopicSubmit extends React.Component {
 
     this.state = {
       card_id: parseInt(this.props.match.params.card_id),
-      topic_id: parseInt(this.props.match.params.topic_id)
+      topic_id: parseInt(this.props.match.params.topic_id),
+      cardPreviewHTML: null
     };
   }
 
@@ -56,7 +57,7 @@ export default class TopicSubmit extends React.Component {
     const frontHTML = md.render(this.front.current.value);
     const backHTML = md.render(this.back.current.value);
     const cardHTML = `${frontHTML}<hr>${backHTML}`;
-    this.preview.current.innerHTML = cardHTML;
+    this.setState({ cardPreviewHTML: ReactHtmlParser(cardHTML, options) });
   }
 
   resizeTextarea() {
@@ -153,7 +154,9 @@ export default class TopicSubmit extends React.Component {
             id="card-preview"
             className="card card-content"
             ref={this.preview}
-          />
+          >
+            {this.state.cardPreviewHTML}
+          </div>
         </div>
       </div>
     );
