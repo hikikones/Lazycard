@@ -17,10 +17,15 @@ export default class TopicSubmit extends React.Component {
   save(topicId) {
     const name = document.getElementById("name").value;
     let image = document.getElementById("image").value;
+    let sortOrder = document.getElementById("sort-order").value;
     let parentId = parseInt(document.getElementById("parent").value);
 
     if (image === "") {
       image = null;
+    }
+
+    if (sortOrder === "") {
+      sortOrder = null;
     }
 
     if (parentId === 0) {
@@ -28,9 +33,9 @@ export default class TopicSubmit extends React.Component {
     }
 
     if (topicId === 0) {
-      db.createTopic(name, image, parentId);
+      db.createTopic(name, image, sortOrder, parentId);
     } else {
-      db.updateTopic(topicId, name, image, parentId);
+      db.updateTopic(topicId, name, image, sortOrder, parentId);
     }
     this.goBack();
   }
@@ -57,6 +62,13 @@ export default class TopicSubmit extends React.Component {
 
         <label htmlFor="image">Image</label>
         <input type="text" id="image" defaultValue={topic ? topic.image : ""} />
+
+        <label htmlFor="sort-order">Sort order</label>
+        <input
+          type="text"
+          id="sort-order"
+          defaultValue={topic ? topic.sort_order : ""}
+        />
 
         <TopicsSelect topic_id={topicId} />
 

@@ -73,15 +73,15 @@ class Database {
     return this.db.prepare(sql).all(topicId);
   }
 
-  createTopic(name, image, parentId) {
-    const create = `INSERT INTO topics (name, image, parent_id)
-                    VALUES (?, ?, ?)`;
-    this.db.prepare(create).run(name, image, parentId);
+  createTopic(name, image, sortOrder, parentId) {
+    const create = `INSERT INTO topics (name, image, sort_order, parent_id)
+                    VALUES (?, ?, ?, ?)`;
+    this.db.prepare(create).run(name, image, sortOrder, parentId);
   }
 
-  updateTopic(topicId, newName, newImage, newParentId) {
+  updateTopic(topicId, newName, newImage, newSortOrder, newParentId) {
     const updateTopic = `UPDATE topics
-                          SET name = ?, image = ?, parent_id = ?
+                          SET name = ?, image = ?, sort_order = ?, parent_id = ?
                         WHERE id = ?`;
     if (this.isSubtopic(newParentId, topicId)) {
       const topicParentId = this.db
@@ -91,7 +91,9 @@ class Database {
         .prepare("UPDATE topics SET parent_id = ? WHERE id = ?")
         .run(topicParentId, newParentId);
     }
-    this.db.prepare(updateTopic).run(newName, newImage, newParentId, topicId);
+    this.db
+      .prepare(updateTopic)
+      .run(newName, newImage, newSortOrder, newParentId, topicId);
   }
 
   deleteTopic(topicId) {
