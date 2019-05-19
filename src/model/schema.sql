@@ -2,6 +2,7 @@ CREATE TABLE topics (
   id INTEGER,
   name TEXT NOT NULL,
   image TEXT,
+  sort_order TEXT,
   parent_id INTEGER,
   PRIMARY KEY (id),
   FOREIGN KEY (parent_id) REFERENCES topics (id)
@@ -23,21 +24,36 @@ CREATE TABLE cards (
     ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-INSERT INTO topics (name, image, parent_id)
-  VALUES  ("Computer Science", "https://images-na.ssl-images-amazon.com/images/I/51rPLfOvqxL._SX376_BO1,204,203,200_.jpg", NULL),
-          ("Mathematics", NULL, NULL),
-          ("Physics", NULL, NULL),
-          ("Algorithms", NULL, 1),
-          ("Sorting", NULL, 4),
-          ("Data Structures", NULL, 4),
-          ("Graphs", NULL, 4),
-          ("Hash Tables", NULL, 6),
-          ("Databases", NULL, 1),
-          ("Normalization", NULL, 9),
-          ("SQL", NULL, 9),
-          ("Networking", NULL, 1),
-          ("Big-O", NULL, 4),
-          ("Advanced", NULL, 8);
+INSERT INTO topics (name, image, sort_order, parent_id)
+  VALUES  ("Computer Science", NULL, NULL, NULL),
+          ("Mathematics", NULL, NULL, NULL),
+          ("Physics", NULL, NULL, NULL),
+          ("Algorithms", NULL, NULL, 1),
+          ("Sorting", NULL, NULL, 4),
+          ("Data Structures", NULL, NULL, 4),
+          ("Graphs", NULL, NULL, 4),
+          ("Hash Tables", NULL, NULL, 6),
+          ("Databases", NULL, NULL, 1),
+          ("Normalization", NULL, NULL, 9),
+          ("SQL", NULL, NULL, 9),
+          ("Networking", NULL, NULL, 1),
+          ("Big-O", NULL, NULL, 4),
+          ("Advanced", NULL, NULL, 8),
+          ("Test", NULL, NULL, NULL),
+          ("Test", NULL, "3", 15),
+          ("Test", NULL, "2", 15),
+          ("Test", NULL, "1", 15),
+          ("Test", NULL, "3.4", 16),
+          ("Test", NULL, "3.3", 16),
+          ("Test", NULL, "3.2", 16),
+          ("Test", NULL, "3.1", 16),
+          ("Test", NULL, "1.3", 18),
+          ("Test", NULL, "1.4", 18),
+          ("Test", NULL, "2.1", 17),
+          ("Test", NULL, "2.4", 17),
+          ("Test", NULL, "3.4.3", 19),
+          ("Test", NULL, "3.4.1", 19),
+          ("Test", NULL, "3.4.2", 19);
 
 INSERT INTO cards (front_md, front_html, back_md, back_html, topic_id)
   VALUES  ("What does SQL stand for?", "<p>What does SQL stand for?</p>", "Structured Query Language", "<p>Structured Query Language</p>", 11),

@@ -155,6 +155,12 @@ main .main-content {
 .topic span.due-cards {
   position: absolute;
   right: 2rem;
+  color: green;
+}
+
+.topic .sort-order {
+  font-style: italic;
+  padding-right: 1rem;
 }
 
 .card-editor-container {

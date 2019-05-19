@@ -60,12 +60,12 @@ class Database {
   }
 
   getSubtopicsRecursively(topicId) {
-    const sql = `WITH RECURSIVE child_topics (id, name, parent_id) AS (
-                SELECT id, name, parent_id
+    const sql = `WITH RECURSIVE child_topics (id, name, sort_order, parent_id) AS (
+                SELECT id, name, sort_order, parent_id
                 FROM topics
                 WHERE parent_id = ?
                 UNION ALL
-                SELECT t.id, t.name, t.parent_id
+                SELECT t.id, t.name, t.sort_order, t.parent_id
                 FROM topics t
                 INNER JOIN child_topics ON t.parent_id = child_topics.id
                 )
