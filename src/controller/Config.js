@@ -40,7 +40,7 @@ function parseConfigFile() {
   }
 }
 
-const config = parseConfigFile();
+let config = parseConfigFile();
 
 function writeConfigFile() {
   fs.writeFileSync(getConfigFile(), JSON.stringify(config));
@@ -49,6 +49,7 @@ function writeConfigFile() {
 class Config {
   // TODO - Main and renderer process both create an instance. This should not happen.
   get(key) {
+    config = parseConfigFile();
     return config[key];
   }
 
