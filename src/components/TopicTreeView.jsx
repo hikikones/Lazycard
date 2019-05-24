@@ -56,7 +56,7 @@ class TopicTreeItem extends React.Component {
         <Link to={`/topic/${this.props.topic.id}`}>
           {this.props.topic.name}
         </Link>
-        <span className="due-cards">5</span>
+        <span className="due-cards">{db.getDueCardsLength(this.props.topic.id)}</span>
         {subtopics ? <ul>{subtopics}</ul> : null}
       </li>
     );

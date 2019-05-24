@@ -140,6 +140,15 @@ class Database {
     return this.db.prepare(cards).all();
   }
 
+  getDueCardsLength(topicId) {
+    const subtopics = this.getSubtopicsRecursively(topicId);
+    subtopics.push({ id: topicId });
+    const cards = `SELECT COUNT(id) AS length FROM cards WHERE topic_id IN
+                  (${subtopics.map(t => t.id).join(",")})
+                  AND due_date <= (date('now'))`;
+    return this.db.prepare(cards).get().length;
+  }
+
   createCard(frontMD, frontHTML, backMD, backHTML, topicId) {
     const create = `INSERT INTO cards (front_md, front_html, back_md, back_html, topic_id)
                     VALUES (?, ?, ?, ?, ?)`;
