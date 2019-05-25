@@ -149,19 +149,19 @@ class Database {
     return this.db.prepare(cards).get().length;
   }
 
-  createCard(frontMD, frontHTML, backMD, backHTML, topicId) {
-    const create = `INSERT INTO cards (front_md, front_html, back_md, back_html, topic_id)
-                    VALUES (?, ?, ?, ?, ?)`;
-    this.db.prepare(create).run(frontMD, frontHTML, backMD, backHTML, topicId);
+  createCard(front, back, topicId) {
+    const create = `INSERT INTO cards (front, back, topic_id)
+                    VALUES (?, ?, ?)`;
+    this.db.prepare(create).run(front, back, topicId);
   }
 
-  updateCard(cardId, frontMD, frontHTML, backMD, backHTML, topicId) {
+  updateCard(cardId, front, back, topicId) {
     const update = `UPDATE cards
-                      SET front_md = ?, front_html = ?, back_md = ?, back_html = ?, topic_id = ?
+                      SET front = ?, back = ?, topic_id = ?
                     WHERE id = ?`;
     this.db
       .prepare(update)
-      .run(frontMD, frontHTML, backMD, backHTML, topicId, cardId);
+      .run(front, back, topicId, cardId);
   }
 
   updateCardReview(cardId, dueDate, dueDays) {

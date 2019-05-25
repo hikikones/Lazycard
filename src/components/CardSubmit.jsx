@@ -1,30 +1,9 @@
 import React from "react";
-import path from "path";
-import ReactHtmlParser, { convertNodeToElement } from "react-html-parser";
 
 import db from "./../model/database";
-import Config from "./../controller/Config";
 
+import Card from "./Card";
 import TopicsSelect from "./TopicsSelect";
-
-const md = require("markdown-it")();
-const prism = require("markdown-it-prism");
-const mk = require("@iktakahiro/markdown-it-katex");
-
-md.use(prism);
-md.use(mk);
-
-const options = {
-  decodeEntities: true,
-  transform
-};
-
-function transform(node, index) {
-  if (node.type === "tag" && node.name === "img") {
-    node.attribs.src = path.join(Config.getImagesPath(), node.attribs.src);
-    return convertNodeToElement(node, index, transform);
-  }
-}
 
 export default class TopicSubmit extends React.Component {
   constructor(props) {
@@ -35,12 +14,15 @@ export default class TopicSubmit extends React.Component {
 
     this.front = React.createRef();
     this.back = React.createRef();
-    this.preview = React.createRef();
+
+    const cardId = parseInt(this.props.match.params.card_id);
+    const topicId = parseInt(this.props.match.params.topic_id);
+    const currentCard = db.getCard(cardId);
 
     this.state = {
-      card_id: parseInt(this.props.match.params.card_id),
-      topic_id: parseInt(this.props.match.params.topic_id),
-      cardPreviewHTML: null
+      card_id: cardId,
+      topic_id: topicId,
+      card: currentCard ? currentCard : { front: "", back: "" }
     };
   }
 
@@ -54,10 +36,9 @@ export default class TopicSubmit extends React.Component {
   }
 
   renderMarkdown() {
-    const frontHTML = md.render(this.front.current.value);
-    const backHTML = md.render(this.back.current.value);
-    const cardHTML = `${frontHTML}<hr>${backHTML}`;
-    this.setState({ cardPreviewHTML: ReactHtmlParser(cardHTML, options) });
+    const frontMD = this.front.current.value;
+    const backMD = this.back.current.value;
+    this.setState({ card: { front: frontMD, back: backMD } });
   }
 
   resizeTextarea() {
@@ -74,25 +55,21 @@ export default class TopicSubmit extends React.Component {
 
   save() {
     const frontMD = this.front.current.value;
-    const frontHTML = md.render(frontMD);
     const backMD = this.back.current.value;
-    const backHTML = md.render(backMD);
     const topicId = parseInt(document.getElementById("parent").value);
 
     if (this.state.card_id) {
       db.updateCard(
         this.state.card_id,
         frontMD,
-        frontHTML,
         backMD,
-        backHTML,
         topicId
       );
       this.goBack();
       return;
     }
 
-    db.createCard(frontMD, frontHTML, backMD, backHTML, topicId);
+    db.createCard(frontMD, backMD, topicId);
 
     this.clearInput();
     this.renderMarkdown();
@@ -108,8 +85,6 @@ export default class TopicSubmit extends React.Component {
   }
 
   render() {
-    const card = db.getCard(this.state.card_id);
-
     return (
       <div className="card-editor-container">
         <div className="card-editor">
@@ -118,7 +93,7 @@ export default class TopicSubmit extends React.Component {
             id="front"
             ref={this.front}
             onInput={() => this.handleInput()}
-            defaultValue={card ? card.front_md : null}
+            defaultValue={this.state.card.front}
           />
 
           <h4>Back</h4>
@@ -126,7 +101,7 @@ export default class TopicSubmit extends React.Component {
             id="back"
             ref={this.back}
             onInput={() => this.handleInput()}
-            defaultValue={card ? card.back_md : null}
+            defaultValue={this.state.card.back}
           />
 
           <TopicsSelect
@@ -150,13 +125,7 @@ export default class TopicSubmit extends React.Component {
         </div>
         <div>
           <h4>Card preview</h4>
-          <div
-            id="card-preview"
-            className="card card-content"
-            ref={this.preview}
-          >
-            {this.state.cardPreviewHTML}
-          </div>
+          <Card card={this.state.card} renderButtons={false} />
         </div>
       </div>
     );

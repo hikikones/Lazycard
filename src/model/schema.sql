@@ -11,10 +11,8 @@ CREATE TABLE topics (
 
 CREATE TABLE cards (
   id INTEGER,
-  front_md TEXT,
-  front_html TEXT,
-  back_md TEXT,
-  back_html TEXT,
+  front TEXT,
+  back TEXT,
   due_date DATE DEFAULT (date('now')) NOT NULL,
   due_days INT DEFAULT 0 NOT NULL,
   last_review_date DATE,
@@ -55,13 +53,13 @@ INSERT INTO topics (name, image, sort_order, parent_id)
           ("Test", NULL, "3.4.1", 19),
           ("Test", NULL, "3.4.2", 19);
 
-INSERT INTO cards (front_md, front_html, back_md, back_html, topic_id)
-  VALUES  ("What does SQL stand for?", "<p>What does SQL stand for?</p>", "Structured Query Language", "<p>Structured Query Language</p>", 11),
-          ("What is database normalization", "<p>What is database normalization?</p>", "The process of structuring a relational database with the goal to reduce data redundancy and improve data integrity.", "<p>The process of structuring a relational database with the goal to reduce data redundancy and improve data integrity.</p>", 10),
-          ("What is meant by data redundancy in a database system", "<p>What is meant by data redundancy in a database system?</p>", "Some information is stored repeatedly.", "<p>Some information is stored repeatedly.</p>", 10),
-          ("What is a functional dependency (FD)?", "<p>What is a functional dependency (FD)?</p>", "A FD is a constraint between two sets of attributes in a relation from a database.", "<p>A FD is a constraint between two sets of attributes in a relation from a database.</p>", 10),
-          ("What is an algorithm?", "<p>What is an algorithm?</p>", "A step by step method of solving a problem.", "<p>A step by step method of solving a problem.</p>", 4),
-          ("Worst time complexity for bubble sort?", "<p>Worst time complexity for bubble sort?</p>", "O(n^2).", "<p>O(n^2).</p>", 4);
+INSERT INTO cards (front, back, topic_id)
+  VALUES  ("What does __SQL__ stand for?", "Structured Query Language", 11),
+          ("What is database _normalization_", "The process of structuring a relational database with the goal to reduce data redundancy and improve data integrity.", 10),
+          ("What is meant by data redundancy in a database system", "Some information is stored repeatedly.", 10),
+          ("What is a _functional dependency_ (FD)?", "A FD is a constraint between two sets of attributes in a relation from a database.", 10),
+          ("What is an _algorithm_?", "A step by step method of solving a problem.", 4),
+          ("Worst time complexity for bubble sort?", "$$ O(n^2). $$", 4);
 
 
 /*

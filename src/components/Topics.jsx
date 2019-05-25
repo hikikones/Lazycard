@@ -24,10 +24,12 @@ export default class Topics extends React.Component {
       return null;
     }
 
-    const cardsList = cards.map(c => <Card key={c.id} card={c} />);
+    const cardsList = cards.map(c =>
+      <Card key={c.id} card={c} />
+    );
     return (
       <div>
-        <h2 className="text-center"> Cards</h2>
+        <h2 className="text-center">Cards</h2>
         <div className="cards-container">{cardsList}</div>
       </div>
     );
