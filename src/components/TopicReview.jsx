@@ -19,7 +19,7 @@ export default class TopicReview extends React.Component {
     this.delete = this.delete.bind(this);
 
     const topic_id = parseInt(this.props.match.params.topic_id);
-    this.cards = db.getDueCards(topic_id);
+    this.cards = topic_id === 0 ? db.getAllDueCards() : db.getDueCards(topic_id);
 
     this.state = {
       topicId: topic_id,

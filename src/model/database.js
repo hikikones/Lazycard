@@ -130,6 +130,18 @@ class Database {
     return cards;
   }
 
+  getAllCardsLength() {
+    return this.db.prepare("SELECT COUNT(id) AS length FROM cards").get().length;
+  }
+
+  getCardsRecursivelyLength(topicId) {
+    const subtopics = this.getSubtopicsRecursively(topicId);
+    subtopics.push({ id: topicId });
+    const cards = `SELECT COUNT(id) AS length FROM cards WHERE topic_id IN
+                  (${subtopics.map(t => t.id).join(",")})`;
+    return this.db.prepare(cards).get().length;
+  }
+
   getDueCards(topicId) {
     const subtopics = this.getSubtopicsRecursively(topicId);
     subtopics.push({ id: topicId });
@@ -147,6 +159,17 @@ class Database {
                   (${subtopics.map(t => t.id).join(",")})
                   AND due_date <= (date('now'))`;
     return this.db.prepare(cards).get().length;
+  }
+
+  getAllDueCards() {
+    const dueCards = `SELECT * FROM cards WHERE due_date <= (date('now'))`;
+    return this.db.prepare(dueCards).all();
+  }
+
+  getAllDueCardsLength() {
+    const dueCardsLength = `SELECT due_date, COUNT(id) AS length FROM cards
+                            WHERE due_date <= (date('now'))`;
+    return this.db.prepare(dueCardsLength).get().length;
   }
 
   createCard(front, back, topicId) {
