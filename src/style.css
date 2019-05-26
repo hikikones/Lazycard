@@ -10,7 +10,7 @@ body {
 }
 
 #root {
-  margin-left: 68px;
+  margin-left: 50px;
 }
 
 header {
@@ -31,7 +31,7 @@ nav {
   z-index: 1;
   top: 0;
   left: 0;
-  padding: 10px;
+  padding: 5px;
   overflow-x: hidden;
   background: white;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
@@ -46,7 +46,7 @@ nav a.active {
 }
 
 nav .material-icons {
-  font-size: 48px;
+  font-size: 40px;
 }
 
 main {
