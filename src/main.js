@@ -26,6 +26,10 @@ function createWindow() {
     window.webContents.openDevTools();
   }
 
+  if (!Config.isDev()) {
+    window.setMenu(null);
+  }
+
   window.on("closed", () => {
     window = null;
   });
