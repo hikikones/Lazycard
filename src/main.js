@@ -7,10 +7,13 @@ import Config from "./controller/Config";
 let window;
 
 function createWindow() {
-  const { width, height } = Config.get("windowBounds");
+  const { x, y, width, height } = Config.get("windowBounds");
   window = new BrowserWindow({
+    x,
+    y,
     width,
     height,
+    show: Config.isDev(),
     webPreferences: {
       nodeIntegration: true,
       webSecurity: !Config.isDev()
@@ -28,10 +31,23 @@ function createWindow() {
 
   if (!Config.isDev()) {
     window.setMenu(null);
+    window.once('ready-to-show', () => {
+      window.show()
+    });
   }
 
   window.on("closed", () => {
     window = null;
+  });
+
+  window.on('resize', () => {
+    const { width, height, x, y } = window.getBounds();
+    Config.set('windowBounds', { width, height, x, y });
+  });
+
+  window.on('move', () => {
+    const { width, height, x, y } = window.getBounds();
+    Config.set('windowBounds', { width, height, x, y });
   });
 }
 

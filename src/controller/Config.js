@@ -28,8 +28,8 @@ if (!fs.existsSync(backupsPath)) {
 
 const defaultConfig = {
   windowBounds: {
-    width: 1600,
-    height: 1200
+    width: 800,
+    height: 600
   },
   backup: path.join(userDataPath, "backup.zip")
 };
