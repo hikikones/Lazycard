@@ -92,7 +92,7 @@ export default class TopicSubmit extends React.Component {
           : <h2 className="text-center">Create card</h2>}
         <div className="card-editor-container">
           <div className="card-editor">
-            <h4>Front</h4>
+            <label>Front</label>
             <textarea
               id="front"
               ref={this.front}
@@ -100,7 +100,7 @@ export default class TopicSubmit extends React.Component {
               defaultValue={this.state.card.front}
             />
 
-            <h4>Back</h4>
+            <label>Back</label>
             <textarea
               id="back"
               ref={this.back}
@@ -128,8 +128,8 @@ export default class TopicSubmit extends React.Component {
             />
           </div>
           <div>
-            <h4>Card preview</h4>
-            <Card card={this.state.card} renderButtons={false} />
+            <label>Preview</label>
+            <Card style={{margin: "0"}} card={this.state.card} renderButtons={false} />
           </div>
         </div>
       </div>

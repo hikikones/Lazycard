@@ -16,13 +16,18 @@ body {
 header {
   background: white;
   height: 50px;
-  display: flex;
-  align-items: center;
+  position: fixed;
+  width: 100%;
 }
 
 header .search {
+  position: absolute;
   width: 75%;
-  margin: 0 auto;
+  left: 0;
+  top: 0;
+  right: 50px;
+  bottom: 0;
+  margin: auto;
 }
 
 nav {
@@ -55,7 +60,8 @@ main {
 }
 
 main .main-content {
-  margin: 2rem 4rem;
+  margin: 6rem 4rem;
+  margin-bottom: 2rem;
 }
 
 .cards-container {
@@ -180,9 +186,14 @@ main .main-content {
   flex-flow: row;
 }
 
+.card-editor-container .card {
+  margin: 0;
+}
+
 .card-editor {
-  width: 45vw;
+  width: 30vw;
   min-width: 210px;
+  max-width: 350px;
   margin-right: 3rem;
 }
 
