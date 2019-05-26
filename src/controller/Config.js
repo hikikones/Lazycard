@@ -20,6 +20,12 @@ if (!fs.existsSync(imagesPath)) {
   fs.mkdirSync(imagesPath);
 }
 
+const backupsPath = path.join(userDataPath, "backups");
+
+if (!fs.existsSync(backupsPath)) {
+  fs.mkdirSync(backupsPath);
+}
+
 const defaultConfig = {
   windowBounds: {
     width: 1600,
@@ -64,6 +70,10 @@ class Config {
 
   getImagesPath() {
     return imagesPath;
+  }
+
+  getBackupsPath() {
+    return backupsPath;
   }
 
   isDev() {

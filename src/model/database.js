@@ -77,6 +77,7 @@ class Database {
     const create = `INSERT INTO topics (name, image, sort_order, parent_id)
                     VALUES (?, ?, ?, ?)`;
     this.db.prepare(create).run(name, image, sortOrder, parentId);
+    this.backupQuick();
   }
 
   updateTopic(topicId, newName, newImage, newSortOrder, newParentId) {
@@ -94,10 +95,12 @@ class Database {
     this.db
       .prepare(updateTopic)
       .run(newName, newImage, newSortOrder, newParentId, topicId);
+    this.backupQuick();
   }
 
   deleteTopic(topicId) {
     this.db.prepare("DELETE FROM topics WHERE id = ?").run(topicId);
+    this.backupQuick();
   }
 
   isSubtopic(topicId, possibleParentTopicId) {
@@ -200,6 +203,7 @@ class Database {
     const create = `INSERT INTO cards (front, back, topic_id)
                     VALUES (?, ?, ?)`;
     this.db.prepare(create).run(front, back, topicId);
+    this.backupQuick();
   }
 
   updateCard(cardId, front, back, topicId) {
@@ -209,6 +213,7 @@ class Database {
     this.db
       .prepare(update)
       .run(front, back, topicId, cardId);
+    this.backupQuick();
   }
 
   updateCardReview(cardId, dueDate, dueDays) {
@@ -216,13 +221,19 @@ class Database {
                       SET due_date = ?, due_days = ?, last_review_date = (date('now'))
                     WHERE id = ?`;
     this.db.prepare(update).run(dueDate, dueDays, cardId);
+    this.backupQuick();
   }
 
   deleteCard(cardId) {
     this.db.prepare("DELETE FROM cards WHERE id = ?").run(cardId);
+    this.backupQuick();
   }
 
   // BACKUP
+  backupQuick() {
+    this.db.backup(path.join(Config.getBackupsPath(), `backup-${Date.now()}.db`));
+  }
+
   backup(callback) {
     var output = fs.createWriteStream(Config.get("backup"));
     var archive = archiver("zip");
@@ -233,7 +244,7 @@ class Database {
 
     archive.pipe(output);
     archive.file(this.db.name, { name: "database.db" });
-    archive.directory(Config.getImagesPath() + "/", "images");
+    archive.directory(Config.getImagesPath(), "images");
     archive.finalize();
   }
 }
