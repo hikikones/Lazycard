@@ -33,6 +33,28 @@ export default class TopicReview extends React.Component {
         : db.getCardsRecursivelyLength(topic_id) === 0,
       card: this.getNextCard()
     };
+
+    document.onkeydown = function (e) {
+      e = e || window.event;
+      switch(e.key) {
+        case " ":
+          const showAnswerBtn = document.getElementById("show-answer");
+          if (showAnswerBtn) showAnswerBtn.click();
+          return;
+        case "ArrowDown":
+          const thumbsDownBtn = document.getElementById("thumbs-down");
+          if (thumbsDownBtn) thumbsDownBtn.click();
+          return;
+        case "ArrowUp":
+          const thumbsUpBtn = document.getElementById("thumbs-up");
+          if (thumbsUpBtn) thumbsUpBtn.click();
+          return;
+      }
+    };
+  }
+
+  handleKeyDown() {
+    console.log("KEYDOWN");
   }
 
   getNextCard() {
@@ -173,6 +195,7 @@ export default class TopicReview extends React.Component {
       return (
         <div className="review-buttons">
           <input
+            id="show-answer"
             type="submit"
             value="SHOW ANSWER"
             className="button"
@@ -186,6 +209,7 @@ export default class TopicReview extends React.Component {
         <hr />
         <div className="review-buttons">
           <button
+            id="thumbs-down"
             onClick={() => this.handleAnswer(false)}
             className="button-clear button-review-answer"
             type="submit"
@@ -193,6 +217,7 @@ export default class TopicReview extends React.Component {
             <i className="material-icons">thumb_down</i>
           </button>
           <button
+            id="thumbs-up"
             onClick={() => this.handleAnswer(true)}
             className="button-clear button-review-answer"
             type="submit"
