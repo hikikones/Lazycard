@@ -29,7 +29,7 @@ export default class Main extends React.Component {
   render() {
     return (
       <div>
-        <h1>Settings</h1>
+        <h2>Settings</h2>
         <label htmlFor="backup">Backup</label>
         <input
           type="text"

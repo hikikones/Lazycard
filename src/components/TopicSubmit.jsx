@@ -1,8 +1,5 @@
 import React from "react";
-import path from "path";
 import db from "./../model/database";
-
-import Config from "./../controller/Config";
 
 import TopicsSelect from "./TopicsSelect";
 
@@ -54,8 +51,8 @@ export default class TopicSubmit extends React.Component {
 
     return (
       <div>
-        <h2>{topic ? topic.name : "Create topic"}</h2>
-        {topic ? <h4>Edit</h4> : null}
+        <h2>{topic ? topic.name : "Topic"}</h2>
+        {topic ? <h4>Edit</h4> : <h4>Create</h4>}
 
         <label htmlFor="name">Name</label>
         <input type="text" id="name" defaultValue={topic ? topic.name : ""} />

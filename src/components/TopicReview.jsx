@@ -189,7 +189,14 @@ export default class TopicReview extends React.Component {
 
   render() {
     if (!this.state.card) {
-      return <h2>Good job!</h2>;
+      return (
+        <div>
+          <h2>Good job!</h2>
+          <p>There are no more remaining cards to be reviewed.</p>
+          <p>Do a custom study for reviewing as many cards as you like without affecting the scheduler.</p>
+          <p>TODO</p>
+        </div>
+      );
     }
 
     return (

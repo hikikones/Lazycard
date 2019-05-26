@@ -86,46 +86,51 @@ export default class TopicSubmit extends React.Component {
 
   render() {
     return (
-      <div className="card-editor-container">
-        <div className="card-editor">
-          <h4>Front</h4>
-          <textarea
-            id="front"
-            ref={this.front}
-            onInput={() => this.handleInput()}
-            defaultValue={this.state.card.front}
-          />
+      <div>
+        {this.state.card_id
+          ? <h2 className="text-center">Edit card</h2>
+          : <h2 className="text-center">Create card</h2>}
+        <div className="card-editor-container">
+          <div className="card-editor">
+            <h4>Front</h4>
+            <textarea
+              id="front"
+              ref={this.front}
+              onInput={() => this.handleInput()}
+              defaultValue={this.state.card.front}
+            />
 
-          <h4>Back</h4>
-          <textarea
-            id="back"
-            ref={this.back}
-            onInput={() => this.handleInput()}
-            defaultValue={this.state.card.back}
-          />
+            <h4>Back</h4>
+            <textarea
+              id="back"
+              ref={this.back}
+              onInput={() => this.handleInput()}
+              defaultValue={this.state.card.back}
+            />
 
-          <TopicsSelect
-            card_id={this.state.card_id}
-            topic_id={this.state.topic_id}
-          />
+            <TopicsSelect
+              card_id={this.state.card_id}
+              topic_id={this.state.topic_id}
+            />
 
-          <input
-            onClick={() => this.save()}
-            type="submit"
-            className="button-primary float-left"
-            value="Save"
-          />
+            <input
+              onClick={() => this.save()}
+              type="submit"
+              className="button-primary float-left"
+              value="Save"
+            />
 
-          <input
-            onClick={() => this.cancel()}
-            type="submit"
-            className="button-primary float-right"
-            value="Cancel"
-          />
-        </div>
-        <div>
-          <h4>Card preview</h4>
-          <Card card={this.state.card} renderButtons={false} />
+            <input
+              onClick={() => this.cancel()}
+              type="submit"
+              className="button-primary float-right"
+              value="Cancel"
+            />
+          </div>
+          <div>
+            <h4>Card preview</h4>
+            <Card card={this.state.card} renderButtons={false} />
+          </div>
         </div>
       </div>
     );

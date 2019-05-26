@@ -29,9 +29,9 @@ export default class Topic extends React.Component {
   renderTopics(topic) {
     return (
       <div className="card-content">
-        <h3>
+        <h4>
           <Link to={`/topic/${topic.id}`}>{topic.name}</Link>
-        </h3>
+        </h4>
 
         <TopicTreeView parent={topic} />
 

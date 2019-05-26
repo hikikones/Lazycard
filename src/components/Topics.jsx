@@ -12,7 +12,7 @@ export default class Topics extends React.Component {
     const topicList = topics.map(t => <TopicCard key={t.id} topic={t} />);
     return (
       <div>
-        <h1 className="text-center">{title}</h1>
+        <h2 className="text-center">{title}</h2>
         <div className="cards-container">{topicList}</div>
       </div>
     );
@@ -29,7 +29,7 @@ export default class Topics extends React.Component {
     );
     return (
       <div>
-        <h2 className="text-center">Cards</h2>
+        <h3 className="text-center">Cards</h3>
         <div className="cards-container">{cardsList}</div>
       </div>
     );
