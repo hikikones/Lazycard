@@ -172,6 +172,18 @@ class Database {
     return this.db.prepare(dueCardsLength).get().length;
   }
 
+  getCardsByKeywords(text) {
+    const words = text.split(" ");
+    let search = `SELECT *, front || " " || back AS text FROM cards
+                  WHERE text LIKE ?`;
+    if (words.length > 1) {
+      for (let i = 0; i < words.length - 1; i++) {
+        search += ` AND text LIKE ?`;
+      }
+    }
+    return this.db.prepare(search).all(words.map(w => `%${w}%`));
+  }
+
   createCard(front, back, topicId) {
     const create = `INSERT INTO cards (front, back, topic_id)
                     VALUES (?, ?, ?)`;

@@ -7,6 +7,7 @@ import TopicReview from "./TopicReview";
 import TopicSubmit from "./TopicSubmit";
 import CardSubmit from "./CardSubmit";
 import Settings from "./Settings";
+import Search from "./Search";
 
 export default class Main extends React.Component {
   render() {
@@ -32,6 +33,7 @@ export default class Main extends React.Component {
               component={CardSubmit}
             />
             <Route exact path="/settings" component={Settings} />
+            <Route exact path="/search/:text" component={Search} />
           </Switch>
         </div>
       </main>
