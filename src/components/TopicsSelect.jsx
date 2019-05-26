@@ -11,7 +11,7 @@ export default class TopicsDatalist extends React.Component {
     if (topicId === 0) {
       return 0;
     }
-    if (this.props.card_id) {
+    if (this.props.card_id >= 0) {
       return topicId;
     }
     const topic = db.getTopic(topicId);
@@ -21,7 +21,7 @@ export default class TopicsDatalist extends React.Component {
   render(props) {
     const topicId = this.props.topic_id;
     const topics =
-      topicId === 0 || this.props.card_id
+    this.props.card_id >= 0 || topicId === 0
         ? db.getTopics()
         : db.getTopicsExcept(topicId);
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 import db from "./../model/database";
 
@@ -17,6 +18,7 @@ export default class TopicReview extends React.Component {
     this.toggleDropdown = this.toggleDropdown.bind(this);
     this.showNextCard = this.showNextCard.bind(this);
     this.delete = this.delete.bind(this);
+    this.activateCustomStudy = this.activateCustomStudy.bind(this);
 
     const topic_id = parseInt(this.props.match.params.topic_id);
     this.cards = topic_id === 0 ? db.getAllDueCards() : db.getDueCards(topic_id);
@@ -25,6 +27,10 @@ export default class TopicReview extends React.Component {
       topicId: topic_id,
       showAnswer: false,
       showDropdown: false,
+      custom: false,
+      topicHasNoCards: topic_id === 0
+        ? db.getAllCardsLength() === 0
+        : db.getCardsRecursivelyLength(topic_id) === 0,
       card: this.getNextCard()
     };
   }
@@ -48,6 +54,11 @@ export default class TopicReview extends React.Component {
   }
 
   handleAnswer(answeredCorrectly) {
+    if (this.state.custom) {
+      this.showNextCard();
+      return;
+    }
+
     const newDueDays = this.getDueDays(answeredCorrectly);
     const newDueDate = this.addDays(
       this.state.card.last_review_date
@@ -67,6 +78,12 @@ export default class TopicReview extends React.Component {
   showNextCard() {
     this.setState({ card: this.getNextCard() });
     this.toggleAnswer();
+  }
+
+  activateCustomStudy() {
+    const topicId = this.state.topicId;
+    this.cards = topicId === 0 ? db.getAllCards() : db.getCardsRecursively(topicId);
+    this.setState({ custom: true, card: this.getNextCard() });
   }
 
   getDueDays(answeredCorrectly) {
@@ -188,13 +205,30 @@ export default class TopicReview extends React.Component {
   }
 
   render() {
+    if (this.state.topicHasNoCards) {
+      return (
+        <div>
+          <h2>No cards found!</h2>
+          <p>This topic has no cards yet.</p>
+          <Link to={`/card/submit/0/${this.state.topicId}`} className="button">
+            ADD CARD
+          </Link>
+        </div>
+      );
+    }
+
     if (!this.state.card) {
       return (
         <div>
           <h2>Good job!</h2>
           <p>There are no more remaining cards to be reviewed.</p>
           <p>Do a custom study for reviewing as many cards as you like without affecting the scheduler.</p>
-          <p>TODO</p>
+          <input
+            type="submit"
+            value="CUSTOM STUDY"
+            className="button"
+            onClick={() => this.activateCustomStudy()}
+          />
         </div>
       );
     }

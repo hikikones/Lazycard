@@ -130,8 +130,20 @@ class Database {
     return cards;
   }
 
+  getAllCards() {
+    return this.db.prepare("SELECT * FROM cards").all();
+  }
+
   getAllCardsLength() {
     return this.db.prepare("SELECT COUNT(id) AS length FROM cards").get().length;
+  }
+
+  getCardsRecursively(topicId) {
+    const subtopics = this.getSubtopicsRecursively(topicId);
+    subtopics.push({ id: topicId });
+    const cards = `SELECT * FROM cards WHERE topic_id IN
+                  (${subtopics.map(t => t.id).join(",")})`;
+    return this.db.prepare(cards).all();
   }
 
   getCardsRecursivelyLength(topicId) {
