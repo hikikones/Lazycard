@@ -23,6 +23,10 @@ export default class TopicReview extends React.Component {
     const topic_id = parseInt(this.props.match.params.topic_id);
     this.cards = topic_id === 0 ? db.getAllDueCards() : db.getDueCards(topic_id);
 
+    if (this.cards.length >= 2) {
+      this.cards = this.shuffle(this.cards);
+    }
+
     this.state = {
       topicId: topic_id,
       showAnswer: false,
@@ -51,10 +55,6 @@ export default class TopicReview extends React.Component {
           return;
       }
     };
-  }
-
-  handleKeyDown() {
-    console.log("KEYDOWN");
   }
 
   getNextCard() {
@@ -102,9 +102,22 @@ export default class TopicReview extends React.Component {
     this.toggleAnswer();
   }
 
+  shuffle(array) {
+    for (let currentIndex = array.length - 1; currentIndex > 0; currentIndex--) {
+        const newIndex = Math.floor(Math.random() * (currentIndex + 1));
+        const temp = array[currentIndex];
+        array[currentIndex] = array[newIndex];
+        array[newIndex] = temp;
+    }
+    return array;
+  }
+
   activateCustomStudy() {
     const topicId = this.state.topicId;
     this.cards = topicId === 0 ? db.getAllCards() : db.getCardsRecursively(topicId);
+    if (this.cards.length >= 2) {
+      this.cards = this.shuffle(this.cards);
+    }
     this.setState({ custom: true, card: this.getNextCard() });
   }
 
