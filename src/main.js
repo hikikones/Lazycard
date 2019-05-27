@@ -4,7 +4,7 @@ import db from "./model/database";
 
 import Config from "./controller/Config";
 
-let window;
+let window = null;
 
 function createWindow() {
   const { x, y, width, height } = Config.get("windowBounds");
@@ -51,16 +51,29 @@ function createWindow() {
   });
 }
 
-app.on("ready", createWindow);
+const gotTheLock = app.requestSingleInstanceLock()
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    db.backup(app.quit);
-  }
-});
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (window) {
+      if (window.isMinimized()) window.restore()
+      window.focus()
+    }
+  })
 
-app.on("activate", () => {
-  if (window === null) {
-    createWindow();
-  }
-});
+  app.on("ready", createWindow);
+
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") {
+      db.backup(app.quit);
+    }
+  });
+  
+  app.on("activate", () => {
+    if (window === null) {
+      createWindow();
+    }
+  });  
+}
