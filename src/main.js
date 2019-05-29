@@ -20,10 +20,7 @@ function createWindow() {
     }
   });
 
-  const indexUrl = Config.isDev()
-    ? "http://localhost:9000/"
-    : `file://${__dirname}/index.html`;
-  window.loadURL(indexUrl);
+  window.loadURL(`file://${__dirname}/index.html`);
 
   if (Config.isDev()) {
     window.webContents.openDevTools();

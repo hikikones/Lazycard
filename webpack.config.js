@@ -62,10 +62,7 @@ const mainConfig = {
     rules: [jsRule, fileRule, rawRule]
   },
   node: nodeSettings,
-  externals: externalsList,
-  devServer: {
-    contentBase: BUILD_DIR
-  }
+  externals: externalsList
 };
 
 const rendererConfig = {
