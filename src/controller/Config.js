@@ -10,21 +10,21 @@ const userDataPath = isDev
       "user"
     );
 
-if (!fs.existsSync(userDataPath)) {
-  fs.mkdirSync(userDataPath);
+function createFolder(dir) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
+
+createFolder(userDataPath);
 
 const imagesPath = path.join(userDataPath, "images");
 
-if (!fs.existsSync(imagesPath)) {
-  fs.mkdirSync(imagesPath);
-}
+createFolder(imagesPath);
 
 const backupsPath = path.join(userDataPath, "backups");
 
-if (!fs.existsSync(backupsPath)) {
-  fs.mkdirSync(backupsPath);
-}
+createFolder(backupsPath);
 
 const defaultConfig = {
   windowBounds: {
