@@ -28,8 +28,8 @@ function createWindow() {
 
   if (!Config.isDev()) {
     window.setMenu(null);
-    window.once('ready-to-show', () => {
-      window.show()
+    window.once("ready-to-show", () => {
+      window.show();
     });
   }
 
@@ -37,40 +37,38 @@ function createWindow() {
     window = null;
   });
 
-  window.on('resize', () => {
+  window.on("resize", () => {
     const { width, height, x, y } = window.getBounds();
-    Config.set('windowBounds', { width, height, x, y });
+    Config.set("windowBounds", { width, height, x, y });
   });
 
-  window.on('move', () => {
+  window.on("move", () => {
     const { width, height, x, y } = window.getBounds();
-    Config.set('windowBounds', { width, height, x, y });
+    Config.set("windowBounds", { width, height, x, y });
   });
 }
 
-const gotTheLock = app.requestSingleInstanceLock()
+const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  app.quit()
+  app.quit();
 } else {
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
     if (window) {
-      if (window.isMinimized()) window.restore()
-      window.focus()
+      if (window.isMinimized()) window.restore();
+      window.focus();
     }
-  })
+  });
 
   app.on("ready", createWindow);
 
   app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      db.backup(app.quit);
-    }
+    db.backup(app.quit);
   });
-  
+
   app.on("activate", () => {
     if (window === null) {
       createWindow();
     }
-  });  
+  });
 }
