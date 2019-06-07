@@ -33,18 +33,13 @@ function createWindow() {
     });
   }
 
+  window.on("close", () => {
+    const { width, height, x, y } = window.getBounds();
+    Config.set("windowBounds", { width, height, x, y });
+  });
+
   window.on("closed", () => {
     window = null;
-  });
-
-  window.on("resize", () => {
-    const { width, height, x, y } = window.getBounds();
-    Config.set("windowBounds", { width, height, x, y });
-  });
-
-  window.on("move", () => {
-    const { width, height, x, y } = window.getBounds();
-    Config.set("windowBounds", { width, height, x, y });
   });
 }
 
