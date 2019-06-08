@@ -19,7 +19,8 @@ header {
   position: fixed;
   width: 100%;
   z-index: 2;
-  box-shadow: 0 10px 20px -20px rgba(0, 0, 0, 0.19), 0 6px 6px -6px rgba(0, 0, 0, 0.23);
+  box-shadow: 0 10px 20px -20px rgba(0, 0, 0, 0.19),
+    0 6px 6px -6px rgba(0, 0, 0, 0.23);
 }
 
 header .search {
@@ -179,8 +180,7 @@ main .main-content {
 }
 
 .topic .sort-order {
-  font-style: italic;
-  padding-right: 1rem;
+  padding-right: 1.5rem;
 }
 
 .card-editor-container {
@@ -218,7 +218,8 @@ table {
   margin-bottom: 1rem;
 }
 
-td, th {
+td,
+th {
   padding: 0 1.5rem;
 }
 
