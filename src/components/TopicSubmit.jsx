@@ -55,16 +55,27 @@ export default class TopicSubmit extends React.Component {
         {topic ? <h4>Edit</h4> : <h4>Create</h4>}
 
         <label htmlFor="name">Name</label>
-        <input type="text" id="name" defaultValue={topic ? topic.name : ""} />
+        <input
+          type="text"
+          id="name"
+          defaultValue={topic ? topic.name : ""}
+          maxLength="255"
+        />
 
         <label htmlFor="image">Image</label>
-        <input type="text" id="image" defaultValue={topic ? topic.image : ""} />
+        <input
+          type="text"
+          id="image"
+          defaultValue={topic ? topic.image : ""}
+          maxLength="255"
+        />
 
         <label htmlFor="sort-order">Sort order</label>
         <input
           type="text"
           id="sort-order"
           defaultValue={topic ? topic.sort_order : ""}
+          maxLength="255"
         />
 
         <TopicsSelect topic_id={topicId} />

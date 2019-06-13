@@ -1,8 +1,8 @@
 CREATE TABLE topics (
   id INTEGER,
-  name TEXT NOT NULL,
-  image TEXT,
-  sort_order TEXT,
+  name VARCHAR(255) NOT NULL,
+  image VARCHAR(255),
+  sort_order VARCHAR(255),
   parent_id INTEGER,
   PRIMARY KEY (id),
   FOREIGN KEY (parent_id) REFERENCES topics (id)
