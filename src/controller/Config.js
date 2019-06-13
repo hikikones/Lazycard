@@ -46,22 +46,21 @@ function parseConfigFile() {
   }
 }
 
-let config = parseConfigFile();
-
-function writeConfigFile() {
-  fs.writeFileSync(getConfigFile(), JSON.stringify(config));
+function writeConfigFile(data) {
+  fs.writeFileSync(getConfigFile(), JSON.stringify(data));
 }
 
 class Config {
   // TODO - Main and renderer process both create an instance. This should not happen.
   get(key) {
-    config = parseConfigFile();
+    const config = parseConfigFile();
     return config[key];
   }
 
   set(key, val) {
+    const config = parseConfigFile();
     config[key] = val;
-    writeConfigFile();
+    writeConfigFile(config);
   }
 
   getUserDataPath() {
