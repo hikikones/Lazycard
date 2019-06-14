@@ -24,14 +24,36 @@ export default class TopicTreeView extends React.Component {
     return tree;
   }
 
+  sortTree(topics) {
+    if (topics.length === 0) {
+      return [];
+    }
+
+    topics.forEach(t => {
+      t.subtopics = this.sortTree(t.subtopics);
+    });
+
+    const topicsSorted = topics.sort((a, b) => {
+      if (a.sort_order && b.sort_order) {
+        return a.sort_order > b.sort_order ? 1 : -1;
+      } else {
+        return a.name > b.name ? 1 : -1;
+      }
+    });
+
+    return topicsSorted;
+  }
+
   render(props) {
     const parent = this.props.parent;
 
-    const topicTree = this.buildTree(
+    let topicTree = this.buildTree(
       db.getSubtopicsRecursively(parent.id),
       parent.id
     );
-    topicTree.sort((a, b) => (a.sort_order > b.sort_order || a.name > b.name ? 1 : -1));
+
+    topicTree = this.sortTree(topicTree);
+
     const topicTreeList = topicTree.map(t => (
       <TopicTreeItem key={t.id} topic={t} />
     ));
@@ -52,11 +74,15 @@ class TopicTreeItem extends React.Component {
 
     return (
       <li key={this.props.topic.id}>
-        {this.props.topic.sort_order ? <span className="sort-order">{this.props.topic.sort_order}</span> : null}
+        {this.props.topic.sort_order ? (
+          <span className="sort-order">{this.props.topic.sort_order}</span>
+        ) : null}
         <Link to={`/topic/${this.props.topic.id}`}>
           {this.props.topic.name}
         </Link>
-        <span className="due-cards">{db.getDueCardsLength(this.props.topic.id)}</span>
+        <span className="due-cards">
+          {db.getDueCardsLength(this.props.topic.id)}
+        </span>
         {subtopics ? <ul>{subtopics}</ul> : null}
       </li>
     );
