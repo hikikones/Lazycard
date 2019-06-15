@@ -4,6 +4,8 @@ import db from "./model/database";
 
 import Config from "./controller/Config";
 
+db.import();
+
 let window = null;
 
 function createWindow() {
@@ -58,7 +60,9 @@ if (!gotTheLock) {
   app.on("ready", createWindow);
 
   app.on("window-all-closed", () => {
-    db.backup(app.quit);
+    //db.backup(app.quit);
+    db.backup();
+    app.quit();
   });
 
   app.on("activate", () => {

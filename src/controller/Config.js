@@ -31,7 +31,7 @@ const defaultConfig = {
     width: 800,
     height: 600
   },
-  backup: path.join(userDataPath, "backup.zip")
+  backup: ""
 };
 
 function getConfigFile() {

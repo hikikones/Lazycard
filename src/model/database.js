@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import sqlite3 from "better-sqlite3";
-import archiver from "archiver";
+import md5File from "md5-file";
 
 import Config from "./../controller/Config";
 
@@ -138,7 +138,8 @@ class Database {
   }
 
   getAllCardsLength() {
-    return this.db.prepare("SELECT COUNT(id) AS length FROM cards").get().length;
+    return this.db.prepare("SELECT COUNT(id) AS length FROM cards").get()
+      .length;
   }
 
   getCardsRecursively(topicId) {
@@ -210,9 +211,7 @@ class Database {
     const update = `UPDATE cards
                       SET front = ?, back = ?, topic_id = ?
                     WHERE id = ?`;
-    this.db
-      .prepare(update)
-      .run(front, back, topicId, cardId);
+    this.db.prepare(update).run(front, back, topicId, cardId);
     this.backupQuick();
   }
 
@@ -231,21 +230,124 @@ class Database {
 
   // BACKUP
   backupQuick() {
-    this.db.backup(path.join(Config.getBackupsPath(), `backup-${Date.now()}.db`));
+    this.db.backup(
+      path.join(Config.getBackupsPath(), `backup-${Date.now()}.db`)
+    );
   }
 
-  backup(callback) {
-    var output = fs.createWriteStream(Config.get("backup"));
-    var archive = archiver("zip", { forceLocalTime: true });
+  backup() {
+    if (Config.get("backup") === "") return;
+    this.syncDatabaseBackup();
+    this.syncDatabaseImages();
+  }
 
-    output.on("close", function() {
-      callback();
+  syncDatabaseBackup() {
+    const backupPath = Config.get("backup");
+    if (!fs.existsSync(backupPath)) {
+      fs.mkdirSync(backupPath, { recursive: true });
+    }
+
+    const dbBackupFile = path.join(backupPath, "database.db");
+    if (fs.existsSync(dbBackupFile)) {
+      // Compare hash values
+      if (this.hashMatch(this.db.name, dbBackupFile)) return; // No change, don't take backup
+
+      // Compare modified date
+      const dbCurrentDate = new Date(fs.statSync(this.db.name).mtime);
+      const dbBackupDate = new Date(fs.statSync(dbBackupFile).mtime);
+      if (dbCurrentDate < dbBackupDate) return; // Old database, don't take backup
+    }
+    // Copy current databse to backup path
+    fs.copyFileSync(this.db.name, dbBackupFile);
+  }
+
+  syncDatabaseImages() {
+    const imagesBackupDir = path.join(Config.get("backup"), "images");
+    if (!fs.existsSync(imagesBackupDir)) {
+      fs.mkdirSync(imagesBackupDir, { recursive: true });
+    }
+
+    const imagesCurrentMap = new Map();
+    fs.readdirSync(Config.getImagesPath()).forEach(image => {
+      imagesCurrentMap.set(image, path.join(Config.getImagesPath(), image));
     });
 
-    archive.pipe(output);
-    archive.file(this.db.name, { name: "database.db" });
-    archive.directory(Config.getImagesPath(), "images");
-    archive.finalize();
+    const imagesBackupMap = new Map();
+    fs.readdirSync(imagesBackupDir).forEach(image => {
+      imagesBackupMap.set(image, path.join(imagesBackupDir, image));
+    });
+
+    // Copy over images that differ
+    for (const [image, file] of imagesCurrentMap) {
+      if (
+        !imagesBackupMap.has(image) ||
+        !this.hashMatch(file, imagesBackupMap.get(image))
+      ) {
+        fs.copyFileSync(file, path.join(imagesBackupDir, image));
+      }
+      imagesBackupMap.delete(image);
+    }
+
+    // Remove unused images in backup folder
+    for (const [image, file] of imagesBackupMap) {
+      fs.unlinkSync(file);
+    }
+  }
+
+  import() {
+    if (Config.get("backup") === "") return;
+    this.syncDatabaseImport();
+    this.syncImagesImport();
+  }
+
+  syncDatabaseImport() {
+    const dbBackupFile = path.join(Config.get("backup"), "database.db");
+
+    // Compare hash values
+    if (this.hashMatch(this.db.name, dbBackupFile)) return; // No change, don't import
+
+    // Compare modified date
+    const dbCurrentDate = new Date(fs.statSync(this.db.name).mtime);
+    const dbBackupDate = new Date(fs.statSync(dbBackupFile).mtime);
+    if (dbCurrentDate > dbBackupDate) return; // Already have newest database, don't import
+
+    // Copy backup database and overwrite with current one
+    fs.copyFileSync(dbBackupFile, this.db.name);
+    this.db = new sqlite3(this.db.name);
+  }
+
+  syncImagesImport() {
+    const imagesBackupDir = path.join(Config.get("backup"), "images");
+
+    const imagesCurrentMap = new Map();
+    fs.readdirSync(Config.getImagesPath()).forEach(image => {
+      imagesCurrentMap.set(image, path.join(Config.getImagesPath(), image));
+    });
+
+    const imagesBackupMap = new Map();
+    fs.readdirSync(imagesBackupDir).forEach(image => {
+      imagesBackupMap.set(image, path.join(imagesBackupDir, image));
+    });
+
+    // Copy over images that differ
+    for (const [image, file] of imagesBackupMap) {
+      if (
+        !imagesCurrentMap.has(image) ||
+        !this.hashMatch(file, imagesCurrentMap.get(image))
+      ) {
+        fs.copyFileSync(file, path.join(Config.getImagesPath(), image));
+      }
+      imagesCurrentMap.delete(image);
+    }
+
+    // Remove unused images
+    for (const [image, file] of imagesCurrentMap) {
+      fs.unlinkSync(file);
+    }
+  }
+
+  hashMatch(file1, file2) {
+    return md5File.sync(file1) === md5File.sync(file2);
   }
 }
 
