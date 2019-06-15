@@ -236,7 +236,7 @@ class Database {
 
   backup(callback) {
     var output = fs.createWriteStream(Config.get("backup"));
-    var archive = archiver("zip");
+    var archive = archiver("zip", { forceLocalTime: true });
 
     output.on("close", function() {
       callback();
