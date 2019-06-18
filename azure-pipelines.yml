@@ -21,8 +21,7 @@ steps:
 
 
 - script:
-    npm install
-    npm run dist
+    npm install && npm run dist
   displayName: 'npm install and build'
 
 - task: CopyFiles@2
