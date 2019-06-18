@@ -21,7 +21,7 @@ steps:
 
 
 - script:
-    npm install && "webpack --mode production && electron-builder
+    npm install && webpack --mode production && electron-builder
   displayName: 'npm install and build'
 
 - task: CopyFiles@2
