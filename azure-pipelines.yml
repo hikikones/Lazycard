@@ -14,10 +14,13 @@ steps:
   inputs:
     versionSpec: '10.x'
   displayName: 'Install Node.js'
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '2.7'
+    architecture: 'x64'
 
 
 - script: |
-    npm install --global --vs2015 windows-build-tools
     npm install
     npm run dist
   displayName: 'npm install and build'
