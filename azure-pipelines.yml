@@ -20,9 +20,8 @@ steps:
     architecture: 'x64'
 
 
-- script: |
-    npm install
-    npm run dist
+- script:
+    npm install && "webpack --mode production && electron-builder
   displayName: 'npm install and build'
 
 - task: CopyFiles@2
