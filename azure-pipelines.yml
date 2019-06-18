@@ -20,8 +20,9 @@ steps:
     architecture: 'x64'
 
 
-- script:
-    npm install && npm run dist
+- script: |
+    npm install
+    npm run build:prod
   displayName: 'npm install and build'
 
 - task: CopyFiles@2
