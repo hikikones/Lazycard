@@ -1,0 +1,36 @@
+# Node.js with React
+# Build a Node.js project that uses React.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+- master
+
+pool:
+  vmImage: 'vs2017-win2016'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+  displayName: 'Install Node.js'
+
+
+- script: |
+    npm install --global --vs2015 windows-build-tools
+    npm install
+    npm run dist
+  displayName: 'npm install and build'
+
+- task: CopyFiles@2
+  inputs:
+    contents: '*.exe' 
+    sourceFolder: '$(Build.SourcesDirectory)/dist'
+    targetFolder: $(Build.ArtifactStagingDirectory)
+  displayName: 'Copy executable to staging directory'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: $(Build.ArtifactStagingDirectory)
+    artifactName: 'LazyCard'
+  displayName: 'Publish LazyCard from build $(Build.BuildNumber)'
