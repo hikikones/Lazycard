@@ -27,22 +27,22 @@ From there, navigate to `lazycard/user/images`. Images must be stored here, and 
 
 ### Topics and cards overview
 
-![](img/topics.png)
-![](img/cards.png)
+![](/img/topics.PNG)
+![](/img/cards.PNG)
 
 ### Card creation
 
-![](img/create_card1.png)
-![](img/create_card2.png)
+![](img/create_card1.PNG)
+![](img/create_card2.PNG)
 
 ### Topic creation
 
-![](img/create_topic.png)
+![](img/create_topic.PNG)
 
 ### Card review
 
-![](img/card_review1.png)
-![](img/card_review2.png)
+![](img/card_review1.PNG)
+![](img/card_review2.PNG)
 
 ## Setup
 
