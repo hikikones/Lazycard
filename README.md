@@ -46,7 +46,7 @@ From there, navigate to `lazycard/user/images`. Images must be stored here, and 
 
 ## Setup
 
-Install [Node.js](https://nodejs.org/en/). If your project uses native Node modules, it's important to have the proper build tools in order to compile them. If your project doesn't need native Node modules, ignore the following instructions on compiling.
+Install [Node.js](https://nodejs.org/en/). This project uses native Node modules, so it's important to have the proper build tools in order to compile them.
 
 ### Compiling on Windows
 
@@ -74,7 +74,7 @@ cd my-project
 npm install
 ```
 
-If you have a native module and get an error about some Python function not working during dependency installation, you may have to install [Python **2**](https://www.python.org/downloads/) with the `PATH` environment variable on Windows. Then remove the `node_modules` folder and install all dependencies again with `npm install`.
+If you get an error about some Python function not working during dependency installation, you may have to install [Python **2**](https://www.python.org/downloads/) with the `PATH` environment variable on Windows. Then remove the `node_modules` folder and install all dependencies again with `npm install`.
 
 ## Usage
 
