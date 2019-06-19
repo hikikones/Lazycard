@@ -15,7 +15,7 @@ Lazycard is a prototype for a spaced repetition flashcard application. It was ma
 
 ## Path location for images
 
-Images for use in the application must be stored in the application data directory, which be default points to:
+Images for use in the application must be stored in the application data directory, which by default points to:
 
 - `%APPDATA%` on Windows
 - `$XDG_CONFIG_HOME` or `~/.config` on Linux
