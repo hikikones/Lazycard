@@ -31,6 +31,7 @@ const defaultConfig = {
     width: 800,
     height: 600
   },
+  isMaximized: false,
   backup: ""
 };
 

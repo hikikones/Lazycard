@@ -26,18 +26,22 @@ function createWindow() {
 
   if (Config.isDev()) {
     window.webContents.openDevTools();
-  }
-
-  if (!Config.isDev()) {
+  } else {
     window.setMenu(null);
     window.once("ready-to-show", () => {
       window.show();
     });
   }
 
+  if (Config.get("isMaximized")) {
+    window.maximize();
+  }
+
   window.on("close", () => {
     const { width, height, x, y } = window.getBounds();
+    const isMaximized = window.isMaximized();
     Config.set("windowBounds", { width, height, x, y });
+    Config.set("isMaximized", isMaximized);
   });
 
   window.on("closed", () => {
