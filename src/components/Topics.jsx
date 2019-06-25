@@ -19,7 +19,8 @@ export default class Topics extends React.Component {
   }
 
   renderCards(topicId) {
-    const cards = topicId === 0 ? db.getAllCards() : db.getCardsRecursively(topicId);
+    //const cards = topicId === 0 ? db.getAllCards() : db.getCardsRecursively(topicId);
+    const cards = db.getCards(topicId);
     if (cards.length === 0) {
       return null;
     }
