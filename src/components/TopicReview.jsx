@@ -132,6 +132,7 @@ export default class TopicReview extends React.Component {
     for (let i = 0; i < doubleCount; i++) {
       if (dueDays === 0) {
         dueDays = 1;
+        i--;
       } else {
         dueDays *= 2;
       }
