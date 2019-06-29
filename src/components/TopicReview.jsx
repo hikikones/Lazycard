@@ -82,12 +82,7 @@ export default class TopicReview extends React.Component {
     }
 
     const newDueDays = this.getDueDays(answeredCorrectly);
-    const newDueDate = this.addDays(
-      this.state.card.last_review_date
-        ? new Date(this.state.card.last_review_date)
-        : new Date(this.state.card.due_date),
-      newDueDays
-    );
+    const newDueDate = this.addDays(new Date(Date.now()), newDueDays);
     db.updateCardReview(this.state.card.id, newDueDate, newDueDays);
 
     if (!answeredCorrectly) {
@@ -132,7 +127,6 @@ export default class TopicReview extends React.Component {
     for (let i = 0; i < doubleCount; i++) {
       if (dueDays === 0) {
         dueDays = 1;
-        i--;
       } else {
         dueDays *= 2;
       }
