@@ -1,37 +1,53 @@
+const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-const BUILD_DIR = __dirname + "/build";
-const APP_DIR = __dirname + "/src";
+const BUILD_DIR = path.resolve(__dirname, "build");
+const APP_DIR = path.resolve(__dirname, "src");
 
 const tsRule = {
     test: /\.ts(x?)$/,
-    use: 'ts-loader'
+    exclude: /node_modules/,
+    use: 'ts-loader',
+    resolve: {
+        extensions: [".ts", ".tsx"]
+    }
+};
+
+const jsRule = {
+    test: /\.js$/,
+    use: 'source-map-loader',
+    enforce: 'pre'
 };
 
 const mainConfig = {
     target: 'electron-main',
-    entry: APP_DIR + "/main/main.ts",
+    entry: path.resolve(APP_DIR, "main", "main.ts"),
+    devtool: 'source-map',
     output: {
         path: BUILD_DIR,
         filename: "main.js"
     },
     module: {
-        rules: [tsRule]
+        rules: [tsRule, jsRule]
     }
 };
 
 const rendererConfig = {
     target: 'electron-renderer',
-    entry: APP_DIR + "/renderer/index.tsx",
+    entry: path.resolve(APP_DIR, "renderer", "renderer.tsx"),
+    devtool: 'source-map',
     output: {
         path: BUILD_DIR,
-        filename: "index.js"
+        filename: "renderer.js"
     },
     module: {
-        rules: [tsRule]
+        rules: [tsRule, jsRule]
     },
     plugins: [
-        new HtmlWebpackPlugin({template: APP_DIR + "/renderer/index.html"})
+        new HtmlWebpackPlugin({
+            template: path.resolve(APP_DIR, "renderer", "index.html"),
+            filename: "index.html"
+        })
     ]
 };
 
