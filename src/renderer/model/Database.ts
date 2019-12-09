@@ -94,8 +94,8 @@ class Cards extends Table<Card> {
         return new Card(topicId);
     }
 
-    getByTopic(topicId: number): Card[] {
-        return this.getAll().filter(card => { card.topicId === topicId });
+    getByTopic(topicId: number): readonly Card[] {
+        return this.getAll().filter((card: Card) => card.topicId === topicId);
     }
 }
 
