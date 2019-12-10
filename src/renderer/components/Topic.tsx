@@ -3,11 +3,10 @@ import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
 
-import Card from './Card';
+import Cards from './Cards';
 
 export default class Topic extends React.Component<IProps, IState> {
     private readonly topic = db.topics.get(parseInt(this.props.match.params.id));
-    private readonly cards = db.cards.getByTopic(this.topic.id);
 
     public constructor(props: IProps) {
         super(props);
@@ -26,8 +25,7 @@ export default class Topic extends React.Component<IProps, IState> {
                 <h1>{this.state.name}</h1>
                 <button onClick={this.test}>Ok</button>
 
-                <h2>Cards</h2>
-                {this.cards.map(c => <Card key={c.id} front={c.front} back={c.back} />)}
+                <Cards topicId={this.topic.id} />
             </div>
         );
     }

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-export default class Card extends React.Component<IProps, IState> {
+export default class Card extends React.Component<IProps> {
     public constructor(props: IProps) {
         super(props);
     }
@@ -8,8 +8,9 @@ export default class Card extends React.Component<IProps, IState> {
     public render() {
         return (
             <div>
-                <p>{this.props.front}</p>
-                <p>{this.props.back}</p>
+                {this.props.front ? <p>{this.props.front}</p> : null}
+                {this.props.back ? <hr /> : null}
+                {this.props.back ? <p>{this.props.back}</p> : null}
             </div>
         );
     }
@@ -18,8 +19,4 @@ export default class Card extends React.Component<IProps, IState> {
 interface IProps {
     front?: string
     back?: string
-}
-
-interface IState {
-    //name: string
 }

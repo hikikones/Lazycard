@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 
 import Nav from './components/Nav';
 import Main from './components/Main';
+
+import "./style.css";
  
 ReactDOM.render(
     <MemoryRouter>

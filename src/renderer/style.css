@@ -1,0 +1,22 @@
+body {
+    margin: 0;
+}
+
+#app {
+    display: grid;
+    grid-template-rows: 100vh;
+    grid-template-columns: 150px auto;
+    grid-template-areas: "nav main";
+}
+
+nav {
+    grid-area: nav;
+    background-color: whitesmoke;
+    overflow: auto;
+}
+
+main {
+    grid-area: main;
+    background-color: white;
+    overflow: auto;
+}

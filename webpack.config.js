@@ -19,6 +19,11 @@ const jsRule = {
     enforce: 'pre'
 };
 
+const cssRule = {
+    test: /\.css$/,
+    use: ["style-loader", "css-loader"]
+};
+
 const mainConfig = {
     target: 'electron-main',
     entry: path.resolve(APP_DIR, "main", "main.ts"),
@@ -41,7 +46,7 @@ const rendererConfig = {
         filename: "renderer.js"
     },
     module: {
-        rules: [tsRule, jsRule]
+        rules: [tsRule, jsRule, cssRule]
     },
     plugins: [
         new HtmlWebpackPlugin({

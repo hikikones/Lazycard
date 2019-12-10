@@ -29,10 +29,12 @@ class NavSection extends React.Component<INavSectionProps> {
 
     public render() {
         return (
-            <div>
-                <h3>{this.props.title}</h3>
-                {this.props.children}
-            </div>
+            <section>
+                <h4>{this.props.title}</h4>
+                <ul>
+                    {this.props.children}
+                </ul>
+            </section>
         )
     }
 }
@@ -49,7 +51,9 @@ class NavItem extends React.Component<INavSectionItem> {
 
     public render() {
         return (
-            <NavLink exact to={this.props.to}>{this.props.name}</NavLink>
+            <li>
+                <NavLink exact to={this.props.to}>{this.props.name}</NavLink>
+            </li>
         )
     }
 }
