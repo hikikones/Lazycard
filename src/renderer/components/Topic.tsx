@@ -5,6 +5,7 @@ import db from '../model/Database';
 import { Card } from '../model/Database';
 
 import Cards from './Cards';
+import CardEditor from './CardEditor';
 
 export default class Topic extends React.Component<IProps, IState> {
     private readonly topic = db.topics.get(parseInt(this.props.match.params.id));
@@ -13,6 +14,7 @@ export default class Topic extends React.Component<IProps, IState> {
         super(props);
         this.state = {
             name: this.topic.name,
+            showCardEditor: false,
             cards: db.cards.getByTopic(this.topic.id)
         }
     }
@@ -23,21 +25,29 @@ export default class Topic extends React.Component<IProps, IState> {
         this.props.onTopicChange();
     }
 
-    private newCard = () => {
-        const card: Card = new Card(this.topic.id);
-        card.front = "Front";
-        card.back = "Back";
-        db.cards.add(card);
+    private updateCards = () => {
         this.setState({ cards: db.cards.getByTopic(this.topic.id) });
+    }
+
+    private toggleCardEditor = () => {
+        this.setState({ showCardEditor: !this.state.showCardEditor });
     }
 
     public render() {
         return (
             <div>
                 <h1>{this.state.name}</h1>
-                <button onClick={() => this.changeName("New Name")}>Change name</button>
 
-                <button onClick={() => this.newCard()}>New card</button>
+                {this.state.showCardEditor
+                    ?   <CardEditor
+                            topicId={this.topic.id}
+                            onSave={this.updateCards}
+                            onCancel={this.toggleCardEditor}
+                        />
+                    :   <button onClick={this.toggleCardEditor}>Add new card</button>
+                }
+
+                <button onClick={() => this.changeName("New Name")}>Change name</button>
 
                 <Cards cards={this.state.cards} />
             </div>
@@ -52,4 +62,5 @@ interface IProps extends RouteComponentProps<{ id: string }> {
 interface IState {
     name: string
     cards: readonly Card[]
+    showCardEditor: boolean
 }

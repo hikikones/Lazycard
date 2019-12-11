@@ -19,7 +19,6 @@ export default class Cards extends React.Component<IProps, IState> {
 
     public render() {
         const cards = this.props.cards ? this.props.cards : db.cards.getAll();
-        const test = cards.filter(c => c.front === "Front");
 
         return (
             <div>
@@ -27,7 +26,7 @@ export default class Cards extends React.Component<IProps, IState> {
 
                 <button onClick={this.toggleAnswer}>Toggle Answer</button>
 
-                {test.map(c =>
+                {cards.map(c =>
                     <Card
                         key={c.id}
                         front={c.front}
