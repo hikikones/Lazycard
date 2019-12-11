@@ -4,7 +4,11 @@ import { Switch, Route } from "react-router-dom";
 import Home from './Home';
 import Topic from './Topic';
 
-export default class Main extends React.Component {
+export default class Main extends React.Component<IProps> {
+    public constructor(props: IProps) {
+        super(props);
+    }
+
     public render() {
         return (
             <main>
@@ -13,10 +17,14 @@ export default class Main extends React.Component {
                         <Home />
                     </Route>
                     <Route path="/topics/:id" render={(props) => (
-                        <Topic key={props.match.params.id} {...props} />
+                        <Topic {...props} onTopicChange={this.props.onTopicChange} key={props.match.params.id} />
                     )} />
                 </Switch>
             </main>
         );
     }
+}
+
+interface IProps {
+    onTopicChange(): void
 }

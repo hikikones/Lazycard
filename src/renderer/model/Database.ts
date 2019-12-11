@@ -15,7 +15,7 @@ class Database {
         fs.writeFileSync(filePath, this.toJSON());
     }
 
-    load() {
+    private load() {
         if (!fs.existsSync(cfg.getDatabasePath())) {
             return;
         }
@@ -24,7 +24,7 @@ class Database {
         const json: any = JSON.parse(buffer.toString());
 
         json.cards.forEach((c: Card) => {
-            const card: Card = this.cards.new(c.topicId);
+            const card: Card = new Card(c.topicId);
             card.id = c.id;
             card.front = c.front;
             card.back = c.back;
@@ -32,7 +32,7 @@ class Database {
         });
 
         json.topics.forEach((t: Topic) => {
-            const topic: Topic = this.topics.new(t.name);
+            const topic: Topic = new Topic(t.name);
             topic.id = t.id;
             this.topics.add(topic);
         });
@@ -50,8 +50,6 @@ class Database {
 abstract class Table<T extends Entity> {
     public idCounter: number = 1;
     private items: T[] = [];
-
-    abstract new(field: string|number): T;
 
     get(id: number): T {
         return this.items[this.getIndex(id)];
@@ -90,26 +88,19 @@ abstract class Table<T extends Entity> {
 }
 
 class Cards extends Table<Card> {
-    new(topicId: number): Card {
-        return new Card(topicId);
-    }
-
     getByTopic(topicId: number): readonly Card[] {
         return this.getAll().filter((card: Card) => card.topicId === topicId);
     }
 }
 
 class Topics extends Table<Topic> {
-    new(name: string): Topic {
-        return new Topic(name);
-    }
 }
 
 abstract class Entity {
     public id: number;
 }
 
-class Card extends Entity {
+export class Card extends Entity {
     public front: string;
     public back: string;
     public topicId: number;
@@ -120,7 +111,7 @@ class Card extends Entity {
     }
 }
 
-class Topic extends Entity {
+export class Topic extends Entity {
     public name: string;
 
     public constructor(name: string) {

@@ -2,7 +2,7 @@ body {
     margin: 0;
 }
 
-#app {
+#app > div {
     display: grid;
     grid-template-rows: 100vh;
     grid-template-columns: 150px auto;

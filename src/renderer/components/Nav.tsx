@@ -2,24 +2,34 @@ import * as React from 'react';
 import { NavLink } from "react-router-dom";
 
 import db from '../model/Database';
+import { Topic } from '../model/Database';
 
-export default class Nav extends React.Component {
-    private add = (): void => {
+export default class Nav extends React.Component<INavProps> {
+    public constructor(props: INavProps) {
+        super(props);
+    }
 
+    private addTopic = (): void => {
+        const topic: Topic = new Topic("New Topic");
+        db.topics.add(topic);
+        this.props.onTopicChange();
     }
 
     public render() {
-        const topics = db.topics.getAll();
-
         return (
             <nav>
                 <NavSection title="Topics">
-                    {topics.map(t => <NavItem key={t.id} name={t.name} to={`/topics/${t.id}`} />)}
-                    <p>ADD</p>
+                    {this.props.topics.map(t => <NavItem key={t.id} name={t.name} to={`/topics/${t.id}`} />)}
+                    <button onClick={this.addTopic}>Add</button>
                 </NavSection>
             </nav>
         );
     }
+}
+
+interface INavProps {
+    topics: readonly Topic[]
+    onTopicChange(): void
 }
 
 class NavSection extends React.Component<INavSectionProps> {
