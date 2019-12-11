@@ -2,6 +2,7 @@ import * as React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
+import { Card } from '../model/Database';
 
 import Cards from './Cards';
 
@@ -11,7 +12,8 @@ export default class Topic extends React.Component<IProps, IState> {
     public constructor(props: IProps) {
         super(props);
         this.state = {
-            name: this.topic.name
+            name: this.topic.name,
+            cards: db.cards.getByTopic(this.topic.id)
         }
     }
 
@@ -21,13 +23,23 @@ export default class Topic extends React.Component<IProps, IState> {
         this.props.onTopicChange();
     }
 
+    private newCard = () => {
+        const card: Card = new Card(this.topic.id);
+        card.front = "Front";
+        card.back = "Back";
+        db.cards.add(card);
+        this.setState({ cards: db.cards.getByTopic(this.topic.id) });
+    }
+
     public render() {
         return (
             <div>
                 <h1>{this.state.name}</h1>
                 <button onClick={() => this.changeName("New Name")}>Change name</button>
 
-                <Cards topicId={this.topic.id} />
+                <button onClick={() => this.newCard()}>New card</button>
+
+                <Cards cards={this.state.cards} />
             </div>
         );
     }
@@ -39,4 +51,5 @@ interface IProps extends RouteComponentProps<{ id: string }> {
 
 interface IState {
     name: string
+    cards: readonly Card[]
 }

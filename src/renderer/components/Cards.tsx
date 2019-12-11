@@ -1,26 +1,47 @@
 import * as React from 'react';
 
 import db from '../model/Database';
+import { Card as CardEntity } from '../model/Database';
 
 import Card from './Card';
 
-export default class Cards extends React.Component<IProps> {
-    private cards = this.props.topicId ? db.cards.getByTopic(this.props.topicId) : db.cards.getAll();
-
+export default class Cards extends React.Component<IProps, IState> {
     public constructor(props: IProps) {
         super(props);
+        this.state = {
+            showBack: false
+        }
+    }
+
+    private toggleAnswer = (): void => {
+        this.setState({ showBack: !this.state.showBack });
     }
 
     public render() {
+        const cards = this.props.cards ? this.props.cards : db.cards.getAll();
+        const test = cards.filter(c => c.front === "Front");
+
         return (
             <div>
                 <h2>Cards</h2>
-                {this.cards.map(c => <Card key={c.id} front={c.front} back={c.back} />)}
+
+                <button onClick={this.toggleAnswer}>Toggle Answer</button>
+
+                {test.map(c =>
+                    <Card
+                        key={c.id}
+                        front={c.front}
+                        back={this.state.showBack ? c.back : null}
+                    />)}
             </div>
         );
     }
 }
 
 interface IProps {
-    topicId?: number
+    cards?: readonly CardEntity[]
+}
+
+interface IState {
+    showBack: boolean
 }

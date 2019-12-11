@@ -18,6 +18,9 @@ export default class Nav extends React.Component<INavProps> {
     public render() {
         return (
             <nav>
+                <NavSection title="Cards">
+                    <NavItem name="All cards" to="/cards/" />
+                </NavSection>
                 <NavSection title="Topics">
                     {this.props.topics.map(t => <NavItem key={t.id} name={t.name} to={`/topics/${t.id}`} />)}
                     <button onClick={this.addTopic}>Add</button>
