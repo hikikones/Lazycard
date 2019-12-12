@@ -11,8 +11,7 @@ export default class Review extends React.Component<IProps, IState> {
     public constructor(props: IProps) {
         super(props);
         const topicId = Number(this.props.match.params.topicId);
-        const cardsToReview = Number.isNaN(topicId) ? db.cards.getAll() : db.cards.getByTopic(topicId);
-        this.cards = [...cardsToReview];
+        this.cards = Number.isNaN(topicId) ? db.cards.getDue() : db.cards.getDue(topicId);
 
         this.shuffle();
 

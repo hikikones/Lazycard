@@ -7,7 +7,7 @@ class SRS {
         card.dueDate.setDate(card.dueDate.getDate() + card.dueDays);
     }
 
-    public init(card: Card): void {
+    public tomorrow(card: Card): void {
         card.dueDays = 1;
         card.dueDate = new Date(Date.now());
         card.dueDate.setDate(card.dueDate.getDate() + card.dueDays);

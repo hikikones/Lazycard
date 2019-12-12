@@ -11,13 +11,14 @@ class Database {
         this.load();
     }
 
-    public save(path: string = null) {
+    public save(path: string = null): void {
         const filePath: string = path === null ? cfg.getDatabasePath() : cfg.getBackupPath();
         fs.writeFileSync(filePath, this.toJSON());
     }
 
-    private load() {
+    private load(): void {
         if (!fs.existsSync(cfg.getDatabasePath())) {
+            this.initSample();
             return;
         }
 
@@ -47,6 +48,20 @@ class Database {
             topics: this.topics.getAll().map(t => t.serialize())
         }, null, 2);
     }
+
+    private initSample(): void {
+        const topic = this.topics.new("Sample Topic");
+
+        const card1 = this.cards.new(topic.id);
+        card1.front = "This card should be scheduled today.";
+        card1.back = "Yes.";
+        srs.today(card1);
+
+        const card2 = this.cards.new(topic.id);
+        card2.front = "This card should be scheduled tomorrow.";
+        card2.back = "Yes.";
+        srs.tomorrow(card2);
+    }
 }
 
 abstract class Table<T extends Entity<EntityData>> {
@@ -71,7 +86,7 @@ abstract class Table<T extends Entity<EntityData>> {
         return this.items;
     }
 
-    public add(item: T) {
+    public add(item: T): void {
         if (item.id === undefined) {
             throw new Error(`Missing id on item ${item} to be added.`);
         }
@@ -83,7 +98,7 @@ abstract class Table<T extends Entity<EntityData>> {
         this.items.push(item);
     }
 
-    public delete(id: number) {
+    public delete(id: number): void {
         const index = this.getIndex(id);
         this.items.splice(index, 1);
     }
@@ -103,11 +118,21 @@ abstract class Table<T extends Entity<EntityData>> {
 class Cards extends Table<Card> {
     protected create(topicId: number): Card {
         const card = new Card(topicId);
-        srs.init(card);
+        srs.tomorrow(card);
         return card;
     }
 
-    public getByTopic(topicId: number): readonly Card[] {
+    public getDue(topicId?: number): Card[] {
+        const now = new Date(Date.now());
+
+        if (topicId === undefined) {
+            return this.getAll().filter((card: Card) => card.dueDate <= now);
+        }
+
+        return this.getAll().filter((card: Card) => card.dueDate <= now && card.topicId === topicId);
+    }
+
+    public getByTopic(topicId: number): Card[] {
         return this.getAll().filter((card: Card) => card.topicId === topicId);
     }
 }
