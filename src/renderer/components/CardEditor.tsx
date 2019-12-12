@@ -14,10 +14,9 @@ export default class CardEditor extends React.Component<IProps> {
     private save = () => {
         if (this.isEmpty()) return;
 
-        const card: Card = new Card(this.props.topicId);
+        const card: Card = db.cards.new(this.props.topicId);
         card.front = this.front.current.value;
         card.back = this.back.current.value;
-        db.cards.add(card);
         this.clear();
         this.props.onSave();
     }

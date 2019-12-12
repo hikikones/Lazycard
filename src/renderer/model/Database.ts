@@ -51,6 +51,16 @@ abstract class Table<T extends Entity> {
     public idCounter: number = 1;
     private items: T[] = [];
 
+    protected abstract create(field: string|number): T;
+
+    new(field: string|number): T {
+        const item = this.create(field);
+        item.id = this.idCounter;
+        this.idCounter++;
+        this.items.push(item);
+        return item;
+    }
+
     get(id: number): T {
         return this.items[this.getIndex(id)];
     }
@@ -61,12 +71,13 @@ abstract class Table<T extends Entity> {
 
     add(item: T) {
         if (item.id === undefined) {
-            item.id = this.idCounter;
-            this.idCounter++;
-        } else if (item.id >= this.idCounter) {
+            throw new Error(`Missing id on item ${item} to be added.`);
+        }
+
+        if (item.id >= this.idCounter) {
             this.idCounter = item.id + 1;
         }
-        
+
         this.items.push(item);
     }
 
@@ -88,12 +99,19 @@ abstract class Table<T extends Entity> {
 }
 
 class Cards extends Table<Card> {
+    protected create(topicId: number): Card {
+        return new Card(topicId);
+    }
+
     getByTopic(topicId: number): readonly Card[] {
         return this.getAll().filter((card: Card) => card.topicId === topicId);
     }
 }
 
 class Topics extends Table<Topic> {
+    protected create(name: string): Topic {
+        return new Topic(name);
+    }
 }
 
 abstract class Entity {

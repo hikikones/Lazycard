@@ -10,8 +10,7 @@ export default class Nav extends React.Component<INavProps> {
     }
 
     private addTopic = (): void => {
-        const topic: Topic = new Topic("New Topic");
-        db.topics.add(topic);
+        const topic: Topic = db.topics.new("New Topic");
         this.props.onTopicChange();
     }
 
