@@ -24,7 +24,7 @@ class Database {
         const buffer: Buffer = fs.readFileSync(cfg.getDatabasePath());
         const json: any = JSON.parse(buffer.toString());
 
-        json.cards.forEach((c: CardJSON) => {
+        json.cards.forEach((c: CardData) => {
             const card: Card = new Card(c.topicId);
             card.id = c.id;
             card.front = c.front;
@@ -34,7 +34,7 @@ class Database {
             this.cards.add(card);
         });
 
-        json.topics.forEach((t: TopicJSON) => {
+        json.topics.forEach((t: TopicData) => {
             const topic: Topic = new Topic(t.name);
             topic.id = t.id;
             this.topics.add(topic);
@@ -43,18 +43,17 @@ class Database {
 
     private toJSON(): string {
         return JSON.stringify({
-            cards: this.cards.toJSON(),
-            topics: this.topics.toJSON()
+            cards: this.cards.getAll().map(c => c.serialize()),
+            topics: this.topics.getAll().map(t => t.serialize())
         }, null, 2);
     }
 }
 
-abstract class Table<T extends Entity> implements ISerialize<EntityJSON> {
+abstract class Table<T extends Entity<EntityData>> {
     public idCounter: number = 1;
     private items: T[] = [];
 
     protected abstract create(field: string|number): T;
-    abstract toJSON(): EntityJSON[];
 
     public new(field: string|number): T {
         const item = this.create(field);
@@ -111,28 +110,20 @@ class Cards extends Table<Card> {
     public getByTopic(topicId: number): readonly Card[] {
         return this.getAll().filter((card: Card) => card.topicId === topicId);
     }
-
-    public toJSON(): CardJSON[] {
-        return this.getAll().map(c => c.toJSON());
-    }
 }
 
 class Topics extends Table<Topic> {
     protected create(name: string): Topic {
         return new Topic(name);
     }
-
-    public toJSON(): TopicJSON[] {
-        return this.getAll().map(t => t.toJSON());
-    }
 }
 
-abstract class Entity implements ISerialize<EntityJSON> {
-    abstract toJSON(): EntityJSON;
+abstract class Entity<E extends EntityData> {
     public id: number;
+    abstract serialize(): E;
 }
 
-export class Card extends Entity {
+export class Card extends Entity<CardData> {
     public front: string;
     public back: string;
     public dueDate: Date;
@@ -144,7 +135,7 @@ export class Card extends Entity {
         this.topicId = topicId;
     }
 
-    public toJSON(): CardJSON {
+    public serialize(): CardData {
         return {
             id: this.id,
             front: this.front,
@@ -156,7 +147,7 @@ export class Card extends Entity {
     }
 }
 
-export class Topic extends Entity {
+export class Topic extends Entity<TopicData> {
     public name: string;
 
     public constructor(name: string) {
@@ -164,20 +155,16 @@ export class Topic extends Entity {
         this.name = name;
     }
 
-    public toJSON(): TopicJSON {
+    public serialize(): TopicData {
         return { id: this.id, name: this.name }
     }
 }
 
-interface ISerialize<T extends EntityJSON> {
-    toJSON(): T|T[]
-}
-
-interface EntityJSON {
+interface EntityData {
     id: number;
 }
 
-interface CardJSON extends EntityJSON {
+interface CardData extends EntityData {
     front: string;
     back: string;
     dueDate: string;
@@ -185,7 +172,7 @@ interface CardJSON extends EntityJSON {
     topicId: number;
 }
 
-interface TopicJSON extends EntityJSON {
+interface TopicData extends EntityData {
     name: string;
 }
 
