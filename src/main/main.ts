@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -19,21 +19,24 @@ function createWindow() {
 		mainWindow.webContents.openDevTools();
 	}
 
-	mainWindow.on("closed", () => {
-		mainWindow = null;
+	mainWindow.on("close", (e: Event) => {
+		if (mainWindow) {
+			e.preventDefault();
+			mainWindow.hide();
+			mainWindow.webContents.send("app-close");
+		}
 	});
 }
 
 app.on("ready", createWindow);
 
-app.on("window-all-closed", () => {
-	if (process.platform !== "darwin") {
-		app.quit();
-	}
-});
-
 app.on("activate", () => {
 	if (mainWindow === null) {
 		createWindow();
 	}
+});
+
+ipcMain.on('quit', (e: Event) => {
+	mainWindow = null;
+	app.quit();
 });
