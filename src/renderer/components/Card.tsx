@@ -5,6 +5,8 @@ export default class Card extends React.Component<IProps> {
         super(props);
     }
 
+    // TODO: Markdown.
+
     public render() {
         return (
             <div>

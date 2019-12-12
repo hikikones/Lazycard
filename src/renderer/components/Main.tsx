@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Switch, Route } from "react-router-dom";
 
 import Home from './Home';
+import Review from './Review';
 import Cards from './Cards';
 import Topic from './Topic';
 
@@ -17,6 +18,9 @@ export default class Main extends React.Component<IProps> {
                     <Route exact path="/">
                         <Home />
                     </Route>
+                    <Route path="/review/:topicId" render={(props) => (
+                        <Review {...props} key={props.match.params.topicId} />
+                    )} />
                     <Route path="/cards/">
                         <Cards />
                     </Route>

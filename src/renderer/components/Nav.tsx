@@ -24,6 +24,8 @@ export default class Nav extends React.Component<INavProps> {
         return (
             <nav>
                 <NavSection title="Cards">
+                    <NavSectionLink name="Home" to="/" />
+                    <NavSectionLink name="Due today" to="/review/:topicId" />
                     <NavSectionLink name="All cards" to="/cards/" />
                 </NavSection>
 

@@ -60,7 +60,7 @@ abstract class Table<T extends Entity> {
     }
 
     add(item: T) {
-        if (typeof item.id === "undefined") {
+        if (item.id === undefined) {
             item.id = this.idCounter;
             this.idCounter++;
         } else if (item.id >= this.idCounter) {

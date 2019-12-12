@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { RouteComponentProps } from 'react-router-dom';
+import { Link, RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
 import { Card } from '../model/Database';
@@ -25,11 +25,11 @@ export default class Topic extends React.Component<IProps, IState> {
         this.props.onTopicChange();
     }
 
-    private updateCards = () => {
+    private updateCards = (): void => {
         this.setState({ cards: db.cards.getByTopic(this.topic.id) });
     }
 
-    private toggleCardEditor = () => {
+    private toggleCardEditor = (): void => {
         this.setState({ showCardEditor: !this.state.showCardEditor });
     }
 
@@ -48,6 +48,8 @@ export default class Topic extends React.Component<IProps, IState> {
                 }
 
                 <button onClick={() => this.changeName("New Name")}>Change name</button>
+
+                <Link to={`/review/${this.topic.id}`}>Review</Link>
 
                 <Cards cards={this.state.cards} />
             </div>
