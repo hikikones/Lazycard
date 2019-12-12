@@ -18,6 +18,7 @@ export default class Cards extends React.Component<IProps, IState> {
     }
 
     public render() {
+        // TODO: make cards prop mandatory? if so, update route.
         const cards = this.props.cards ? this.props.cards : db.cards.getAll();
 
         return (

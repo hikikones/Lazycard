@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
 import cfg from './Config';
+import srs from '../controller/SRS';
 
 class Database {
     public readonly cards: Cards = new Cards();
@@ -10,7 +11,7 @@ class Database {
         this.load();
     }
 
-    save(path: string = null) {
+    public save(path: string = null) {
         const filePath: string = path === null ? cfg.getDatabasePath() : cfg.getBackupPath();
         fs.writeFileSync(filePath, this.toJSON());
     }
@@ -23,15 +24,17 @@ class Database {
         const buffer: Buffer = fs.readFileSync(cfg.getDatabasePath());
         const json: any = JSON.parse(buffer.toString());
 
-        json.cards.forEach((c: Card) => {
+        json.cards.forEach((c: CardJSON) => {
             const card: Card = new Card(c.topicId);
             card.id = c.id;
             card.front = c.front;
             card.back = c.back;
+            card.dueDate = new Date(c.dueDate);
+            card.dueDays = c.dueDays;
             this.cards.add(card);
         });
 
-        json.topics.forEach((t: Topic) => {
+        json.topics.forEach((t: TopicJSON) => {
             const topic: Topic = new Topic(t.name);
             topic.id = t.id;
             this.topics.add(topic);
@@ -39,21 +42,21 @@ class Database {
     }
 
     private toJSON(): string {
-        const json: string = JSON.stringify({
-            cards: this.cards.getAll(),
-            topics: this.topics.getAll()
+        return JSON.stringify({
+            cards: this.cards.toJSON(),
+            topics: this.topics.toJSON()
         }, null, 2);
-        return json;
     }
 }
 
-abstract class Table<T extends Entity> {
+abstract class Table<T extends Entity> implements ISerialize<EntityJSON> {
     public idCounter: number = 1;
     private items: T[] = [];
 
     protected abstract create(field: string|number): T;
+    abstract toJSON(): EntityJSON[];
 
-    new(field: string|number): T {
+    public new(field: string|number): T {
         const item = this.create(field);
         item.id = this.idCounter;
         this.idCounter++;
@@ -61,15 +64,15 @@ abstract class Table<T extends Entity> {
         return item;
     }
 
-    get(id: number): T {
+    public get(id: number): T {
         return this.items[this.getIndex(id)];
     }
 
-    getAll(): readonly T[] {
+    public getAll(): readonly T[] {
         return this.items;
     }
 
-    add(item: T) {
+    public add(item: T) {
         if (item.id === undefined) {
             throw new Error(`Missing id on item ${item} to be added.`);
         }
@@ -81,12 +84,12 @@ abstract class Table<T extends Entity> {
         this.items.push(item);
     }
 
-    delete(id: number) {
+    public delete(id: number) {
         const index = this.getIndex(id);
         this.items.splice(index, 1);
     }
 
-    size(): number {
+    public size(): number {
         return this.items.length;
     }
 
@@ -100,11 +103,17 @@ abstract class Table<T extends Entity> {
 
 class Cards extends Table<Card> {
     protected create(topicId: number): Card {
-        return new Card(topicId);
+        const card = new Card(topicId);
+        srs.init(card);
+        return card;
     }
 
-    getByTopic(topicId: number): readonly Card[] {
+    public getByTopic(topicId: number): readonly Card[] {
         return this.getAll().filter((card: Card) => card.topicId === topicId);
+    }
+
+    public toJSON(): CardJSON[] {
+        return this.getAll().map(c => c.toJSON());
     }
 }
 
@@ -112,20 +121,38 @@ class Topics extends Table<Topic> {
     protected create(name: string): Topic {
         return new Topic(name);
     }
+
+    public toJSON(): TopicJSON[] {
+        return this.getAll().map(t => t.toJSON());
+    }
 }
 
-abstract class Entity {
+abstract class Entity implements ISerialize<EntityJSON> {
+    abstract toJSON(): EntityJSON;
     public id: number;
 }
 
 export class Card extends Entity {
     public front: string;
     public back: string;
+    public dueDate: Date;
+    public dueDays: number;
     public topicId: number;
 
     public constructor(topicId: number) {
         super();
         this.topicId = topicId;
+    }
+
+    public toJSON(): CardJSON {
+        return {
+            id: this.id,
+            front: this.front,
+            back: this.back,
+            dueDate: this.dueDate.toLocaleDateString(),
+            dueDays: this.dueDays,
+            topicId: this.topicId
+        }
     }
 }
 
@@ -136,6 +163,30 @@ export class Topic extends Entity {
         super();
         this.name = name;
     }
+
+    public toJSON(): TopicJSON {
+        return { id: this.id, name: this.name }
+    }
+}
+
+interface ISerialize<T extends EntityJSON> {
+    toJSON(): T|T[]
+}
+
+interface EntityJSON {
+    id: number;
+}
+
+interface CardJSON extends EntityJSON {
+    front: string;
+    back: string;
+    dueDate: string;
+    dueDays: number;
+    topicId: number;
+}
+
+interface TopicJSON extends EntityJSON {
+    name: string;
 }
 
 export default new Database();

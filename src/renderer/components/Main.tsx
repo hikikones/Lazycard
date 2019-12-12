@@ -22,7 +22,7 @@ export default class Main extends React.Component<IProps> {
                         <Review {...props} key={props.match.params.topicId} />
                     )} />
                     <Route path="/cards/">
-                        <Cards />
+                        <Cards /> {/* TODO: pass cards in props? */}
                     </Route>
                     <Route path="/topics/:id" render={(props) => (
                         <Topic {...props} onTopicChange={this.props.onTopicChange} key={props.match.params.id} />
