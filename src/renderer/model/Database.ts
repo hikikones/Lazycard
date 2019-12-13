@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 
 import cfg from './Config';
+import dialog from '../controller/Dialog';
 import srs from '../controller/SRS';
 
 class Database {
@@ -12,8 +13,19 @@ class Database {
     }
 
     public save(path: string = null): void {
+        // TODO: Only use database path. No need for backup path.
         const filePath: string = path === null ? cfg.getDatabasePath() : cfg.getBackupPath();
         fs.writeFileSync(filePath, this.toJSON());
+    }
+
+    public export(topicId: number): void {
+        const path = dialog.saveFile('lazytopic', ['lazytopic']);
+        if (path === undefined) return;
+
+        const topic = this.topics.get(topicId).export();
+        const cards = this.cards.getByTopic(topicId);
+        cards.forEach(c => topic.cards.push(c.export()));
+        fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
     private load(): void {
@@ -64,7 +76,7 @@ class Database {
     }
 }
 
-abstract class Table<T extends Entity<EntityData>> {
+abstract class Table<T extends Entity<EntityData, EntityExport>> {
     public idCounter: number = 1;
     private items: T[] = [];
 
@@ -143,12 +155,13 @@ class Topics extends Table<Topic> {
     }
 }
 
-abstract class Entity<E extends EntityData> {
+abstract class Entity<E extends EntityData, F extends EntityExport> {
     public id: number;
     abstract serialize(): E;
+    abstract export(): F;
 }
 
-export class Card extends Entity<CardData> {
+export class Card extends Entity<CardData, CardExport> {
     public front: string;
     public back: string;
     public dueDate: Date;
@@ -170,9 +183,13 @@ export class Card extends Entity<CardData> {
             topicId: this.topicId
         }
     }
+
+    public export(): CardExport {
+        return { front: this.front, back: this.back }
+    }
 }
 
-export class Topic extends Entity<TopicData> {
+export class Topic extends Entity<TopicData, TopicExport> {
     public name: string;
 
     public constructor(name: string) {
@@ -183,22 +200,38 @@ export class Topic extends Entity<TopicData> {
     public serialize(): TopicData {
         return { id: this.id, name: this.name }
     }
+
+    public export(): TopicExport {
+        return { name: this.name, cards: [] }
+    }
 }
 
 interface EntityData {
-    id: number;
+    id: number
 }
 
 interface CardData extends EntityData {
-    front: string;
-    back: string;
-    dueDate: string;
-    dueDays: number;
-    topicId: number;
+    front: string
+    back: string
+    dueDate: string
+    dueDays: number
+    topicId: number
 }
 
 interface TopicData extends EntityData {
-    name: string;
+    name: string
+}
+
+interface EntityExport {}
+
+interface TopicExport extends EntityExport {
+    name: string
+    cards: CardExport[]
+}
+
+interface CardExport extends EntityExport {
+    front: string
+    back: string
 }
 
 export default new Database();

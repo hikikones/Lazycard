@@ -46,9 +46,8 @@ export default class Topic extends React.Component<IProps, IState> {
                         />
                     :   <button onClick={this.toggleCardEditor}>Add new card</button>
                 }
-
                 <button onClick={() => this.changeName("New Name")}>Change name</button>
-
+                <button onClick={() => db.export(this.topic.id)}>Export</button>
                 <Link to={`/review/${this.topic.id}`}>Review</Link>
 
                 <Cards cards={this.state.cards} />
