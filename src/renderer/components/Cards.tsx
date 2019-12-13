@@ -31,7 +31,7 @@ export default class Cards extends React.Component<IProps, IState> {
                     <Card
                         key={c.id}
                         front={c.front}
-                        back={this.state.showBack ? c.back : null}
+                        back={this.state.showBack ? c.back : undefined}
                     />
                 )}
             </div>

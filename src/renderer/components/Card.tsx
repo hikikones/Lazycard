@@ -1,18 +1,18 @@
 import * as React from 'react';
 
+import md from '../controller/Markdown';
+
 export default class Card extends React.Component<IProps> {
     public constructor(props: IProps) {
         super(props);
     }
 
-    // TODO: Markdown.
-
     public render() {
         return (
             <div>
-                {this.props.front ? <p>{this.props.front}</p> : null}
-                {this.props.back ? <hr /> : null}
-                {this.props.back ? <p>{this.props.back}</p> : null}
+                {this.props.front === undefined ? null : <CardContent markdown={this.props.front} />}
+                {this.props.back === undefined ? null : <hr />}
+                {this.props.back === undefined ? null : <CardContent markdown={this.props.back} />}
             </div>
         );
     }
@@ -21,4 +21,8 @@ export default class Card extends React.Component<IProps> {
 interface IProps {
     front?: string
     back?: string
+}
+
+const CardContent = (props: { markdown: string }) => {
+    return <div dangerouslySetInnerHTML={{ __html: md.parse(props.markdown) }} />
 }

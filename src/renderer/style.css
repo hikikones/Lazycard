@@ -1,6 +1,11 @@
+@import '~katex/dist/katex.min.css';
+@import "~prismjs/themes/prism-tomorrow.css";
+
 body {
     margin: 0;
 }
+
+/* TODO: Fix small window size scroll bug. That is, the side navigation is not sticky. */
 
 #app > div {
     display: grid;

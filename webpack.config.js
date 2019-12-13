@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const nodeExternals = require("webpack-node-externals");
 
 const BUILD_DIR = path.resolve(__dirname, "build");
 const APP_DIR = path.resolve(__dirname, "src");
@@ -13,47 +14,55 @@ const tsRule = {
     }
 };
 
-const jsRule = {
-    test: /\.js$/,
-    use: 'source-map-loader',
-    enforce: 'pre'
-};
-
 const cssRule = {
     test: /\.css$/,
     use: ["style-loader", "css-loader"]
 };
 
+const fileRule = {
+    test: /\.(png|jpe?g|gif|svg|ttf|woff(2)?|eot)$/,
+    use: "file-loader"
+};
+
+const nodeSettings = {
+    __dirname: false,
+    __filename: false
+};
+
+const externalsList = [nodeExternals()];
+
 const mainConfig = {
     target: 'electron-main',
     entry: path.resolve(APP_DIR, "main", "main.ts"),
-    devtool: 'source-map',
     output: {
         path: BUILD_DIR,
         filename: "main.js"
     },
     module: {
-        rules: [tsRule, jsRule]
-    }
+        rules: [tsRule]
+    },
+    node: nodeSettings,
+    externals: externalsList
 };
 
 const rendererConfig = {
     target: 'electron-renderer',
     entry: path.resolve(APP_DIR, "renderer", "renderer.tsx"),
-    devtool: 'source-map',
     output: {
         path: BUILD_DIR,
         filename: "renderer.js"
     },
     module: {
-        rules: [tsRule, jsRule, cssRule]
+        rules: [tsRule, cssRule, fileRule]
     },
     plugins: [
         new HtmlWebpackPlugin({
             template: path.resolve(APP_DIR, "renderer", "index.html"),
             filename: "index.html"
         })
-    ]
+    ],
+    node: nodeSettings,
+    externals: externalsList
 };
 
 module.exports = [mainConfig, rendererConfig];

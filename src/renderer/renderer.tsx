@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import db from './model/Database';
 import App from './components/App';
-import "./style.css";
+import './style.css';
  
 ReactDOM.render(
     <MemoryRouter>
