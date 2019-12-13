@@ -74,7 +74,7 @@ export default class Review extends React.Component<IProps, IState> {
 
                 <Card
                     front={this.state.currentCard.front}
-                    back={this.state.showAnswer ? this.state.currentCard.back : null}
+                    back={this.state.showAnswer ? this.state.currentCard.back : undefined}
                 />
 
                 {this.state.showAnswer ? null : <button onClick={this.showAnswer}>Show answer</button>}

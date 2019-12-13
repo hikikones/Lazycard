@@ -4,6 +4,7 @@ import { Switch, Route } from "react-router-dom";
 import Home from './Home';
 import Review from './Review';
 import Cards from './Cards';
+import Settings from './Settings';
 import Topic from './Topic';
 
 export default class Main extends React.Component<IProps> {
@@ -23,6 +24,9 @@ export default class Main extends React.Component<IProps> {
                     )} />
                     <Route path="/cards/">
                         <Cards /> {/* TODO: pass cards in props? */}
+                    </Route>
+                    <Route path="/settings">
+                        <Settings />
                     </Route>
                     <Route path="/topics/:id" render={(props) => (
                         <Topic {...props} onTopicChange={this.props.onTopicChange} key={props.match.params.id} />

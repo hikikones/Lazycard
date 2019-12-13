@@ -12,10 +12,8 @@ class Database {
         this.load();
     }
 
-    public save(path: string = null): void {
-        // TODO: Only use database path. No need for backup path.
-        const filePath: string = path === null ? cfg.getDatabasePath() : cfg.getBackupPath();
-        fs.writeFileSync(filePath, this.toJSON());
+    public save(): void {
+        fs.writeFileSync(cfg.getDatabasePath(), this.toJSON());
     }
 
     public export(topicId: number): void {
