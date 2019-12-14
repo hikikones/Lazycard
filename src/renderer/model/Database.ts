@@ -26,6 +26,22 @@ class Database {
         fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
+    public import(): void {
+        const lazytopic = dialog.openFile('lazytopic', ['lazytopic']);
+        if (lazytopic === undefined) return;
+
+        const buffer = fs.readFileSync(lazytopic);
+        const json: TopicExport = JSON.parse(buffer.toString());
+
+        // TODO: check for duplicates/existing
+        const topic = this.topics.new(json.name);
+        json.cards.forEach(c => {
+            const card = this.cards.new(topic.id);
+            card.front = c.front;
+            card.back = c.back;
+        });
+    }
+
     private load(): void {
         if (!fs.existsSync(cfg.getDatabasePath())) {
             this.initSample();

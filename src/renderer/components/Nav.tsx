@@ -15,8 +15,8 @@ export default class Nav extends React.Component<INavProps> {
     }
 
     private import = () => {
-        // TODO: db.import?
-        console.log("IMPORT");
+        db.import();
+        this.props.onTopicChange();
     }
 
     public render() {
