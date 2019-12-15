@@ -65,7 +65,7 @@ export default class Topic extends React.Component<IProps, IState> {
                 <Link to={`/review/${this.topic.id}`}>Review</Link>
                 <button onClick={this.delete}>Delete</button>
 
-                <Cards cards={this.state.cards} />
+                <Cards cards={this.state.cards} onCardChange={this.updateCards} />
             </div>
         );
     }

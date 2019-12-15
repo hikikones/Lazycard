@@ -4,6 +4,7 @@ import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
 
 import Card from './Card';
+import CardMenu from './CardMenu';
 
 export default class Cards extends React.Component<IProps, IState> {
     public constructor(props: IProps) {
@@ -17,22 +18,32 @@ export default class Cards extends React.Component<IProps, IState> {
         this.setState({ showBack: !this.state.showBack });
     }
 
-    public render() {
-        // TODO: make cards prop mandatory? if so, update route.
-        const cards = this.props.cards ? this.props.cards : db.cards.getAll();
+    private edit = (card: CardEntity): void => {
+        // TODO: show modal for card edit
+        console.log("EDIT: " + card.id);
+    }
 
+    private delete = (card: CardEntity): void => {
+        console.log("DELETE: " + card.id);
+        db.cards.delete(card.id);
+        this.props.onCardChange();
+    }
+
+    public render() {
         return (
             <div>
                 <h2>Cards</h2>
 
                 <button onClick={this.toggleAnswer}>Toggle Answer</button>
 
-                {cards.map(c =>
+                {this.props.cards.map(c =>
                     <Card
                         key={c.id}
                         front={c.front}
                         back={this.state.showBack ? c.back : undefined}
-                    />
+                    >
+                        <CardMenu card={c} onEdit={this.edit} onDelete={this.delete} />
+                    </Card>
                 )}
             </div>
         );
@@ -40,7 +51,8 @@ export default class Cards extends React.Component<IProps, IState> {
 }
 
 interface IProps {
-    cards?: readonly CardEntity[]
+    cards: readonly CardEntity[]
+    onCardChange(): void
 }
 
 interface IState {

@@ -13,6 +13,7 @@ export default class Card extends React.Component<IProps> {
                 {this.props.front === undefined ? null : <CardContent markdown={this.props.front} />}
                 {this.props.back === undefined ? null : <hr />}
                 {this.props.back === undefined ? null : <CardContent markdown={this.props.back} />}
+                {this.props.children}
             </div>
         );
     }
