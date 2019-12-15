@@ -13,7 +13,7 @@ function createWindow() {
 		}
 	});
 
-	mainWindow.loadFile("index.html");
+	mainWindow.loadFile(`${__dirname}/index.html`);
 
 	if (isDev) {
 		mainWindow.webContents.openDevTools();
