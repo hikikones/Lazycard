@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 import db from '../model/Database';
-import { Card as CardEntity } from '../model/Database';
 import Card from './Card';
 
 export default class CardEditor extends React.Component<IProps, IState> {
@@ -18,7 +17,7 @@ export default class CardEditor extends React.Component<IProps, IState> {
 
     private save = () => {
         if (this.isEmpty()) return;
-        const card: CardEntity = db.cards.new(this.props.topicId);
+        const card = db.cards.new(this.props.topicId);
         card.front = this.front.current.value;
         card.back = this.back.current.value;
         this.clear();
@@ -99,6 +98,7 @@ interface IProps {
     topicId: number
     onSave(): void
     onCancel(): void
+    id?: number
 }
 
 interface IState {

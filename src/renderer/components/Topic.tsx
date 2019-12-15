@@ -15,7 +15,8 @@ export default class Topic extends React.Component<IProps, IState> {
         this.state = {
             name: this.topic.name,
             showCardEditor: false,
-            cards: db.cards.getByTopic(this.topic.id)
+            cards: db.cards.getByTopic(this.topic.id),
+            deleted: false
         }
     }
 
@@ -33,7 +34,20 @@ export default class Topic extends React.Component<IProps, IState> {
         this.setState({ showCardEditor: !this.state.showCardEditor });
     }
 
+    private delete = () => {
+        this.setState({ deleted: true });
+        db.topics.delete(this.topic.id);
+        this.props.onTopicChange();
+        this.state.cards.forEach(c => db.cards.delete(c.id));
+    }
+
     public render() {
+        if (this.state.deleted) {
+            return (
+                <h3>Topic has been deleted.</h3>
+            );
+        }
+
         return (
             <div>
                 <h1>{this.state.name}</h1>
@@ -49,6 +63,7 @@ export default class Topic extends React.Component<IProps, IState> {
                 <button onClick={() => this.changeName("New Name")}>Change name</button>
                 <button onClick={() => db.export(this.topic.id)}>Export</button>
                 <Link to={`/review/${this.topic.id}`}>Review</Link>
+                <button onClick={this.delete}>Delete</button>
 
                 <Cards cards={this.state.cards} />
             </div>
@@ -64,4 +79,5 @@ interface IState {
     name: string
     cards: readonly Card[]
     showCardEditor: boolean
+    deleted: boolean
 }

@@ -39,6 +39,7 @@ class Database {
             const card = this.cards.new(topic.id);
             card.front = c.front;
             card.back = c.back;
+            srs.today(card);
         });
     }
 
