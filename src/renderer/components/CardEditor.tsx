@@ -1,23 +1,48 @@
 import * as React from 'react';
 
 import db from '../model/Database';
+import { Card as CardEntity } from '../model/Database';
+
 import Card from './Card';
 
-export default class CardEditor extends React.Component<IProps, IState> {
+export default class CardEditor extends React.Component<Props, IState> {
     private readonly front = React.createRef<HTMLTextAreaElement>();
     private readonly back = React.createRef<HTMLTextAreaElement>();
 
-    public constructor(props: IProps) {
+    public constructor(props: Props) {
         super(props);
-        this.state = {
-            front: "",
-            back: ""
+
+        const propsType = this.props;
+
+        if (this.isCardNew(propsType)) {
+            this.state = {
+                front: "",
+                back: ""
+            }
+        } else {
+            this.state = {
+                front: propsType.card.front,
+                back: propsType.card.back
+            }
         }
+    }
+
+    private isCardNew = (prop: ICardNew | ICardEdit): prop is ICardNew => {
+        return (prop as ICardNew).topicId !== undefined;
     }
 
     private save = () => {
         if (this.isEmpty()) return;
-        const card = db.cards.new(this.props.topicId);
+
+        let card: CardEntity;
+        const propsType = this.props;
+        
+        if (this.isCardNew(propsType)) {
+            card = db.cards.new(propsType.topicId);
+        } else {
+            card = propsType.card;
+        }
+
         card.front = this.front.current.value;
         card.back = this.back.current.value;
         this.clear();
@@ -73,6 +98,7 @@ export default class CardEditor extends React.Component<IProps, IState> {
                 <label>Front</label>
                 <textarea
                     ref={this.front}
+                    defaultValue={this.state.front}
                     onInput={this.onInputFront}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, true)}
                 />
@@ -80,6 +106,7 @@ export default class CardEditor extends React.Component<IProps, IState> {
                 <label>Back</label>
                 <textarea
                     ref={this.back}
+                    defaultValue={this.state.back}
                     onInput={this.onInputBack}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, false)}
                 />
@@ -95,11 +122,19 @@ export default class CardEditor extends React.Component<IProps, IState> {
 }
 
 interface IProps {
-    topicId: number
     onSave(): void
     onCancel(): void
-    id?: number
 }
+
+interface ICardNew extends IProps {
+    topicId: number
+}
+
+interface ICardEdit extends IProps {
+    card: CardEntity
+}
+
+type Props = ICardNew | ICardEdit;
 
 interface IState {
     front: string

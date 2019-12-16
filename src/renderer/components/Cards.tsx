@@ -5,12 +5,17 @@ import { Card as CardEntity } from '../model/Database';
 
 import Card from './Card';
 import CardMenu from './CardMenu';
+import Modal from './Modal';
+import CardEditor from './CardEditor';
 
 export default class Cards extends React.Component<IProps, IState> {
+    private selectedCard: CardEntity;
+
     public constructor(props: IProps) {
         super(props);
         this.state = {
-            showBack: false
+            showBack: false,
+            showModal: false
         }
     }
 
@@ -19,14 +24,22 @@ export default class Cards extends React.Component<IProps, IState> {
     }
 
     private edit = (card: CardEntity): void => {
-        // TODO: show modal for card edit
-        console.log("EDIT: " + card.id);
+        this.selectedCard = card;
+        this.setState({ showModal: true });
     }
 
     private delete = (card: CardEntity): void => {
-        console.log("DELETE: " + card.id);
         db.cards.delete(card.id);
         this.props.onCardChange();
+    }
+
+    private closeModal = () => {
+        this.setState({ showModal: false });
+    }
+
+    private onCardEdit = () => {
+        this.props.onCardChange();
+        this.closeModal();
     }
 
     public render() {
@@ -45,6 +58,14 @@ export default class Cards extends React.Component<IProps, IState> {
                         <CardMenu card={c} onEdit={this.edit} onDelete={this.delete} />
                     </Card>
                 )}
+
+                <Modal show={this.state.showModal} onClickOutside={this.closeModal}>
+                    <CardEditor
+                        onSave={this.onCardEdit}
+                        onCancel={this.closeModal}
+                        card={this.selectedCard}
+                    />
+                </Modal>
             </div>
         );
     }
@@ -57,4 +78,5 @@ interface IProps {
 
 interface IState {
     showBack: boolean
+    showModal: boolean
 }
