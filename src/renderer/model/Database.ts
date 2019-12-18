@@ -33,13 +33,16 @@ class Database {
         const buffer = fs.readFileSync(lazytopic);
         const json: TopicExport = JSON.parse(buffer.toString());
 
-        // TODO: check for duplicates/existing
-        const topic = this.topics.new(json.name);
+        const topic = this.topics.exists(json.name)
+            ? this.topics.getByName(json.name)
+            : this.topics.new(json.name);
         json.cards.forEach(c => {
-            const card = this.cards.new(topic.id);
-            card.front = c.front;
-            card.back = c.back;
-            srs.today(card);
+            if (!this.cards.exists(c.front)) {
+                const card = this.cards.new(topic.id);
+                card.front = c.front;
+                card.back = c.back;
+                srs.today(card);
+            }
         });
     }
 
@@ -96,6 +99,7 @@ abstract class Table<T extends Entity<EntityData, EntityExport>> {
     private items: T[] = [];
 
     protected abstract create(field: string|number): T;
+    public abstract exists(field: string): boolean;
 
     public new(field: string|number): T {
         const item = this.create(field);
@@ -149,6 +153,13 @@ class Cards extends Table<Card> {
         return card;
     }
 
+    public exists(front: string): boolean {
+        for (let c of this.getAll()) {
+            if (c.front === front) return true;
+        }
+        return false;
+    }
+
     public getDue(topicId?: number): Card[] {
         const now = new Date(Date.now());
 
@@ -167,6 +178,20 @@ class Cards extends Table<Card> {
 class Topics extends Table<Topic> {
     protected create(name: string): Topic {
         return new Topic(name);
+    }
+
+    public exists(name: string): boolean {
+        for (let t of this.getAll()) {
+            if (t.name === name) return true;
+        }
+        return false;
+    }
+
+    public getByName(name: string): Topic {
+        for (let t of this.getAll()) {
+            if (t.name === name) return t;
+        }
+        return null;
     }
 }
 
