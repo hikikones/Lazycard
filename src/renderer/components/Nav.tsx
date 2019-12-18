@@ -22,23 +22,17 @@ export default class Nav extends React.Component<INavProps> {
     public render() {
         return (
             <nav>
-                <NavSection title="Cards">
-                    <NavSectionLink name="Home" to="/" />
-                    <NavSectionLink name="Due today" to="/review/:topicId" />
-                    <NavSectionLink name="All cards" to="/cards/" />
-                </NavSection>
+                <NavItem name="Home" to="/" />
+                <NavItem name="Due today" to="/review/:topicId" />
+                <NavItem name="All cards" to="/cards/" />
+                <NavItem name="Settings" to="/settings" />
+                <NavItem name="Import" action={this.import} />
 
-                <NavSection title="Database">
-                    <NavSectionLink name="Settings" to="/settings" />
-                    <NavSectionButton name="Import" action={this.import} />
-                </NavSection>
-
-                <NavSection title="Topics">
-                    {this.props.topics.map(t =>
-                        <NavSectionLink key={t.id} name={t.name} to={`/topics/${t.id}`} />
-                    )}
-                    <NavSectionButton name="Add topic" action={this.addTopic} />
-                </NavSection>
+                <label>Topics</label>
+                {this.props.topics.map(t =>
+                    <NavItem key={t.id} name={t.name} to={`/topics/${t.id}`} />
+                )}
+                <NavItem name="Add topic" action={this.addTopic} />
             </nav>
         );
     }
@@ -49,29 +43,20 @@ interface INavProps {
     onTopicChange(): void
 }
 
-const NavSection = (props: { title: string, children: React.ReactNode }) => {
-    return (
-        <section>
-            <h4>{props.title}</h4>
-            <ul>
-                {props.children}
-            </ul>
-        </section>
-    )
+const NavItem = (props: INavLink | INavButton) => {
+    if ((props as INavLink).to) {
+        return <NavLink className="nav" exact to={(props as INavLink).to}>{props.name}</NavLink>
+    }
+
+    return <a href="#" className="nav" onClick={(props as INavButton).action}>{props.name}</a>
 }
 
-const NavSectionLink = (props: { name: string, to: string }) => {
-    return (
-        <li>
-            <NavLink exact to={props.to}>{props.name}</NavLink>
-        </li>
-    )
+interface INavLink {
+    name: string
+    to: string
 }
 
-const NavSectionButton = (props: { name: string, action(): void }) => {
-    return (
-        <li>
-            <a href="#" onClick={props.action}>{props.name}</a>
-        </li>
-    )
+interface INavButton {
+    name: string
+    action(): void
 }

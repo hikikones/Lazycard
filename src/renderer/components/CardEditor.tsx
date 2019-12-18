@@ -4,6 +4,7 @@ import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
 
 import Card from './Card';
+import Button from './Button';
 
 export default class CardEditor extends React.Component<Props, IState> {
     private readonly front = React.createRef<HTMLTextAreaElement>();
@@ -113,8 +114,8 @@ export default class CardEditor extends React.Component<Props, IState> {
                     />
 
                     <div className="row space-between">
-                        <button onClick={this.save}>Save</button>
-                        <button onClick={this.cancel}>Cancel</button>
+                        <Button name="Save" action={this.save} />
+                        <Button name="Cancel" action={this.cancel} />
                     </div>
                 </section>
                 

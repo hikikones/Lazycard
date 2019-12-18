@@ -20,6 +20,7 @@ body {
 
 nav {
     grid-area: nav;
+    padding: 1rem 0;
     background-color: whitesmoke;
     overflow: auto;
 }
@@ -30,12 +31,40 @@ main {
     overflow: auto;
 }
 
+main > div {
+    flex-basis: 90%;
+}
+
+nav label {
+    margin-left: 0.5rem;
+}
+
 section {
     margin-bottom: 20px;
 }
 
-main > div {
-    flex-basis: 90%;
+textarea {
+    width: var(--card-min-width);
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+a.nav {
+    display: block;
+    padding: 0.2rem 1rem;
+    font-size: 0.9rem;
+    text-decoration: none;
+    color: black;
+}
+
+a.nav:hover, a.active {
+    background-color: lightgrey;
 }
 
 .cards {
@@ -45,13 +74,30 @@ main > div {
 }
 
 .card {
-    padding: 0 1rem;
-    border: 1px solid lightgrey;
+    position: relative;
+    padding: 1rem;
     border-radius: 2px;
     min-width: var(--card-min-width);
     max-width: var(--card-max-width);
     overflow-wrap: break-word;
     box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15);
+}
+
+.card-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.card-btn .btn {
+    margin: 0;
+}
+
+.card-menu {
+    position: absolute;
+    background-color: white;
+    left: -100%;
+    z-index: 1;
 }
 
 .card-editor {
@@ -80,7 +126,7 @@ a.btn {
     color: black;
 }
 
-a:hover {
+a.btn:hover {
     background-color: whitesmoke;
 }
 
@@ -130,13 +176,4 @@ section a.btn:last-child {
 
 .space-between {
     justify-content: space-between;
-}
-
-textarea {
-    width: var(--card-min-width);
-    margin-bottom: 15px;
-}
-
-label {
-    margin-bottom: 5px;
 }
