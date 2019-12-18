@@ -13,7 +13,7 @@ export default class App extends React.Component<IProps> {
         if (!this.props.show) return null;
 
         return (
-            <div className='modal' onClick={this.onClickOutside}>
+            <div className="modal col col-center" onClick={this.onClickOutside}>
                 <div onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
                     {this.props.children}
                 </div>

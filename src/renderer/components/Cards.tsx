@@ -47,17 +47,21 @@ export default class Cards extends React.Component<IProps, IState> {
             <div>
                 <h2>Cards</h2>
 
-                <button onClick={this.toggleAnswer}>Toggle Answer</button>
+                <div className="buttons-menu">
+                    <button onClick={this.toggleAnswer}>Toggle Answer</button>
+                </div>
 
-                {this.props.cards.map(c =>
-                    <Card
-                        key={c.id}
-                        front={c.front}
-                        back={this.state.showBack ? c.back : undefined}
-                    >
-                        <CardMenu card={c} onEdit={this.edit} onDelete={this.delete} />
-                    </Card>
-                )}
+                <div className="cards">
+                    {this.props.cards.map(c =>
+                        <Card
+                            key={c.id}
+                            front={c.front}
+                            back={this.state.showBack ? c.back : undefined}
+                        >
+                            <CardMenu card={c} onEdit={this.edit} onDelete={this.delete} />
+                        </Card>
+                    )}
+                </div>
 
                 <Modal show={this.state.showModal} onClickOutside={this.closeModal}>
                     <CardEditor

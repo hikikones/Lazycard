@@ -45,15 +45,6 @@ export default class Review extends React.Component<IProps, IState> {
         return this.state.currentCard === undefined;
     }
 
-    private showReviewButtons = (): JSX.Element => {
-        return (
-            <footer>
-                <button onClick={() => this.handleReview(true)}>Yes</button>
-                <button onClick={() => this.handleReview(false)}>No</button>
-            </footer>
-        )
-    }
-
     private shuffle = (): void => {
         for (let currentIndex = this.cards.length - 1; currentIndex > 0; currentIndex--) {
             const newIndex = Math.floor(Math.random() * (currentIndex + 1));
@@ -69,18 +60,22 @@ export default class Review extends React.Component<IProps, IState> {
         }
 
         return (
-            <div>
+            <div className="col col-center review space-between">
                 <h2>Review</h2>
 
-                <Card
-                    front={this.state.currentCard.front}
-                    back={this.state.showAnswer ? this.state.currentCard.back : undefined}
-                />
+                <div className="col col-center review-card">
+                    <Card
+                        front={this.state.currentCard.front}
+                        back={this.state.showAnswer ? this.state.currentCard.back : undefined}
+                    />
+                    {this.state.showAnswer ? null : <button className="review-show-answer" onClick={this.showAnswer}>Show answer</button>}
+                </div>
 
-                {this.state.showAnswer ? null : <button onClick={this.showAnswer}>Show answer</button>}
-
-                {this.state.showAnswer ? this.showReviewButtons() : null}
-                <button onClick={this.skipCard}>Skip</button>
+                <footer className="review-buttons">
+                    {this.state.showAnswer ? <button onClick={() => this.handleReview(true)}>Yes</button> : null}
+                    {this.state.showAnswer ? <button onClick={() => this.handleReview(false)}>No</button> : null}
+                    <button onClick={this.skipCard}>Skip</button>
+                </footer>
             </div>
         );
     }

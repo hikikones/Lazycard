@@ -74,7 +74,7 @@ export default class CardEditor extends React.Component<Props, IState> {
                     const base64 = reader.result;
                     const target = e.target as HTMLTextAreaElement;
                     target.value += `![](${base64})`;
-                    if (front)  this.onInputFront();
+                    if (front) this.onInputFront();
                     else this.onInputBack();
                 }
 	        }
@@ -94,28 +94,34 @@ export default class CardEditor extends React.Component<Props, IState> {
 
     public render() {
         return (
-            <div>
-                <label>Front</label>
-                <textarea
-                    ref={this.front}
-                    defaultValue={this.state.front}
-                    onInput={this.onInputFront}
-                    onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, true)}
-                />
+            <div className="card-editor-container row">
+                <div className="card-editor col">
+                    <label>Front</label>
+                    <textarea
+                        ref={this.front}
+                        defaultValue={this.state.front}
+                        onInput={this.onInputFront}
+                        onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, true)}
+                    />
 
-                <label>Back</label>
-                <textarea
-                    ref={this.back}
-                    defaultValue={this.state.back}
-                    onInput={this.onInputBack}
-                    onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, false)}
-                />
+                    <label>Back</label>
+                    <textarea
+                        ref={this.back}
+                        defaultValue={this.state.back}
+                        onInput={this.onInputBack}
+                        onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, false)}
+                    />
 
-                <button onClick={this.save}>Save</button>
-                <button onClick={this.cancel}>Cancel</button>
-
-                <label>Preview</label>
-                <Card front={this.state.front} back={this.state.back} />
+                    <div className="card-editor-buttons row space-between">
+                        <button onClick={this.save}>Save</button>
+                        <button onClick={this.cancel}>Cancel</button>
+                    </div>
+                </div>
+                
+                <div className="card-preview col">
+                    <label>Preview</label>
+                    <Card front={this.state.front} back={this.state.back} />
+                </div>
             </div>
         );
     }

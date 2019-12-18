@@ -1,6 +1,11 @@
 @import '~katex/dist/katex.min.css';
 @import "~prismjs/themes/prism-tomorrow.css";
 
+:root {
+    --card-min-width: 250px;
+    --card-max-width: 350px;
+}
+
 body {
     margin: 0;
 }
@@ -24,6 +29,59 @@ main {
     overflow: auto;
 }
 
+main > div {
+    flex-basis: 90%;
+}
+
+.cards {
+    display: grid;
+    grid-gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
+}
+
+.card {
+    border: 1px solid lightgrey;
+    min-width: var(--card-min-width);
+    max-width: var(--card-max-width);
+    overflow-wrap: break-word;
+}
+
+.card-editor {
+    margin-right: 25px;
+}
+
+.card-editor-buttons {
+    margin-bottom: 15px;
+}
+
+.review {
+    height: 100vh;
+}
+
+.review-card {
+    margin-bottom: 10vh;
+}
+
+.review-show-answer {
+    margin-top: 25px;
+}
+
+.review-buttons {
+    margin-bottom: 25px;
+}
+
+.buttons-menu {
+    margin-bottom: 25px;
+}
+
+.buttons-menu button {
+    margin-right: 10px;
+}
+
+.link-button {
+    appearance: button;
+}
+
 .modal {
     position: fixed;
     z-index: 1;
@@ -32,14 +90,43 @@ main {
     right: 0;
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.4);
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: baseline;
 }
 
 .modal > div {
     background-color: white;
     margin-top: 100px;
+    padding: 40px;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.row-center {
+    justify-content: center;
+    align-items: baseline;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+}
+
+.col-center {
+    align-items: center;
+}
+
+.space-between {
+    justify-content: space-between;
+}
+
+textarea {
+    width: var(--card-min-width);
+    margin-bottom: 15px;
+}
+
+label {
+    margin-bottom: 5px;
 }

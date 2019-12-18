@@ -44,7 +44,9 @@ export default class Topic extends React.Component<IProps, IState> {
     public render() {
         if (this.state.deleted) {
             return (
-                <h3>Topic has been deleted.</h3>
+                <div>
+                    <h3>Topic has been deleted.</h3>
+                </div>
             );
         }
 
@@ -52,18 +54,26 @@ export default class Topic extends React.Component<IProps, IState> {
             <div>
                 <h1>{this.state.name}</h1>
 
+                <div className="buttons-menu">
+                    {this.state.showCardEditor ? null : <button onClick={this.toggleCardEditor}>Add new card</button>}
+                    <button onClick={() => this.changeName("New Name")}>Change name</button>
+                    <button onClick={() => db.export(this.topic.id)}>Export</button>
+                    <Link to={`/review/${this.topic.id}`}>Review</Link>
+                    {/* TODO: make Button component to fix Link */}
+                    <button onClick={this.delete}>Delete</button>
+                </div>
+
                 {this.state.showCardEditor
-                    ?   <CardEditor
-                            topicId={this.topic.id}
-                            onSave={this.updateCards}
-                            onCancel={this.toggleCardEditor}
-                        />
-                    :   <button onClick={this.toggleCardEditor}>Add new card</button>
+                    ?   <div>
+                            <h2>Create card</h2>
+                            <CardEditor
+                                topicId={this.topic.id}
+                                onSave={this.updateCards}
+                                onCancel={this.toggleCardEditor}
+                            />
+                        </div>
+                    :   null
                 }
-                <button onClick={() => this.changeName("New Name")}>Change name</button>
-                <button onClick={() => db.export(this.topic.id)}>Export</button>
-                <Link to={`/review/${this.topic.id}`}>Review</Link>
-                <button onClick={this.delete}>Delete</button>
 
                 <Cards cards={this.state.cards} onCardChange={this.updateCards} />
             </div>

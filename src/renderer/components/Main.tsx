@@ -24,7 +24,7 @@ export default class Main extends React.Component<IProps, IState> {
 
     public render() {
         return (
-            <main>
+            <main className="row row-center">
                 <Switch>
                     <Route exact path="/">
                         <Home />

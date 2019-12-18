@@ -9,7 +9,7 @@ export default class Card extends React.Component<IProps> {
 
     public render() {
         return (
-            <div>
+            <div className="card">
                 {this.props.front === undefined ? null : <CardContent markdown={this.props.front} />}
                 {this.props.back === undefined ? null : <hr />}
                 {this.props.back === undefined ? null : <CardContent markdown={this.props.back} />}
