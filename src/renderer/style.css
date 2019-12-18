@@ -2,6 +2,7 @@
 @import "~prismjs/themes/prism-tomorrow.css";
 
 :root {
+    --nav-width: 200px;
     --card-min-width: 250px;
     --card-max-width: 350px;
 }
@@ -13,7 +14,7 @@ body {
 #app > div {
     display: grid;
     grid-template-rows: 100vh;
-    grid-template-columns: 150px auto;
+    grid-template-columns: var(--nav-width) auto;
     grid-template-areas: "nav main";
 }
 
@@ -29,6 +30,10 @@ main {
     overflow: auto;
 }
 
+section {
+    margin-bottom: 20px;
+}
+
 main > div {
     flex-basis: 90%;
 }
@@ -40,18 +45,17 @@ main > div {
 }
 
 .card {
+    padding: 0 1rem;
     border: 1px solid lightgrey;
+    border-radius: 2px;
     min-width: var(--card-min-width);
     max-width: var(--card-max-width);
     overflow-wrap: break-word;
+    box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15);
 }
 
 .card-editor {
     margin-right: 25px;
-}
-
-.card-editor-buttons {
-    margin-bottom: 15px;
 }
 
 .review {
@@ -66,20 +70,26 @@ main > div {
     margin-top: 25px;
 }
 
-.review-buttons {
-    margin-bottom: 25px;
+a.btn {
+    display: inline-block;
+    padding: 0.2rem 0.4rem;
+    margin-bottom: 5px;
+    border: 1px solid lightgrey;
+    text-decoration: none;
+    background-color: white;
+    color: black;
 }
 
-.buttons-menu {
-    margin-bottom: 25px;
+a:hover {
+    background-color: whitesmoke;
 }
 
-.buttons-menu button {
+section a.btn {
     margin-right: 10px;
 }
 
-.link-button {
-    appearance: button;
+section a.btn:last-child {
+    margin-right: 0;
 }
 
 .modal {

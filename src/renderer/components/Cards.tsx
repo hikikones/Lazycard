@@ -47,9 +47,9 @@ export default class Cards extends React.Component<IProps, IState> {
             <div>
                 <h2>Cards</h2>
 
-                <div className="buttons-menu">
+                <section>
                     <button onClick={this.toggleAnswer}>Toggle Answer</button>
-                </div>
+                </section>
 
                 <div className="cards">
                     {this.props.cards.map(c =>

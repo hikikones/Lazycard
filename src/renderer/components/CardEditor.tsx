@@ -94,8 +94,8 @@ export default class CardEditor extends React.Component<Props, IState> {
 
     public render() {
         return (
-            <div className="card-editor-container row">
-                <div className="card-editor col">
+            <div className="row">
+                <section className="card-editor col">
                     <label>Front</label>
                     <textarea
                         ref={this.front}
@@ -112,13 +112,13 @@ export default class CardEditor extends React.Component<Props, IState> {
                         onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, false)}
                     />
 
-                    <div className="card-editor-buttons row space-between">
+                    <div className="row space-between">
                         <button onClick={this.save}>Save</button>
                         <button onClick={this.cancel}>Cancel</button>
                     </div>
-                </div>
+                </section>
                 
-                <div className="card-preview col">
+                <div className="col">
                     <label>Preview</label>
                     <Card front={this.state.front} back={this.state.back} />
                 </div>

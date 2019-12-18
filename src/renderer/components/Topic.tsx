@@ -6,6 +6,7 @@ import { Card } from '../model/Database';
 
 import Cards from './Cards';
 import CardEditor from './CardEditor';
+import Button from './Button';
 
 export default class Topic extends React.Component<IProps, IState> {
     private readonly topic = db.topics.get(parseInt(this.props.match.params.id));
@@ -54,14 +55,13 @@ export default class Topic extends React.Component<IProps, IState> {
             <div>
                 <h1>{this.state.name}</h1>
 
-                <div className="buttons-menu">
-                    {this.state.showCardEditor ? null : <button onClick={this.toggleCardEditor}>Add new card</button>}
-                    <button onClick={() => this.changeName("New Name")}>Change name</button>
-                    <button onClick={() => db.export(this.topic.id)}>Export</button>
-                    <Link to={`/review/${this.topic.id}`}>Review</Link>
-                    {/* TODO: make Button component to fix Link */}
-                    <button onClick={this.delete}>Delete</button>
-                </div>
+                <section>
+                    {this.state.showCardEditor ? null : <Button name="Add new card" action={this.toggleCardEditor} />}
+                    <Button name="Change name" action={() => this.changeName("New Name")} />
+                    <Button name="Export" action={() => db.export(this.topic.id)} />
+                    <Button name="Review" to={`/review/${this.topic.id}`} />
+                    <Button name="Delete" action={this.delete} />
+                </section>
 
                 {this.state.showCardEditor
                     ?   <div>

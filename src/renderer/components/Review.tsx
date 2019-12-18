@@ -3,7 +3,9 @@ import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
+
 import Card from './Card';
+import Button from './Button';
 
 export default class Review extends React.Component<IProps, IState> {
     private cards: CardEntity[];
@@ -64,18 +66,20 @@ export default class Review extends React.Component<IProps, IState> {
                 <h2>Review</h2>
 
                 <div className="col col-center review-card">
-                    <Card
-                        front={this.state.currentCard.front}
-                        back={this.state.showAnswer ? this.state.currentCard.back : undefined}
-                    />
-                    {this.state.showAnswer ? null : <button className="review-show-answer" onClick={this.showAnswer}>Show answer</button>}
+                    <section>
+                        <Card
+                            front={this.state.currentCard.front}
+                            back={this.state.showAnswer ? this.state.currentCard.back : undefined}
+                        />
+                    </section>
+                    {this.state.showAnswer ? null : <Button name="Show answer" action={this.showAnswer} />}
                 </div>
 
-                <footer className="review-buttons">
-                    {this.state.showAnswer ? <button onClick={() => this.handleReview(true)}>Yes</button> : null}
-                    {this.state.showAnswer ? <button onClick={() => this.handleReview(false)}>No</button> : null}
-                    <button onClick={this.skipCard}>Skip</button>
-                </footer>
+                <section>
+                    {this.state.showAnswer ? <Button name="Yes" action={() => this.handleReview(true)} /> : null}
+                    {this.state.showAnswer ? <Button name="No" action={() => this.handleReview(false)} /> : null}
+                    <Button name="Skip" action={this.skipCard} />
+                </section>
             </div>
         );
     }
