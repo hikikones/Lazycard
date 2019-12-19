@@ -56,11 +56,11 @@ export default class Topic extends React.Component<IProps, IState> {
                 <h1>{this.state.name}</h1>
 
                 <section>
-                    {this.state.showCardEditor ? null : <Button name="Add new card" action={this.toggleCardEditor} />}
-                    <Button name="Change name" action={() => this.changeName("New Name")} />
-                    <Button name="Export" action={() => db.export(this.topic.id)} />
-                    <Button name="Review" to={`/review/${this.topic.id}`} />
-                    <Button name="Delete" action={this.delete} />
+                    {this.state.showCardEditor ? null : <Button name="Add new card" icon="add" action={this.toggleCardEditor} />}
+                    <Button name="Change name" icon="edit" action={() => this.changeName("New Name")} />
+                    <Button name="Export" icon="save" action={() => db.export(this.topic.id)} />
+                    <Button name="Review" icon="drafts" to={`/review/${this.topic.id}`} />
+                    <Button name="Delete" icon="delete" action={this.delete} />
                 </section>
 
                 {this.state.showCardEditor

@@ -8,19 +8,29 @@ export default class Button extends React.Component<Props> {
 
     public render() {
         if ((this.props as IButton).action) {
-            return <a href="#" className="btn" onClick={(this.props as IButton).action}>{this.props.name}</a>
+            return (
+                <a href="#" className="btn" onClick={(this.props as IButton).action}>
+                    <i className="material-icons">{this.props.icon}</i> {this.props.name}
+                </a>
+            );
         }
 
-        return <Link className="btn" to={(this.props as ILink).to}>{this.props.name}</Link>
+        return (
+            <Link className="btn" to={(this.props as ILink).to}>
+                <i className="material-icons">{this.props.icon}</i> {this.props.name}
+            </Link>
+        );
     }
 }
 
 interface IButton {
+    icon: string
     name: string
     action(): void
 }
 
 interface ILink {
+    icon: string
     name: string
     to: string
 }

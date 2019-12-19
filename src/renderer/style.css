@@ -1,5 +1,6 @@
 @import '~katex/dist/katex.min.css';
 @import "~prismjs/themes/prism-tomorrow.css";
+@import "~material-icons/iconfont/material-icons.css";
 
 :root {
     --nav-width: 200px;
@@ -40,24 +41,23 @@ nav label {
 }
 
 section {
-    margin-bottom: 20px;
+    margin: 1rem 0;
 }
 
 textarea {
     width: var(--card-min-width);
-    margin-bottom: 15px;
+    margin-bottom: 0.5rem;
 }
 
 label {
     display: block;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
     font-weight: bold;
 }
 
 a.nav {
     display: block;
-    padding: 0.2rem 1rem;
+    padding: 0.25rem 0.5rem;
     font-size: 0.9rem;
     text-decoration: none;
     color: black;
@@ -65,6 +65,11 @@ a.nav {
 
 a.nav:hover, a.active {
     background-color: lightgrey;
+}
+
+a.nav i.material-icons {
+    font-size: 1rem;
+    padding: 0 0.15rem;
 }
 
 .cards {
@@ -77,6 +82,7 @@ a.nav:hover, a.active {
     position: relative;
     padding: 1rem;
     border-radius: 2px;
+    box-sizing: border-box;
     min-width: var(--card-min-width);
     max-width: var(--card-max-width);
     overflow-wrap: break-word;
@@ -89,19 +95,16 @@ a.nav:hover, a.active {
     right: 0;
 }
 
-.card-btn .btn {
-    margin: 0;
-}
-
 .card-menu {
     position: absolute;
+    white-space: nowrap;
     background-color: white;
-    left: -100%;
+    right: 0;
     z-index: 1;
 }
 
 .card-editor {
-    margin-right: 25px;
+    margin-right: 1.4rem;
 }
 
 .review {
@@ -119,15 +122,18 @@ a.nav:hover, a.active {
 a.btn {
     display: inline-block;
     padding: 0.2rem 0.4rem;
-    margin-bottom: 5px;
-    border: 1px solid lightgrey;
     text-decoration: none;
-    background-color: white;
     color: black;
 }
 
 a.btn:hover {
     background-color: whitesmoke;
+}
+
+.material-icons {
+    font-size: 1.4rem;
+    vertical-align: sub;
+    color: grey;
 }
 
 section a.btn {
@@ -157,7 +163,7 @@ section a.btn:last-child {
 .row {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    /* flex-wrap: wrap; */
 }
 
 .row-center {

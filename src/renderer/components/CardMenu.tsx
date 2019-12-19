@@ -29,11 +29,15 @@ export default class CardMenu extends React.Component<IProps, IState> {
     public render() {
         return (
             <div className="card-btn">
-                <Button name="ok" action={this.toggleMenu} />
+                <Button name="" icon="more_horiz" action={this.toggleMenu} />
                 {this.state.showMenu
                     ?   <div className="card-menu">
-                            <a href="#" onClick={this.onEdit} className="nav">Edit</a>
-                            <a href="#" onClick={this.onDelete} className="nav">Delete</a>
+                            <a href="#" onClick={this.onEdit} className="nav">
+                                <i className="material-icons">edit</i> Edit
+                            </a>
+                            <a href="#" onClick={this.onDelete} className="nav">
+                                <i className="material-icons">delete</i> Delete
+                            </a>
                         </div>
                     :   null
                 }

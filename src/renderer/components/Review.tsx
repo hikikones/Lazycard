@@ -72,13 +72,13 @@ export default class Review extends React.Component<IProps, IState> {
                             back={this.state.showAnswer ? this.state.currentCard.back : undefined}
                         />
                     </section>
-                    {this.state.showAnswer ? null : <Button name="Show answer" action={this.showAnswer} />}
+                    {this.state.showAnswer ? null : <Button name="Show answer" icon="lock_open" action={this.showAnswer} />}
                 </div>
 
                 <section>
-                    {this.state.showAnswer ? <Button name="Yes" action={() => this.handleReview(true)} /> : null}
-                    {this.state.showAnswer ? <Button name="No" action={() => this.handleReview(false)} /> : null}
-                    <Button name="Skip" action={this.skipCard} />
+                    {this.state.showAnswer ? <Button name="Yes" icon="done" action={() => this.handleReview(true)} /> : null}
+                    {this.state.showAnswer ? <Button name="No" icon="close" action={() => this.handleReview(false)} /> : null}
+                    <Button name="Skip" icon="double_arrow" action={this.skipCard} />
                 </section>
             </div>
         );

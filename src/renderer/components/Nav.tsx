@@ -22,17 +22,17 @@ export default class Nav extends React.Component<INavProps> {
     public render() {
         return (
             <nav>
-                <NavItem name="Home" to="/" />
-                <NavItem name="Due today" to="/review/:topicId" />
-                <NavItem name="All cards" to="/cards/" />
-                <NavItem name="Settings" to="/settings" />
-                <NavItem name="Import" action={this.import} />
+                <NavItem name="Home" icon="home" to="/" />
+                <NavItem name="Due today" icon="drafts" to="/review/:topicId" />
+                <NavItem name="All cards" icon="layers" to="/cards/" />
+                <NavItem name="Settings" icon="settings" to="/settings" />
+                <NavItem name="Import" icon="save_alt" action={this.import} />
 
                 <label>Topics</label>
                 {this.props.topics.map(t =>
-                    <NavItem key={t.id} name={t.name} to={`/topics/${t.id}`} />
+                    <NavItem key={t.id} name={t.name} icon="bookmark" to={`/topics/${t.id}`} />
                 )}
-                <NavItem name="Add topic" action={this.addTopic} />
+                <NavItem name="Add topic" icon="add" action={this.addTopic} />
             </nav>
         );
     }
@@ -45,18 +45,28 @@ interface INavProps {
 
 const NavItem = (props: INavLink | INavButton) => {
     if ((props as INavLink).to) {
-        return <NavLink className="nav" exact to={(props as INavLink).to}>{props.name}</NavLink>
+        return (
+            <NavLink className="nav" exact to={(props as INavLink).to}>
+                <i className="material-icons">{props.icon}</i> {props.name}
+            </NavLink>
+        );
     }
 
-    return <a href="#" className="nav" onClick={(props as INavButton).action}>{props.name}</a>
+    return (
+        <a href="#" className="nav" onClick={(props as INavButton).action}>
+            <i className="material-icons">{props.icon}</i> {props.name}
+        </a>
+    );
 }
 
 interface INavLink {
     name: string
+    icon: string
     to: string
 }
 
 interface INavButton {
     name: string
+    icon: string
     action(): void
 }

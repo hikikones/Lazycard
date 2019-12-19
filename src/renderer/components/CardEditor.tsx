@@ -95,8 +95,8 @@ export default class CardEditor extends React.Component<Props, IState> {
 
     public render() {
         return (
-            <div className="row">
-                <section className="card-editor col">
+            <section className="row">
+                <div className="card-editor col">
                     <label>Front</label>
                     <textarea
                         ref={this.front}
@@ -114,16 +114,16 @@ export default class CardEditor extends React.Component<Props, IState> {
                     />
 
                     <div className="row space-between">
-                        <Button name="Save" action={this.save} />
-                        <Button name="Cancel" action={this.cancel} />
+                        <Button name="Save" icon="save_alt" action={this.save} />
+                        <Button name="Cancel" icon="cancel" action={this.cancel} />
                     </div>
-                </section>
+                </div>
                 
                 <div className="col">
                     <label>Preview</label>
                     <Card front={this.state.front} back={this.state.back} />
                 </div>
-            </div>
+            </section>
         );
     }
 }
