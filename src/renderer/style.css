@@ -96,6 +96,13 @@ input.topic-name:focus {
     outline: none;
 }
 
+img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
 hr { 
     border: 0;
     height: 1px;
@@ -240,4 +247,13 @@ section a.btn:last-child {
 
 .space-between {
     justify-content: space-between;
+}
+
+::-webkit-scrollbar {
+    width: 0.4rem;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: darkgrey;
+    border-radius: 1rem;
 }
