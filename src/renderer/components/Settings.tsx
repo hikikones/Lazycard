@@ -28,7 +28,7 @@ export default class Settings extends React.Component<IProps, IState> {
             <div>
                 <h1>Settings</h1>
 
-                <h2>Database path</h2>
+                <h2>Database</h2>
                 <label>{this.state.dbPath}</label>
                 <Button name="Change" icon="edit" action={this.changeDatabasePath} />
             </div>

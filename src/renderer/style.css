@@ -72,6 +72,12 @@ label {
     color: darkgrey;
 }
 
+hr { 
+    border: 0;
+    height: 1px;
+    background-image: -webkit-linear-gradient(left,whitesmoke, lightgrey, whitesmoke);
+}
+
 a.nav {
     display: block;
     padding: 0.25rem 0.5rem;
