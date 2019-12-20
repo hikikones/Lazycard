@@ -44,6 +44,8 @@ export default class Cards extends React.Component<IProps, IState> {
     }
 
     public render() {
+        if (this.props.cards.length === 0) return null;
+
         return (
             <div>
                 <h2>Cards</h2>
