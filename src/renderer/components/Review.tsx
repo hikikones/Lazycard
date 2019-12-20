@@ -65,20 +65,18 @@ export default class Review extends React.Component<IProps, IState> {
             <div className="col col-center review space-between">
                 <h2>Review</h2>
 
-                <div className="col col-center review-card">
-                    <section>
-                        <Card
-                            front={this.state.currentCard.front}
-                            back={this.state.showAnswer ? this.state.currentCard.back : undefined}
-                        />
-                    </section>
-                    {this.state.showAnswer ? null : <Button name="Show answer" icon="lock_open" action={this.showAnswer} />}
-                </div>
+                <section className="col col-center review-card">
+                    <Card
+                        front={this.state.currentCard.front}
+                        back={this.state.showAnswer ? this.state.currentCard.back : undefined}
+                    />
+                    {this.state.showAnswer ? null : <Button name="" icon="lock_open" action={this.showAnswer} />}
+                </section>
 
                 <section>
-                    {this.state.showAnswer ? <Button name="Yes" icon="done" action={() => this.handleReview(true)} /> : null}
-                    {this.state.showAnswer ? <Button name="No" icon="close" action={() => this.handleReview(false)} /> : null}
-                    <Button name="Skip" icon="double_arrow" action={this.skipCard} />
+                    {this.state.showAnswer ? <Button name="" icon="done" action={() => this.handleReview(true)} /> : null}
+                    {this.state.showAnswer ? <Button name="" icon="close" action={() => this.handleReview(false)} /> : null}
+                    <Button name="" icon="double_arrow" action={this.skipCard} />
                 </section>
             </div>
         );

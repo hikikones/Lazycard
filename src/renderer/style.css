@@ -39,7 +39,9 @@ main > div {
 }
 
 nav label {
+    margin-top: 1rem;
     margin-left: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 section {
@@ -48,13 +50,26 @@ section {
 
 textarea {
     width: var(--card-min-width);
+    border-radius: 2px;
+    border-color: lightgrey;
     margin-bottom: 0.5rem;
+    padding: 0.25rem;
+    font-size: 0.85rem;
+    font-family: Lato;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: none;
+    border: 1px solid darkgrey;
 }
 
 label {
     display: block;
     margin-bottom: 0.25rem;
     font-weight: bold;
+    font-size: 0.9rem;
+    color: darkgrey;
 }
 
 a.nav {
@@ -76,7 +91,7 @@ a.nav i.material-icons {
 
 .cards {
     display: grid;
-    grid-gap: 10px;
+    grid-gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
 }
 
@@ -88,6 +103,9 @@ a.nav i.material-icons {
     min-width: var(--card-min-width);
     max-width: var(--card-max-width);
     overflow-wrap: break-word;
+}
+
+.shadow {
     box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15);
 }
 
@@ -95,6 +113,10 @@ a.nav i.material-icons {
     position: absolute;
     top: 0;
     right: 0;
+}
+
+.card-btn .btn {
+    margin: 0;
 }
 
 .card-menu {
@@ -113,12 +135,16 @@ a.nav i.material-icons {
     height: 100vh;
 }
 
-.review-card {
+.review-card .card {
     margin-bottom: 10vh;
 }
 
-.review-show-answer {
-    margin-top: 25px;
+.review .btn {
+    border-radius: 50%;
+}
+
+.review .btn i.material-icons {
+    font-size: 2rem;
 }
 
 a.btn {

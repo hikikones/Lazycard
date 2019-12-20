@@ -65,7 +65,6 @@ export default class Topic extends React.Component<IProps, IState> {
 
                 {this.state.showCardEditor
                     ?   <div>
-                            <h2>Create card</h2>
                             <CardEditor
                                 topicId={this.topic.id}
                                 onSave={this.updateCards}

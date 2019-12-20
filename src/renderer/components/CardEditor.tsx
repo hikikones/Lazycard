@@ -101,6 +101,7 @@ export default class CardEditor extends React.Component<Props, IState> {
                     <textarea
                         ref={this.front}
                         defaultValue={this.state.front}
+                        rows={4}
                         onInput={this.onInputFront}
                         onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, true)}
                     />
@@ -109,13 +110,14 @@ export default class CardEditor extends React.Component<Props, IState> {
                     <textarea
                         ref={this.back}
                         defaultValue={this.state.back}
+                        rows={4}
                         onInput={this.onInputBack}
                         onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, false)}
                     />
 
                     <div className="row space-between">
-                        <Button name="Save" icon="save_alt" action={this.save} />
-                        <Button name="Cancel" icon="cancel" action={this.cancel} />
+                        <Button name="Save" icon="done" action={this.save} />
+                        <Button name="Cancel" icon="close" action={this.cancel} />
                     </div>
                 </div>
                 

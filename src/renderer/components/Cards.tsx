@@ -7,6 +7,7 @@ import Card from './Card';
 import CardMenu from './CardMenu';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
+import Button from './Button';
 
 export default class Cards extends React.Component<IProps, IState> {
     private selectedCard: CardEntity;
@@ -48,10 +49,14 @@ export default class Cards extends React.Component<IProps, IState> {
                 <h2>Cards</h2>
 
                 <section>
-                    <button onClick={this.toggleAnswer}>Toggle Answer</button>
+                    <Button
+                        name="Show answer"
+                        icon={this.state.showBack ? "check_box" : "check_box_outline_blank"}
+                        action={this.toggleAnswer}
+                    />
                 </section>
 
-                <div className="cards">
+                <section className="cards">
                     {this.props.cards.map(c =>
                         <Card
                             key={c.id}
@@ -61,7 +66,7 @@ export default class Cards extends React.Component<IProps, IState> {
                             <CardMenu card={c} onEdit={this.edit} onDelete={this.delete} />
                         </Card>
                     )}
-                </div>
+                </section>
 
                 <Modal show={this.state.showModal} onClickOutside={this.closeModal}>
                     <CardEditor

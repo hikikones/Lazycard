@@ -31,7 +31,7 @@ export default class CardMenu extends React.Component<IProps, IState> {
             <div className="card-btn">
                 <Button name="" icon="more_horiz" action={this.toggleMenu} />
                 {this.state.showMenu
-                    ?   <div className="card-menu">
+                    ?   <div className="card-menu shadow">
                             <a href="#" onClick={this.onEdit} className="nav">
                                 <i className="material-icons">edit</i> Edit
                             </a>

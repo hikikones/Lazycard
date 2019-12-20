@@ -3,6 +3,8 @@ import * as React from 'react';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
 
+import Button from './Button';
+
 export default class Settings extends React.Component<IProps, IState> {
     public constructor(props: IProps) {
         super(props);
@@ -26,10 +28,9 @@ export default class Settings extends React.Component<IProps, IState> {
             <div>
                 <h1>Settings</h1>
 
-                <h2>Database Path</h2>
-                <label>Current path</label>
-                <p>{this.state.dbPath}</p>
-                <button onClick={this.changeDatabasePath}>Change</button>
+                <h2>Database path</h2>
+                <label>{this.state.dbPath}</label>
+                <Button name="Change" icon="edit" action={this.changeDatabasePath} />
             </div>
         );
     }
