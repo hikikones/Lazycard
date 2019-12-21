@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
+import search from '../controller/Search';
 
 import Card from './Card';
 import CardMenu from './CardMenu';
@@ -11,12 +12,14 @@ import Button from './Button';
 
 export default class Cards extends React.Component<IProps, IState> {
     private selectedCard: CardEntity;
+    private readonly searchInput = React.createRef<HTMLInputElement>();
 
     public constructor(props: IProps) {
         super(props);
         this.state = {
             showBack: false,
-            showModal: false
+            showModal: false,
+            query: ""
         }
     }
 
@@ -34,17 +37,35 @@ export default class Cards extends React.Component<IProps, IState> {
         this.props.onCardChange();
     }
 
-    private closeModal = () => {
+    private closeModal = (): void => {
         this.setState({ showModal: false });
     }
 
-    private onCardEdit = () => {
+    private onCardEdit = (): void => {
         this.props.onCardChange();
         this.closeModal();
     }
 
+    private search = (): void => {
+        this.setState({ query: this.searchInput.current.value });
+    }
+
+    private clearSearch = (): void => {
+        this.searchInput.current.value = "";
+        this.setState({ query: "" });
+    }
+
+    private isSearchEmpty = (): boolean => {
+        return this.state.query === "";
+    }
+
     public render() {
         if (this.props.cards.length === 0) return null;
+
+        let cards = this.props.cards;
+        if (!this.isSearchEmpty()) {
+            cards = search.query(this.state.query, cards)
+        }
 
         return (
             <div>
@@ -56,10 +77,21 @@ export default class Cards extends React.Component<IProps, IState> {
                         icon={this.state.showBack ? "check_box" : "check_box_outline_blank"}
                         action={this.toggleAnswer}
                     />
+                    <div className="search-container">
+                        <i className="search-icon material-icons">search</i>
+                        <input
+                            ref={this.searchInput}
+                            className="search"
+                            placeholder="Search..."
+                            type="text"
+                            onInput={this.search}
+                        />
+                        <i onClick={this.clearSearch} className="clear-icon material-icons">close</i>
+                    </div>
                 </section>
 
                 <section className="cards">
-                    {this.props.cards.map(c =>
+                    {cards.map(c =>
                         <Card
                             key={c.id}
                             front={c.front}
@@ -90,4 +122,9 @@ interface IProps {
 interface IState {
     showBack: boolean
     showModal: boolean
+    query: string
 }
+
+// const Search = (props: {}) => {
+    
+// }

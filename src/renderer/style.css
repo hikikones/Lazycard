@@ -168,6 +168,37 @@ a.nav i.material-icons {
     margin-right: 1.4rem;
 }
 
+.search-container {
+    display: inline-block;
+    border: 1px solid lightgrey;
+    border-radius: 1rem;
+}
+
+.search-container input.search {
+    padding: 0 0.5rem;
+    font-family: Lato;
+    border: none;
+}
+
+.search-container input.search:focus {
+    outline: none;
+}
+
+.search-container .search-icon {
+    margin-left: 0.4rem;
+    pointer-events: none;
+}
+
+.search-container .clear-icon {
+    margin-right: 0.4rem;
+    cursor: pointer;
+}
+
+.search-container i.material-icons {
+    font-size: 1.1rem;
+    line-height: 1.4rem;
+}
+
 .review {
     height: 100vh;
 }
