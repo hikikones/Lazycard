@@ -4,7 +4,7 @@ class SRS {
     public schedule(card: Card, success: boolean): void {
         let newDueDays = success ? card.dueDays * 2 : card.dueDays / 2;
         if (newDueDays < 1) newDueDays = 1;
-        card.dueDate.setDate(card.dueDate.getDate() + card.dueDays);
+        card.dueDate.setDate(card.dueDate.getDate() + newDueDays);
     }
 
     public tomorrow(card: Card): void {

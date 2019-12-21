@@ -3,17 +3,21 @@ import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
+import srs from '../controller/SRS';
 
 import Card from './Card';
 import Button from './Button';
 
 export default class Review extends React.Component<IProps, IState> {
     private cards: CardEntity[];
+    private total: number;
 
     public constructor(props: IProps) {
         super(props);
+
         const topicId = Number(this.props.match.params.topicId);
         this.cards = Number.isNaN(topicId) ? db.cards.getDue() : db.cards.getDue(topicId);
+        this.total = this.cards.length;
 
         this.shuffle();
 
@@ -28,8 +32,7 @@ export default class Review extends React.Component<IProps, IState> {
     }
 
     private showNextCard = (): void => {
-        this.setState({ showAnswer: false });
-        this.setState({ currentCard: this.cards.pop() });
+        this.setState({ showAnswer: false, currentCard: this.cards.pop() });
     }
 
     private skipCard = (): void => {
@@ -38,8 +41,7 @@ export default class Review extends React.Component<IProps, IState> {
     }
 
     private handleReview = (correct: boolean): void => {
-        // TODO
-        console.log("ANSWER: " + correct);
+        srs.schedule(this.state.currentCard, correct);
         this.showNextCard();
     }
 
@@ -58,12 +60,12 @@ export default class Review extends React.Component<IProps, IState> {
 
     public render() {
         if (this.noCardsLeft()) {
-            return <h4>No more cards left!</h4>
+            return <h3>Good job!</h3>
         }
 
         return (
             <div className="col col-center review space-between">
-                <h2>Review</h2>
+                <span className="review-progress">{this.total - this.cards.length} / {this.total}</span>
 
                 <section className="col col-center review-card">
                     <Card

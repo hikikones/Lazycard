@@ -172,6 +172,10 @@ a.nav i.material-icons {
     height: 100vh;
 }
 
+.review-progress {
+    color: grey;
+}
+
 .review-card .card {
     margin-bottom: 10vh;
 }
