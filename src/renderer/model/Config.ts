@@ -19,6 +19,10 @@ class Config {
         return this.dbPath;
     }
 
+    public getDatabaseDir(): string {
+        return path.dirname(this.dbPath);
+    }
+
     public setDatabasePath(newPath: string): void {
         this.dbPath = newPath;
     }

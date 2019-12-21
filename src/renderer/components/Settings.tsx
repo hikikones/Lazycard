@@ -1,5 +1,7 @@
+import { shell } from 'electron';
 import * as React from 'react';
 
+import db from '../model/Database';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
 
@@ -23,20 +25,43 @@ export default class Settings extends React.Component<IProps, IState> {
         this.setState({ dbPath: newPath });
     }
 
+    private openDatabaseDir = (): void => {
+        shell.openItem(cfg.getDatabaseDir());
+    }
+
+    private restoreDatabase = () => {
+        const dbFile = dialog.openFile('lazycard', ['lazycard']);
+        if (dbFile === undefined) {
+            return;
+        }
+
+        db.restore(dbFile);
+        this.props.onTopicChange();
+    }
+
     public render() {
         return (
             <div>
                 <h1>Settings</h1>
 
                 <h2>Database</h2>
+
+                <h3>Path</h3>
+                <p>The location of your database file.</p>
                 <label>{this.state.dbPath}</label>
+                <Button name="Open" icon="folder_open" action={this.openDatabaseDir} />
                 <Button name="Change" icon="edit" action={this.changeDatabasePath} />
+
+                <h3>Restore</h3>
+                <p>Restore your database from a local file.</p>
+                <Button name="Restore" icon="settings_backup_restore" action={this.restoreDatabase} />
             </div>
         );
     }
 }
 
 interface IProps {
+    onTopicChange(): void
 }
 
 interface IState {

@@ -220,11 +220,11 @@ a.nav i.material-icons {
     font-size: 2rem;
 }
 
-.review .card .card-btn .btn {
+.review .card .card-btn .btn, .review .modal .card-editor .btn  {
     border-radius: 0;
 }
 
-.review .card .card-btn .btn i.material-icons {
+.review .card .card-btn .btn i.material-icons, .review .modal .card-editor .btn i.material-icons {
     font-size: 1.4rem;
 }
 
@@ -267,6 +267,7 @@ section a.btn:last-child {
     background-color: white;
     margin-top: 100px;
     padding: 40px;
+    overflow: auto;
 }
 
 .row {

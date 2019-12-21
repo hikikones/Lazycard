@@ -46,16 +46,22 @@ class Database {
         });
     }
 
-    private load(): void {
+    public restore(dbFile: string): void {
+        this.cards.reset();
+        this.topics.reset();
+        this.load(dbFile);
+    }
+
+    private load(file?: string): void {
         if (!fs.existsSync(cfg.getDatabasePath())) {
             this.initSample();
             return;
         }
 
-        const buffer: Buffer = fs.readFileSync(cfg.getDatabasePath());
-        const json: any = JSON.parse(buffer.toString());
+        const buffer: Buffer = fs.readFileSync(file || cfg.getDatabasePath());
+        const json: IDatabase = JSON.parse(buffer.toString());
 
-        json.cards.forEach((c: CardData) => {
+        json.cards.forEach(c => {
             const card: Card = new Card(c.topicId);
             card.id = c.id;
             card.front = c.front;
@@ -65,7 +71,7 @@ class Database {
             this.cards.add(card);
         });
 
-        json.topics.forEach((t: TopicData) => {
+        json.topics.forEach(t => {
             const topic: Topic = new Topic(t.name);
             topic.id = t.id;
             this.topics.add(topic);
@@ -136,6 +142,11 @@ abstract class Table<T extends Entity<EntityData, EntityExport>> {
 
     public size(): number {
         return this.items.length;
+    }
+
+    public reset(): void {
+        this.idCounter = 1;
+        this.items = [];
     }
 
     private getIndex(id: number): number {
@@ -244,6 +255,11 @@ export class Topic extends Entity<TopicData, TopicExport> {
     public export(): TopicExport {
         return { name: this.name, cards: [] }
     }
+}
+
+interface IDatabase {
+    cards: CardData[]
+    topics: TopicData[]
 }
 
 interface EntityData {
