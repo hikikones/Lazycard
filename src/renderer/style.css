@@ -177,6 +177,7 @@ a.nav i.material-icons {
 .search-container input.search {
     padding: 0 0.5rem;
     font-family: Lato;
+    line-height: 1.5rem;
     border: none;
 }
 
@@ -217,6 +218,14 @@ a.nav i.material-icons {
 
 .review .btn i.material-icons {
     font-size: 2rem;
+}
+
+.review .card .card-btn .btn {
+    border-radius: 0;
+}
+
+.review .card .card-btn .btn i.material-icons {
+    font-size: 1.4rem;
 }
 
 a.btn {

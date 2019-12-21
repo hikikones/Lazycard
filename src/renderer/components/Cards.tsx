@@ -124,7 +124,3 @@ interface IState {
     showModal: boolean
     query: string
 }
-
-// const Search = (props: {}) => {
-    
-// }
