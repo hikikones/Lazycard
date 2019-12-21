@@ -9,11 +9,17 @@ class Database {
     public readonly topics: Topics = new Topics();
 
     public constructor() {
-        this.load();
+        this.parse(this.read());
     }
 
-    public save(): void {
-        fs.writeFileSync(cfg.getDatabasePath(), this.toJSON());
+    public save(path?: string): void {
+        const file = path || cfg.getDatabasePath();
+        const dbFile = this.toJSON(this.read(file));
+        const dbMemory = this.toJSON();
+
+        if (dbFile === dbMemory) return;
+
+        fs.writeFileSync(file, dbMemory);
     }
 
     public export(topicId: number): void {
@@ -49,19 +55,22 @@ class Database {
     public restore(dbFile: string): void {
         this.cards.reset();
         this.topics.reset();
-        this.load(dbFile);
+        this.parse(this.read(dbFile));
     }
 
-    private load(file?: string): void {
-        if (!fs.existsSync(cfg.getDatabasePath())) {
-            this.initSample();
+    private read(file?: string): IDatabase {
+        if (!fs.existsSync(file || cfg.getDatabasePath())) {
+            // TODO: return demo file
             return;
         }
 
         const buffer: Buffer = fs.readFileSync(file || cfg.getDatabasePath());
-        const json: IDatabase = JSON.parse(buffer.toString());
+        const data: IDatabase = JSON.parse(buffer.toString());
+        return data;
+    }
 
-        json.cards.forEach(c => {
+    private parse(data: IDatabase): void {
+        data.cards.forEach(c => {
             const card: Card = new Card(c.topicId);
             card.id = c.id;
             card.front = c.front;
@@ -71,32 +80,18 @@ class Database {
             this.cards.add(card);
         });
 
-        json.topics.forEach(t => {
+        data.topics.forEach(t => {
             const topic: Topic = new Topic(t.name);
             topic.id = t.id;
             this.topics.add(topic);
         });
     }
 
-    private toJSON(): string {
+    private toJSON(data?: IDatabase): string {
         return JSON.stringify({
-            cards: this.cards.getAll().map(c => c.serialize()),
-            topics: this.topics.getAll().map(t => t.serialize())
+            cards: data === undefined ? this.cards.getAll().map(c => c.serialize()) : data.cards,
+            topics: data === undefined ? this.topics.getAll().map(t => t.serialize()) : data.topics
         }, null, 2);
-    }
-
-    private initSample(): void {
-        const topic = this.topics.new("Sample Topic");
-
-        const card1 = this.cards.new(topic.id);
-        card1.front = "This card should be scheduled today.";
-        card1.back = "Yes.";
-        srs.today(card1);
-
-        const card2 = this.cards.new(topic.id);
-        card2.front = "This card should be scheduled tomorrow.";
-        card2.back = "Yes.";
-        srs.tomorrow(card2);
     }
 }
 
