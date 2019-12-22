@@ -10,7 +10,7 @@ class Search {
             tokenize: true,
             matchAllTokens: true,
             findAllMatches: true,
-            threshold: 0.0,
+            threshold: 0.1,
             location: 0,
             distance: 100,
             maxPatternLength: 32,
@@ -21,7 +21,6 @@ class Search {
 
     public query(query: string, cards: readonly Card[]): Card[] {
         const fuse = new Fuse(cards, this.options);
-        // TODO: ignore chars like _*~ etc due to markdown
         return fuse.search(query.trimRight());
     }
 }
