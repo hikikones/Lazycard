@@ -21,6 +21,7 @@ class Search {
 
     public query(query: string, cards: readonly Card[]): Card[] {
         const fuse = new Fuse(cards, this.options);
+        // TODO: ignore chars like _*~ etc due to markdown
         return fuse.search(query.trimRight());
     }
 }

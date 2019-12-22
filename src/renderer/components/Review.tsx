@@ -11,9 +11,16 @@ import CardMenu from './CardMenu';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
 
+// TODO: Add custom study
+
 export default class Review extends React.Component<IProps, IState> {
     private cards: CardEntity[];
     private total: number;
+
+    private unlockBtn = React.createRef<Button>();
+    private yesBtn = React.createRef<Button>();
+    private noBtn = React.createRef<Button>();
+    private skipBtn = React.createRef<Button>();
 
     public constructor(props: IProps) {
         super(props);
@@ -28,7 +35,25 @@ export default class Review extends React.Component<IProps, IState> {
             currentCard: this.cards.pop(),
             showAnswer: false,
             showModal: false
-        }
+        };
+
+        document.onkeydown = (e: KeyboardEvent) => {
+            // TODO: remove global event when leaving page
+            switch (e.keyCode) {
+                case 32: // Space
+                    if (this.unlockBtn.current) this.unlockBtn.current.click();
+                    break;
+                case 38: // ArrowUp
+                    if (this.yesBtn.current) this.yesBtn.current.click();
+                    break;
+                case 39: // ArrowRight
+                    if (this.skipBtn.current) this.skipBtn.current.click();
+                    break;
+                case 40: // ArrowDown
+                    if (this.noBtn.current) this.noBtn.current.click();
+                    break;
+            }
+        };
     }
 
     private showAnswer = (): void => {
@@ -92,13 +117,13 @@ export default class Review extends React.Component<IProps, IState> {
                     >
                         <CardMenu card={this.state.currentCard} onEdit={this.edit} onDelete={this.delete} />
                     </Card>
-                    {this.state.showAnswer ? null : <Button name="" icon="lock_open" action={this.showAnswer} />}
+                    {this.state.showAnswer ? null : <Button ref={this.unlockBtn} name="" icon="lock_open" action={this.showAnswer} />}
                 </section>
 
                 <section>
-                    {this.state.showAnswer ? <Button name="" icon="done" action={() => this.handleReview(true)} /> : null}
-                    {this.state.showAnswer ? <Button name="" icon="close" action={() => this.handleReview(false)} /> : null}
-                    <Button name="" icon="double_arrow" action={this.skipCard} />
+                    {this.state.showAnswer ? <Button ref={this.yesBtn} name="" icon="done" action={() => this.handleReview(true)} /> : null}
+                    {this.state.showAnswer ? <Button ref={this.noBtn} name="" icon="close" action={() => this.handleReview(false)} /> : null}
+                    <Button ref={this.skipBtn} name="" icon="double_arrow" action={this.skipCard} />
                 </section>
 
                 <Modal show={this.state.showModal} onClickOutside={this.closeModal}>

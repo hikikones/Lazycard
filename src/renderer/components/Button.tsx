@@ -6,6 +6,12 @@ export default class Button extends React.Component<Props> {
         super(props);
     }
 
+    public click = () => {
+        if ((this.props as IButton).action) {
+            (this.props as IButton).action();
+        }
+    }
+
     public render() {
         if ((this.props as IButton).action) {
             return (
