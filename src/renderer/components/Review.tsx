@@ -11,11 +11,11 @@ import CardMenu from './CardMenu';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
 
-// TODO: Add custom study
-
 export default class Review extends React.Component<IProps, IState> {
+    private readonly topicId: number | undefined;
     private cards: CardEntity[];
     private total: number;
+    private customStudy: boolean = false;
 
     private unlockBtn = React.createRef<Button>();
     private yesBtn = React.createRef<Button>();
@@ -26,10 +26,9 @@ export default class Review extends React.Component<IProps, IState> {
         super(props);
 
         const topicId = Number(this.props.match.params.topicId);
-        this.cards = Number.isNaN(topicId) ? db.cards.getDue() : db.cards.getDue(topicId);
-        this.total = this.cards.length;
+        this.topicId = Number.isNaN(topicId) ? undefined : topicId;
 
-        this.shuffle();
+        this.init();
 
         this.state = {
             currentCard: this.cards.pop(),
@@ -37,6 +36,64 @@ export default class Review extends React.Component<IProps, IState> {
             showModal: false
         };
 
+        this.initKeyboardShortcuts();
+    }
+
+    private init = (): void => {
+        this.cards = this.fetchCards();
+        this.total = this.cards.length;
+        this.shuffle();
+    }
+
+    private fetchCards = (): CardEntity[] => {
+        if (this.customStudy) {
+            return this.topicId === undefined
+                ?   [...db.cards.getAll()]
+                :   db.cards.getByTopic(this.topicId);
+        }
+        return this.topicId === undefined ? db.cards.getDue() : db.cards.getDue(this.topicId);
+    }
+
+    private showAnswer = (): void => {
+        this.setState({ showAnswer: true });
+    }
+
+    private showNextCard = (): void => {
+        this.setState({ showAnswer: false, currentCard: this.cards.pop() });
+    }
+
+    private skipCard = (): void => {
+        this.cards.unshift(this.state.currentCard);
+        this.showNextCard();
+    }
+
+    private handleReview = (correct: boolean): void => {
+        if (!this.customStudy) {
+            srs.schedule(this.state.currentCard, correct);
+        }
+        this.showNextCard();
+    }
+
+    private noCardsLeft = (): boolean => {
+        return this.state.currentCard === undefined;
+    }
+
+    private shuffle = (): void => {
+        for (let currentIndex = this.cards.length - 1; currentIndex > 0; currentIndex--) {
+            const newIndex = Math.floor(Math.random() * (currentIndex + 1));
+            const temp = this.cards[currentIndex];
+            this.cards[currentIndex] = this.cards[newIndex];
+            this.cards[newIndex] = temp;
+        }
+    }
+
+    private initCustomStudy = (): void => {
+        this.customStudy = true;
+        this.init();
+        this.showNextCard();
+    }
+
+    private initKeyboardShortcuts = (): void => {
         document.onkeydown = (e: KeyboardEvent) => {
             // TODO: remove global event when leaving page
             switch (e.keyCode) {
@@ -56,37 +113,6 @@ export default class Review extends React.Component<IProps, IState> {
         };
     }
 
-    private showAnswer = (): void => {
-        this.setState({ showAnswer: true });
-    }
-
-    private showNextCard = (): void => {
-        this.setState({ showAnswer: false, currentCard: this.cards.pop() });
-    }
-
-    private skipCard = (): void => {
-        this.cards.unshift(this.state.currentCard);
-        this.showNextCard();
-    }
-
-    private handleReview = (correct: boolean): void => {
-        srs.schedule(this.state.currentCard, correct);
-        this.showNextCard();
-    }
-
-    private noCardsLeft = (): boolean => {
-        return this.state.currentCard === undefined;
-    }
-
-    private shuffle = (): void => {
-        for (let currentIndex = this.cards.length - 1; currentIndex > 0; currentIndex--) {
-            const newIndex = Math.floor(Math.random() * (currentIndex + 1));
-            const temp = this.cards[currentIndex];
-            this.cards[currentIndex] = this.cards[newIndex];
-            this.cards[newIndex] = temp;
-        }
-    }
-
     private edit = (card: CardEntity): void => {
         this.setState({ showModal: true });
     }
@@ -103,7 +129,14 @@ export default class Review extends React.Component<IProps, IState> {
 
     public render() {
         if (this.noCardsLeft()) {
-            return <h3>Good job!</h3>
+            return (
+                <div>
+                    <h2>Good job!</h2>
+                    <p>There are no more remaining cards to be reviewed.</p>
+                    <p>Do a custom study for reviewing as many cards as you like without affecting the scheduler.</p>
+                    <Button name="Custom study" icon="redo" action={this.initCustomStudy} />
+                </div>
+            );
         }
 
         return (
