@@ -17,6 +17,11 @@ function createWindow() {
 
 	if (isDev) {
 		mainWindow.webContents.openDevTools();
+	} else {
+		mainWindow.setMenu(null);
+		mainWindow.on("ready-to-show", () => {
+			mainWindow.show();
+		});
 	}
 
 	mainWindow.on("close", (e: Event) => {
@@ -28,15 +33,30 @@ function createWindow() {
 	});
 }
 
-app.on("ready", createWindow);
+const gotTheLock = app.requestSingleInstanceLock();
 
-app.on("activate", () => {
-	if (mainWindow === null) {
-		createWindow();
-	}
-});
-
-ipcMain.on('quit', (e: Event) => {
-	mainWindow = null;
+if (!gotTheLock) {
 	app.quit();
-});
+} else {
+	app.on("second-instance", () => {
+		if (mainWindow) {
+			if (mainWindow.isMinimized()) {
+				mainWindow.restore();
+			}
+			mainWindow.focus();
+		}
+	});
+
+	app.on("ready", createWindow);
+
+	app.on("activate", () => {
+		if (mainWindow === null) {
+			createWindow();
+		}
+	});
+
+	ipcMain.on('quit', () => {
+		mainWindow = null;
+		app.quit();
+	});
+}
