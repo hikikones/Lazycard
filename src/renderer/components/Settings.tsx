@@ -29,6 +29,19 @@ export default class Settings extends React.Component<IProps, IState> {
         shell.openItem(cfg.getDatabaseDir());
     }
 
+    private changeBackupAmount = (e: React.FormEvent<HTMLInputElement>) => {
+        const target = e.target as HTMLInputElement;
+        let amount = Number(target.value);
+        if (amount > 100) amount = 100;
+        if (amount < 1) amount = 1;
+        target.value = amount.toString();
+        cfg.setBackupAmount(amount);
+    }
+
+    private openBackupDir = (): void => {
+        shell.openItem(cfg.getBackupPath());
+    }
+
     private restoreDatabase = () => {
         const dbFile = dialog.openFile('lazycard', ['lazycard']);
         if (dbFile === undefined) {
@@ -51,6 +64,11 @@ export default class Settings extends React.Component<IProps, IState> {
                 <label>{this.state.dbPath}</label>
                 <Button name="Open" icon="folder_open" action={this.openDatabaseDir} />
                 <Button name="Change" icon="edit" action={this.changeDatabasePath} />
+
+                <h3>Backups</h3>
+                <p>The amount of backups before new ones starts replacing old ones.</p>
+                <Button name="Open" icon="folder_open" action={this.openBackupDir} />
+                <input type="number" defaultValue={cfg.getBackupAmount()} min="1" max="100" onInput={(e: React.FormEvent<HTMLInputElement>) => this.changeBackupAmount(e)} />
 
                 <h3>Restore</h3>
                 <p>Restore your database from a local file.</p>

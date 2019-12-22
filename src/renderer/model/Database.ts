@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 
 import cfg from './Config';
 import dialog from '../controller/Dialog';
@@ -20,6 +21,21 @@ class Database {
         if (dbFile === dbMemory) return;
 
         fs.writeFileSync(file, dbMemory);
+        this.backup(dbMemory);
+    }
+
+    private backup(data: string): void {
+        const files: string[] = [];
+        fs.readdirSync(cfg.getBackupPath()).forEach(file => {
+            files.push(file);
+        });
+        files.sort().reverse();
+        if (files.length >= cfg.getBackupAmount()) {
+            try {
+                fs.unlinkSync(path.join(cfg.getBackupPath(), files.pop()));
+            } catch(err) {}
+        }
+        fs.writeFileSync(path.join(cfg.getBackupPath(), `${Date.now()}.lazycard`), data);
     }
 
     public export(topicId: number): void {

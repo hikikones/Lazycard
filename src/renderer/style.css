@@ -52,6 +52,28 @@ section {
     margin: 1rem 0;
 }
 
+input {
+    border: 1px solid lightgrey;
+    border-radius: 2px;
+    padding: 0.25rem;
+    line-height: 1.18rem;
+}
+
+input:focus {
+    outline: none;
+    border: 1px solid darkgrey;
+}
+
+a.nav:focus {
+    outline: none;
+    background-color: lightgrey;
+}
+
+a.btn:focus {
+    outline: none;
+    background-color: whitesmoke;
+}
+
 textarea {
     width: var(--card-min-width);
     border-radius: 2px;
