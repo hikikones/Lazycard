@@ -1,5 +1,5 @@
 @import '~katex/dist/katex.min.css';
-@import "~prismjs/themes/prism-tomorrow.css";
+@import "~prismjs/themes/prism.css";
 @import "~material-icons/iconfont/material-icons.css";
 @import "~lato-font/css/lato-font.css";
 
@@ -74,6 +74,22 @@ label {
     font-weight: bold;
     font-size: 0.9rem;
     color: darkgrey;
+}
+
+table {
+    margin: 0 auto;
+    width: 100%;
+    border-spacing: 0;
+    border: 1px solid whitesmoke;
+}
+
+table thead {
+    background-color: whitesmoke;
+}
+
+thead th, tbody td {
+    padding: 0.5rem;
+    border: 1px solid whitesmoke;
 }
 
 h1.topic-name:hover {
