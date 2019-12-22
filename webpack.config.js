@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const nodeExternals = require("webpack-node-externals");
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const NodeExternals = require("webpack-node-externals");
 
 const BUILD_DIR = path.resolve(__dirname, "build");
 const APP_DIR = path.resolve(__dirname, "src");
@@ -29,7 +30,7 @@ const nodeSettings = {
     __filename: false
 };
 
-const externalsList = [nodeExternals()];
+const externalsList = [NodeExternals()];
 
 const mainConfig = {
     target: 'electron-main',
@@ -59,7 +60,8 @@ const rendererConfig = {
         new HtmlWebpackPlugin({
             template: path.resolve(APP_DIR, "renderer", "index.html"),
             filename: "index.html"
-        })
+        }),
+        new CopyWebpackPlugin([{ from: './static', to: BUILD_DIR }])
     ],
     node: nodeSettings,
     externals: externalsList
