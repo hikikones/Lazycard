@@ -7,9 +7,6 @@ import srs from '../controller/SRS';
 
 import Card from './Card';
 import Button from './Button';
-import CardMenu from './CardMenu';
-import Modal from './Modal';
-import CardEditor from './CardEditor';
 
 export default class Review extends React.Component<IProps, IState> {
     private readonly topic: Topic | undefined;
@@ -32,8 +29,7 @@ export default class Review extends React.Component<IProps, IState> {
 
         this.state = {
             currentCard: this.cards.pop(),
-            showAnswer: false,
-            showModal: false
+            showAnswer: false
         };
 
         this.initKeyboardShortcuts();
@@ -113,18 +109,9 @@ export default class Review extends React.Component<IProps, IState> {
         };
     }
 
-    private edit = (card: CardEntity): void => {
-        this.setState({ showModal: true });
-    }
-
-    private delete = (card: CardEntity): void => {
-        db.cards.delete(card.id);
+    private onDelete = (): void => {
         this.total--;
         this.showNextCard();
-    }
-
-    private closeModal = (): void => {
-        this.setState({ showModal: false });
     }
 
     public render() {
@@ -148,11 +135,10 @@ export default class Review extends React.Component<IProps, IState> {
 
                 <section className="col col-center review-card">
                     <Card
-                        front={this.state.currentCard.front}
-                        back={this.state.showAnswer ? this.state.currentCard.back : undefined}
-                    >
-                        <CardMenu card={this.state.currentCard} onEdit={this.edit} onDelete={this.delete} />
-                    </Card>
+                        card={this.state.currentCard}
+                        showBack={this.state.showAnswer}
+                        onDelete={this.onDelete}
+                    />
                     {this.state.showAnswer ? null : <Button ref={this.unlockBtn} name="" icon="lock_open" action={this.showAnswer} />}
                 </section>
 
@@ -161,14 +147,6 @@ export default class Review extends React.Component<IProps, IState> {
                     {this.state.showAnswer ? <Button ref={this.noBtn} name="" icon="close" action={() => this.handleReview(false)} /> : null}
                     <Button ref={this.skipBtn} name="" icon="double_arrow" action={this.skipCard} />
                 </section>
-
-                <Modal show={this.state.showModal} onClickOutside={this.closeModal}>
-                    <CardEditor
-                        onSave={this.closeModal}
-                        onCancel={this.closeModal}
-                        card={this.state.currentCard}
-                    />
-                </Modal>
             </div>
         );
     }
@@ -180,5 +158,4 @@ interface IProps extends RouteComponentProps<{ topicId?: string }> {
 interface IState {
     currentCard: CardEntity
     showAnswer: boolean
-    showModal: boolean
 }

@@ -1,17 +1,12 @@
 import * as React from 'react';
 
-import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
 import search from '../controller/Search';
 
 import Card from './Card';
-import CardMenu from './CardMenu';
-import Modal from './Modal';
-import CardEditor from './CardEditor';
 import Button from './Button';
 
 export default class Cards extends React.Component<IProps, IState> {
-    private selectedCard: CardEntity;
     private readonly searchInput = React.createRef<HTMLInputElement>();
 
     public constructor(props: IProps) {
@@ -25,25 +20,6 @@ export default class Cards extends React.Component<IProps, IState> {
 
     private toggleAnswer = (): void => {
         this.setState({ showBack: !this.state.showBack });
-    }
-
-    private edit = (card: CardEntity): void => {
-        this.selectedCard = card;
-        this.setState({ showModal: true });
-    }
-
-    private delete = (card: CardEntity): void => {
-        db.cards.delete(card.id);
-        this.props.onCardChange();
-    }
-
-    private closeModal = (): void => {
-        this.setState({ showModal: false });
-    }
-
-    private onCardEdit = (): void => {
-        this.props.onCardChange();
-        this.closeModal();
     }
 
     private search = (): void => {
@@ -94,21 +70,12 @@ export default class Cards extends React.Component<IProps, IState> {
                     {cards.map(c =>
                         <Card
                             key={c.id}
-                            front={c.front}
-                            back={this.state.showBack ? c.back : undefined}
-                        >
-                            <CardMenu card={c} onEdit={this.edit} onDelete={this.delete} />
-                        </Card>
+                            card={c}
+                            showBack={this.state.showBack}
+                            onDelete={this.props.onCardChange}
+                        />
                     )}
                 </section>
-
-                <Modal show={this.state.showModal} onClickOutside={this.closeModal}>
-                    <CardEditor
-                        onSave={this.onCardEdit}
-                        onCancel={this.closeModal}
-                        card={this.selectedCard}
-                    />
-                </Modal>
             </div>
         );
     }
