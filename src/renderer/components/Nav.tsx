@@ -31,7 +31,7 @@ export default class Nav extends React.Component<INavProps> {
         return (
             <nav>
                 <NavItem name="Home" icon="home" to="/" />
-                <NavItem name="Due today" icon="drafts" to="/review/:topicId" />
+                <NavItem name="Due today" icon="drafts" to="/review/:topicId" matchWith="/review" />
                 <NavItem name="All cards" icon="layers" to="/cards/" />
                 <NavItem name="Settings" icon="settings" to="/settings" />
                 <NavItem name="Import" icon="save_alt" action={this.import} />
@@ -51,7 +51,16 @@ interface INavProps {
     onTopicChange(): void
 }
 
-const NavItem = (props: INavLink | INavButton) => {
+const NavItem = (props: INavLink | INavLooseLink | INavButton) => {
+    if ((props as INavLooseLink).matchWith) {
+        return (
+            <NavLink className="nav" exact to={(props as INavLink).to}
+                isActive={(_, location) => location.pathname.startsWith((props as INavLooseLink).matchWith)} >
+                <i className="material-icons">{props.icon}</i> {props.name}
+            </NavLink>
+        );
+    }
+
     if ((props as INavLink).to) {
         return (
             <NavLink className="nav" exact to={(props as INavLink).to}>
@@ -67,14 +76,19 @@ const NavItem = (props: INavLink | INavButton) => {
     );
 }
 
-interface INavLink {
+interface INav {
     name: string
     icon: string
+}
+
+interface INavLink extends INav {
     to: string
 }
 
-interface INavButton {
-    name: string
-    icon: string
+interface INavLooseLink extends INavLink {
+    matchWith: string
+}
+
+interface INavButton extends INav {
     action(): void
 }

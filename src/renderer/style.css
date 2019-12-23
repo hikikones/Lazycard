@@ -243,6 +243,11 @@ a.nav i.material-icons {
 
 .review-progress {
     color: grey;
+    text-align: center;
+}
+
+section.review-progress label {
+    margin-bottom: 1rem;
 }
 
 .review-card .card {
@@ -333,6 +338,7 @@ section a.btn:last-child {
 
 ::-webkit-scrollbar {
     width: 0.4rem;
+    height: 0.4rem;
 }
 
 ::-webkit-scrollbar-thumb {

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
-import { Card as CardEntity } from '../model/Database';
+import { Card as CardEntity, Topic } from '../model/Database';
 import srs from '../controller/SRS';
 
 import Card from './Card';
@@ -12,7 +12,7 @@ import Modal from './Modal';
 import CardEditor from './CardEditor';
 
 export default class Review extends React.Component<IProps, IState> {
-    private readonly topicId: number | undefined;
+    private readonly topic: Topic | undefined;
     private cards: CardEntity[];
     private total: number;
     private customStudy: boolean = false;
@@ -26,7 +26,7 @@ export default class Review extends React.Component<IProps, IState> {
         super(props);
 
         const topicId = Number(this.props.match.params.topicId);
-        this.topicId = Number.isNaN(topicId) ? undefined : topicId;
+        this.topic = Number.isNaN(topicId) ? undefined : db.topics.get(topicId);
 
         this.init();
 
@@ -47,11 +47,11 @@ export default class Review extends React.Component<IProps, IState> {
 
     private fetchCards = (): CardEntity[] => {
         if (this.customStudy) {
-            return this.topicId === undefined
+            return this.topic === undefined
                 ?   [...db.cards.getAll()]
-                :   db.cards.getByTopic(this.topicId);
+                :   db.cards.getByTopic(this.topic.id);
         }
-        return this.topicId === undefined ? db.cards.getDue() : db.cards.getDue(this.topicId);
+        return this.topic === undefined ? db.cards.getDue() : db.cards.getDue(this.topic.id);
     }
 
     private showAnswer = (): void => {
@@ -141,7 +141,10 @@ export default class Review extends React.Component<IProps, IState> {
 
         return (
             <div className="col col-center review space-between">
-                <span className="review-progress">{this.total - this.cards.length} / {this.total}</span>
+                <section className="review-progress">
+                    {this.topic === undefined ? null : <label>{this.topic.name}</label>}
+                    <span>{this.total - this.cards.length} / {this.total}</span>
+                </section>
 
                 <section className="col col-center review-card">
                     <Card
