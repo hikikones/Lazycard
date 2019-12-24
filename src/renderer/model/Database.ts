@@ -93,6 +93,8 @@ class Database {
             card.back = c.back;
             card.dueDate = new Date(c.dueDate);
             card.dueDays = c.dueDays;
+            card.attempts = c.attempts;
+            card.successes = c.successes;
             this.cards.add(card);
         });
 
@@ -171,6 +173,8 @@ abstract class Table<T extends Entity<EntityData, EntityExport>> {
 class Cards extends Table<Card> {
     protected create(topicId: number): Card {
         const card = new Card(topicId);
+        card.attempts = 0;
+        card.successes = 0;
         srs.tomorrow(card);
         return card;
     }
@@ -228,11 +232,18 @@ export class Card extends Entity<CardData, CardExport> {
     public back: string;
     public dueDate: Date;
     public dueDays: number;
+    public attempts: number;
+    public successes: number;
     public topicId: number;
 
     public constructor(topicId: number) {
         super();
         this.topicId = topicId;
+    }
+
+    public retentionRate(): number {
+        if (this.attempts === 0) return 0;
+        return this.successes / this.attempts;
     }
 
     public serialize(): CardData {
@@ -242,6 +253,8 @@ export class Card extends Entity<CardData, CardExport> {
             back: this.back,
             dueDate: this.dueDate.toLocaleDateString(),
             dueDays: this.dueDays,
+            attempts: this.attempts,
+            successes: this.successes,
             topicId: this.topicId
         }
     }
@@ -282,6 +295,8 @@ interface CardData extends EntityData {
     back: string
     dueDate: string
     dueDays: number
+    attempts: number
+    successes: number
     topicId: number
 }
 
