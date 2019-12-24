@@ -19,7 +19,7 @@ class Search {
         };
     }
 
-    public query(query: string, cards: readonly Card[]): Card[] {
+    public query(query: string, cards: Card[]): Card[] {
         const fuse = new Fuse(cards, this.options);
         return fuse.search(query.trimRight());
     }

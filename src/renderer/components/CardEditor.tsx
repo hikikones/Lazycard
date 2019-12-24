@@ -47,6 +47,7 @@ export default class CardEditor extends React.Component<Props, IState> {
         card.front = this.front.current.value;
         card.back = this.back.current.value;
         this.clear();
+        this.front.current.focus();
         this.props.onSave();
     }
 

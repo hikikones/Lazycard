@@ -38,9 +38,11 @@ export default class Cards extends React.Component<IProps, IState> {
     public render() {
         if (this.props.cards.length === 0) return null;
 
-        let cards = this.props.cards;
+        let cards = [...this.props.cards];
         if (!this.isSearchEmpty()) {
             cards = search.query(this.state.query, cards)
+        } else {
+            cards.sort((a, b) => b.id - a.id);
         }
 
         return (
