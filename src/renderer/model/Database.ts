@@ -236,9 +236,17 @@ export class Card extends Entity<CardData, CardExport> {
     public successes: number;
     public topicId: number;
 
+    public selected: boolean = false;
+
     public constructor(topicId: number) {
         super();
         this.topicId = topicId;
+    }
+
+    public review(success: boolean): void {
+        this.attempts++;
+        if (success) this.successes++;
+        srs.schedule(this, success);
     }
 
     public retentionRate(): number {

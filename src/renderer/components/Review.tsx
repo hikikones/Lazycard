@@ -3,7 +3,6 @@ import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
 import { Card as CardEntity, Topic } from '../model/Database';
-import srs from '../controller/SRS';
 
 import Card from './Card';
 import Button from './Button';
@@ -63,9 +62,9 @@ export default class Review extends React.Component<IProps, IState> {
         this.showNextCard();
     }
 
-    private handleReview = (correct: boolean): void => {
+    private handleReview = (success: boolean): void => {
         if (!this.customStudy) {
-            srs.schedule(this.state.currentCard, correct);
+            this.state.currentCard.review(success);
         }
         this.showNextCard();
     }

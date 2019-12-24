@@ -5,8 +5,7 @@
 
 :root {
     --nav-width: 200px;
-    --card-min-width: 250px;
-    --card-max-width: 350px;
+    --card-width: 400px;
 }
 
 body {
@@ -75,7 +74,7 @@ a.btn:focus {
 }
 
 textarea {
-    width: var(--card-min-width);
+    width: 250px;
     border-radius: 2px;
     border-color: lightgrey;
     margin-bottom: 0.5rem;
@@ -167,7 +166,7 @@ a.nav i.material-icons {
 .cards {
     display: grid;
     grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
+    grid-template-columns: repeat(auto-fill, var(--card-width));
 }
 
 .card {
@@ -175,9 +174,12 @@ a.nav i.material-icons {
     padding: 1rem;
     border-radius: 2px;
     box-sizing: border-box;
-    min-width: var(--card-min-width);
-    max-width: var(--card-max-width);
+    width: var(--card-width);
     overflow-wrap: break-word;
+}
+
+.cards .card {
+    height: 100%;
 }
 
 .shadow {
@@ -192,6 +194,15 @@ a.nav i.material-icons {
 
 .card-btn .btn {
     margin: 0;
+}
+
+.card-checkbox-container {
+    position: relative;
+}
+
+.card-checkbox-container .btn {
+    position: absolute;
+    z-index: 1;
 }
 
 .card-menu {
@@ -297,7 +308,7 @@ section a.btn:last-child {
 
 .modal {
     position: fixed;
-    z-index: 1;
+    z-index: 99;
     left: 0;
     top: 0;
     right: 0;

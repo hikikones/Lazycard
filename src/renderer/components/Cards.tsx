@@ -1,9 +1,9 @@
 import * as React from 'react';
 
-import { Card as CardEntity } from '../model/Database';
+import { Card } from '../model/Database';
 import search from '../controller/Search';
 
-import Card from './Card';
+import CardSelectable from './CardSelectable';
 import Button from './Button';
 
 export default class Cards extends React.Component<IProps, IState> {
@@ -14,7 +14,8 @@ export default class Cards extends React.Component<IProps, IState> {
         this.state = {
             showBack: false,
             showModal: false,
-            query: ""
+            query: "",
+            selected: this.props.cards.filter(c => c.selected).length
         }
     }
 
@@ -35,6 +36,38 @@ export default class Cards extends React.Component<IProps, IState> {
         return this.state.query === "";
     }
 
+    private select = (): void => {
+        this.setState({ selected: this.state.selected + 1 });
+        this.props.onCardChange();
+    }
+
+    private deselect = (): void => {
+        this.setState({ selected: this.state.selected - 1 });
+        this.props.onCardChange();
+    }
+
+    private toggleSelectAll = () => {
+        if (this.isAllSelected()) {
+            this.props.cards.forEach(c => c.selected = false);
+            this.setState({ selected: 0 });
+        } else {
+            this.props.cards.forEach(c => c.selected = true);
+            this.setState({ selected: this.props.cards.length });
+        }
+        this.props.onCardChange();
+    }
+
+    private isAllSelected = (): boolean => {
+        return this.state.selected === this.props.cards.length;
+    }
+
+    private delete = (card: Card): void => {
+        if (card.selected) {
+            this.setState({ selected: this.state.selected - 1 });
+        }
+        this.props.onCardChange();
+    }
+
     public render() {
         if (this.props.cards.length === 0) return null;
 
@@ -49,11 +82,18 @@ export default class Cards extends React.Component<IProps, IState> {
             <div>
                 <h2>Cards</h2>
 
+                <p>Selected: {this.state.selected}</p>
+
                 <section>
                     <Button
                         name="Show answer"
                         icon={this.state.showBack ? "check_box" : "check_box_outline_blank"}
                         action={this.toggleAnswer}
+                    />
+                    <Button
+                        name="Select all"
+                        icon={this.isAllSelected() ? "check_box" : "check_box_outline_blank"}
+                        action={this.toggleSelectAll}
                     />
                     <div className="search-container">
                         <i className="search-icon material-icons">search</i>
@@ -70,11 +110,13 @@ export default class Cards extends React.Component<IProps, IState> {
 
                 <section className="cards">
                     {cards.map(c =>
-                        <Card
+                        <CardSelectable
                             key={c.id}
                             card={c}
                             showBack={this.state.showBack}
-                            onDelete={this.props.onCardChange}
+                            onDelete={this.delete}
+                            onSelect={this.select}
+                            onDeselect={this.deselect}
                         />
                     )}
                 </section>
@@ -84,7 +126,7 @@ export default class Cards extends React.Component<IProps, IState> {
 }
 
 interface IProps {
-    cards: readonly CardEntity[]
+    cards: readonly Card[]
     onCardChange(): void
 }
 
@@ -92,4 +134,5 @@ interface IState {
     showBack: boolean
     showModal: boolean
     query: string
+    selected: number
 }
