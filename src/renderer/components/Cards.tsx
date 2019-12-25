@@ -1,15 +1,22 @@
 import * as React from 'react';
 
 import db, { Card } from '../model/Database';
+import search from '../controller/Search';
 
 import CardSelectable from './CardSelectable';
 import Button from './Button';
 import Dropdown, { DropdownItem } from './Dropdown';
-import SearchInput from './SearchInput';
 import Modal from './Modal';
 
+enum CardSort {
+    Newest,
+    Oldest,
+    RetentionRateAsc,
+    RetentionRateDesc
+}
+
 export default class Cards extends React.Component<IProps, IState> {
-    private readonly search = React.createRef<SearchInput>();
+    private readonly searchInput = React.createRef<HTMLInputElement>();
     private readonly topics = React.createRef<HTMLSelectElement>();
     private cards: Card[];
 
@@ -19,6 +26,8 @@ export default class Cards extends React.Component<IProps, IState> {
             showBack: false,
             selected: this.props.cards.filter(c => c.selected).length,
             showModal: false,
+            query: "",
+            sort: CardSort.Newest
         }
     }
 
@@ -38,9 +47,9 @@ export default class Cards extends React.Component<IProps, IState> {
 
     private toggleSelectAll = (): void => {
         if (this.isAllSelected()) {
-            (this.cards || this.props.cards).forEach(c => c.selected = false);
+            this.cards.forEach(c => c.selected = false);
         } else {
-            (this.cards || this.props.cards).forEach(c => c.selected = true);
+            this.cards.forEach(c => c.selected = true);
         }
         this.setState({ selected: this.props.cards.filter(c => c.selected).length });
         this.props.onCardChange();
@@ -52,15 +61,16 @@ export default class Cards extends React.Component<IProps, IState> {
 
     private delete = (card: Card): void => {
         if (card.selected) this.deselect();
+        else this.props.onCardChange();
     }
 
     private onSearch = (): void => {
-        if (this.search.current.isEmpty()) {
-            this.cards = null;
-        } else {
-            this.cards = this.search.current.query([...this.props.cards]);
-        }
-        this.forceUpdate()
+        this.setState({ query: this.searchInput.current.value });
+    }
+
+    private clearSearch = (): void => {
+        this.searchInput.current.value = "";
+        this.setState({ query: "" });
     }
 
     private toggleModal = (): void => {
@@ -74,19 +84,54 @@ export default class Cards extends React.Component<IProps, IState> {
             c.topicId = Number(this.topics.current.value);
             c.selected = false;
         });
+        this.setState({ selected: 0 });
         this.props.onCardChange();
         this.toggleModal();
+    }
+
+    private setSort(sortType: CardSort): void {
+        this.setState({ sort: sortType });
+    }
+
+    private sort = (): void => {
+        switch (this.state.sort) {
+            case CardSort.Newest:
+                this.cards.sort((a, b) => b.id - a.id); break;
+            case CardSort.Oldest:
+                this.cards.sort((a, b) => a.id - b.id); break;
+            case CardSort.RetentionRateDesc:
+                this.cards.sort((a, b) => b.retentionRate() - a.retentionRate()); break;
+            case CardSort.RetentionRateAsc:
+                this.cards.sort((a, b) => a.retentionRate() - b.retentionRate()); break;
+            default:
+                this.cards.sort((a, b) => b.id - a.id); break;
+        }
     }
 
     public render() {
         if (this.props.cards.length === 0) return null;
 
-        let cards = [...this.props.cards];
-        cards.sort((a, b) => b.id - a.id);
+        this.cards = [...this.props.cards];
+        if (this.state.query !== "") this.cards = search.query(this.state.query, this.cards);
+        this.sort();
 
         return (
             <div>
                 <h2>Cards</h2>
+
+                <section>
+                    <div className="search-container">
+                        <i className="search-icon material-icons">search</i>
+                        <input
+                            ref={this.searchInput}
+                            className="search"
+                            placeholder="Search..."
+                            type="text"
+                            onInput={this.onSearch}
+                        />
+                        <i onClick={this.clearSearch} className="clear-icon material-icons">close</i>
+                    </div>
+                </section>
 
                 <section>
                     <Button
@@ -99,14 +144,19 @@ export default class Cards extends React.Component<IProps, IState> {
                         icon={this.isAllSelected() ? "check_box" : "check_box_outline_blank"}
                         action={this.toggleSelectAll}
                     />
+                    <Dropdown name="Sort" icon="sort" showDownArrow={true}>
+                        <DropdownItem name="Newest" icon="arrow_upward" action={() => this.setSort(CardSort.Newest)} />
+                        <DropdownItem name="Oldest" icon="arrow_downward" action={() => this.setSort(CardSort.Oldest)} />
+                        <DropdownItem name="Retention Rate" icon="trending_down" action={() => this.setSort(CardSort.RetentionRateDesc)} />
+                        <DropdownItem name="Retention Rate" icon="trending_up" action={() => this.setSort(CardSort.RetentionRateAsc)} />
+                    </Dropdown>
                     <Dropdown name="Bulk" icon="assignment" number={this.state.selected} showDownArrow={true}>
                         <DropdownItem name="Move" icon="arrow_forward" action={this.toggleModal} />
                     </Dropdown>
-                    <SearchInput ref={this.search} onInput={this.onSearch} />
                 </section>
 
                 <section className="cards">
-                    {(this.cards || cards).map(c =>
+                    {(this.cards).map(c =>
                         <CardSelectable
                             key={c.id}
                             card={c}
@@ -142,4 +192,6 @@ interface IState {
     showBack: boolean
     selected: number
     showModal: boolean
+    query: string
+    sort: CardSort
 }
