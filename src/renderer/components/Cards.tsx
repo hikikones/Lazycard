@@ -1,40 +1,27 @@
 import * as React from 'react';
 
 import { Card } from '../model/Database';
-import search from '../controller/Search';
 
 import CardSelectable from './CardSelectable';
 import Button from './Button';
 import Dropdown, { DropdownItem } from './Dropdown';
+import SearchInput from './SearchInput';
 
 export default class Cards extends React.Component<IProps, IState> {
-    private readonly searchInput = React.createRef<HTMLInputElement>();
+    private readonly search = React.createRef<SearchInput>();
+    private cards: Card[];
 
     public constructor(props: IProps) {
         super(props);
         this.state = {
             showBack: false,
             showModal: false,
-            query: "",
             selected: this.props.cards.filter(c => c.selected).length
         }
     }
 
     private toggleAnswer = (): void => {
         this.setState({ showBack: !this.state.showBack });
-    }
-
-    private search = (): void => {
-        this.setState({ query: this.searchInput.current.value });
-    }
-
-    private clearSearch = (): void => {
-        this.searchInput.current.value = "";
-        this.setState({ query: "" });
-    }
-
-    private isSearchEmpty = (): boolean => {
-        return this.state.query === "";
     }
 
     private select = (): void => {
@@ -47,14 +34,13 @@ export default class Cards extends React.Component<IProps, IState> {
         this.props.onCardChange();
     }
 
-    private toggleSelectAll = () => {
+    private toggleSelectAll = (): void => {
         if (this.isAllSelected()) {
-            this.props.cards.forEach(c => c.selected = false);
-            this.setState({ selected: 0 });
+            (this.cards || this.props.cards).forEach(c => c.selected = false);
         } else {
-            this.props.cards.forEach(c => c.selected = true);
-            this.setState({ selected: this.props.cards.length });
+            (this.cards || this.props.cards).forEach(c => c.selected = true);
         }
+        this.setState({ selected: this.props.cards.filter(c => c.selected).length });
         this.props.onCardChange();
     }
 
@@ -63,21 +49,23 @@ export default class Cards extends React.Component<IProps, IState> {
     }
 
     private delete = (card: Card): void => {
-        if (card.selected) {
-            this.setState({ selected: this.state.selected - 1 });
+        if (card.selected) this.deselect();
+    }
+
+    private onSearch = (): void => {
+        if (this.search.current.isEmpty()) {
+            this.cards = null;
+        } else {
+            this.cards = this.search.current.query([...this.props.cards]);
         }
-        this.props.onCardChange();
+        this.forceUpdate()
     }
 
     public render() {
         if (this.props.cards.length === 0) return null;
 
         let cards = [...this.props.cards];
-        if (!this.isSearchEmpty()) {
-            cards = search.query(this.state.query, cards)
-        } else {
-            cards.sort((a, b) => b.id - a.id);
-        }
+        cards.sort((a, b) => b.id - a.id);
 
         return (
             <div>
@@ -97,21 +85,11 @@ export default class Cards extends React.Component<IProps, IState> {
                     <Dropdown name="Bulk" icon="assignment" number={this.state.selected} showDownArrow={true}>
                         <DropdownItem name="Move" icon="arrow_forward" action={() => console.log("Move")} />
                     </Dropdown>
-                    <div className="search-container">
-                        <i className="search-icon material-icons">search</i>
-                        <input
-                            ref={this.searchInput}
-                            className="search"
-                            placeholder="Search..."
-                            type="text"
-                            onInput={this.search}
-                        />
-                        <i onClick={this.clearSearch} className="clear-icon material-icons">close</i>
-                    </div>
+                    <SearchInput ref={this.search} onInput={this.onSearch} />
                 </section>
 
                 <section className="cards">
-                    {cards.map(c =>
+                    {(this.cards || cards).map(c =>
                         <CardSelectable
                             key={c.id}
                             card={c}
@@ -135,6 +113,5 @@ interface IProps {
 interface IState {
     showBack: boolean
     showModal: boolean
-    query: string
     selected: number
 }
