@@ -12,16 +12,17 @@ export default class Card extends React.Component<ICardNew | ICard, ICardState> 
     public constructor(props: ICardNew | ICard) {
         super(props);
         this.state = {
-            showModal: false
+            showEditor: false,
+            showStats: false
         }
     }
 
     private openEditor = (): void => {
-        this.setState({ showModal: true });
+        this.setState({ showEditor: true });
     }
 
     private closeEditor = (): void => {
-        this.setState({ showModal: false });
+        this.setState({ showEditor: false });
     }
 
     private onSave = (): void => {
@@ -34,6 +35,10 @@ export default class Card extends React.Component<ICardNew | ICard, ICardState> 
             db.cards.delete(this.props.card.id);
             this.props.onDelete();
         }
+    }
+
+    private toggleStats = (): void => {
+        this.setState({ showStats: !this.state.showStats });
     }
 
     public render() {
@@ -52,6 +57,7 @@ export default class Card extends React.Component<ICardNew | ICard, ICardState> 
                 
                 <Dropdown name="" icon="more_horiz" className="card-btn" showDownArrow={false}>
                     <DropdownItem name="Edit" icon="edit" action={this.openEditor} />
+                    <DropdownItem name="Stats" icon="assessment" action={this.toggleStats} />
                     <DropdownItem name="Delete" icon="delete" action={this.delete} />
                 </Dropdown>
 
@@ -59,12 +65,34 @@ export default class Card extends React.Component<ICardNew | ICard, ICardState> 
                 {this.props.showBack ? <hr /> : null}
                 {this.props.showBack ? <CardContent markdown={this.props.card.back} /> : null}
 
-                <Modal show={this.state.showModal} onClickOutside={this.closeEditor}>
+                <Modal show={this.state.showEditor} onClickOutside={this.closeEditor}>
                     <CardEditor
                         onSave={this.onSave}
                         onCancel={this.closeEditor}
                         card={this.props.card}
                     />
+                </Modal>
+
+                <Modal show={this.state.showStats} onClickOutside={this.toggleStats}>
+                    <h2>Stats</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Attempts</th>
+                                <th>Successes</th>
+                                <th>Retention Rate</th>
+                                <th>Due date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{this.props.card.attempts}</td>
+                                <td>{this.props.card.successes}</td>
+                                <td>{this.props.card.retentionRate()}</td>
+                                <td>{this.props.card.dueDate.toLocaleDateString()}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </Modal>
             </div>
         );
@@ -83,7 +111,8 @@ interface ICard {
 }
 
 interface ICardState {
-    showModal: boolean
+    showEditor: boolean
+    showStats: boolean
 }
 
 const isCardNew = (prop: ICardNew | ICard): prop is ICardNew => {

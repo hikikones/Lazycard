@@ -43,7 +43,7 @@ export default class Topic extends React.Component<IProps, IState> {
     }
 
     private validateNameChange = (newName: string): void => {
-        if (newName === "" || db.topics.exists(newName)) return;
+        if (newName === "" || db.topics.exists(newName.trim())) return;
 
         this.topic.name = newName;
         this.setState({ name: newName });

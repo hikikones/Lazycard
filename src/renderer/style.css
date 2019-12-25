@@ -31,6 +31,16 @@ nav {
     overflow: auto;
 }
 
+nav a.nav {
+    position: relative;
+    padding-left: 1.6rem;
+}
+
+nav a.nav i.material-icons {
+    position: absolute;
+    left: 0.15rem;
+}
+
 main {
     grid-area: main;
     background-color: white;
