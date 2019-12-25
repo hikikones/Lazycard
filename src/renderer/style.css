@@ -146,6 +146,15 @@ hr {
     background-image: -webkit-linear-gradient(left,whitesmoke, lightgrey, whitesmoke);
 }
 
+select, option {
+    padding: 0.1rem 0.15rem;
+    font-family: Lato;
+}
+
+select:focus, option:focus, optgroup:focus {
+    outline: none;
+}
+
 a.nav {
     display: block;
     padding: 0.25rem 0.5rem;

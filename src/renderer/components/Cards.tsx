@@ -1,22 +1,24 @@
 import * as React from 'react';
 
-import { Card } from '../model/Database';
+import db, { Card } from '../model/Database';
 
 import CardSelectable from './CardSelectable';
 import Button from './Button';
 import Dropdown, { DropdownItem } from './Dropdown';
 import SearchInput from './SearchInput';
+import Modal from './Modal';
 
 export default class Cards extends React.Component<IProps, IState> {
     private readonly search = React.createRef<SearchInput>();
+    private readonly topics = React.createRef<HTMLSelectElement>();
     private cards: Card[];
 
     public constructor(props: IProps) {
         super(props);
         this.state = {
             showBack: false,
+            selected: this.props.cards.filter(c => c.selected).length,
             showModal: false,
-            selected: this.props.cards.filter(c => c.selected).length
         }
     }
 
@@ -61,6 +63,21 @@ export default class Cards extends React.Component<IProps, IState> {
         this.forceUpdate()
     }
 
+    private toggleModal = (): void => {
+        this.setState({ showModal: !this.state.showModal });
+    }
+
+    private move = (): void => {
+        const selectedCards = this.props.cards.filter(c => c.selected);
+        if (selectedCards.length === 0) return;
+        selectedCards.forEach(c => {
+            c.topicId = Number(this.topics.current.value);
+            c.selected = false;
+        });
+        this.props.onCardChange();
+        this.toggleModal();
+    }
+
     public render() {
         if (this.props.cards.length === 0) return null;
 
@@ -83,7 +100,7 @@ export default class Cards extends React.Component<IProps, IState> {
                         action={this.toggleSelectAll}
                     />
                     <Dropdown name="Bulk" icon="assignment" number={this.state.selected} showDownArrow={true}>
-                        <DropdownItem name="Move" icon="arrow_forward" action={() => console.log("Move")} />
+                        <DropdownItem name="Move" icon="arrow_forward" action={this.toggleModal} />
                     </Dropdown>
                     <SearchInput ref={this.search} onInput={this.onSearch} />
                 </section>
@@ -100,6 +117,17 @@ export default class Cards extends React.Component<IProps, IState> {
                         />
                     )}
                 </section>
+
+                <Modal show={this.state.showModal} onClickOutside={this.toggleModal}>
+                    <h2>Move</h2>
+                    <p>Move selected cards to another topic.</p>
+                    <label>Topics</label>
+                    <select ref={this.topics}>
+                        {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <Button name="Move" icon="done" action={this.move} />
+                    <Button name="Cancel" icon="close" action={this.toggleModal} />
+                </Modal>
             </div>
         );
     }
@@ -112,6 +140,6 @@ interface IProps {
 
 interface IState {
     showBack: boolean
-    showModal: boolean
     selected: number
+    showModal: boolean
 }
