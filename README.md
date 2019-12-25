@@ -17,7 +17,7 @@ Head over to the [releases](https://github.com/hikikones/Lazycard/releases) page
 
 ## :scroll: Setup
 
-Install [Node.js](https://nodejs.org/en/). Open up a terminal and clone the project with [Git](https://git-scm.com/), `cd` into the project root folder where the `package.json` file, and install all dependencies:
+Install [Node.js](https://nodejs.org/en/). Open up a terminal and clone the project with [Git](https://git-scm.com/), `cd` into the project root folder and install all dependencies:
 
 
 ```
