@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-export default class App extends React.Component<IProps> {
+export default class Modal extends React.Component<IProps> {
     public constructor(props: IProps) {
         super(props);
     }

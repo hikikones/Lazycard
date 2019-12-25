@@ -5,6 +5,7 @@ import search from '../controller/Search';
 
 import CardSelectable from './CardSelectable';
 import Button from './Button';
+import Dropdown, { DropdownItem } from './Dropdown';
 
 export default class Cards extends React.Component<IProps, IState> {
     private readonly searchInput = React.createRef<HTMLInputElement>();
@@ -82,8 +83,6 @@ export default class Cards extends React.Component<IProps, IState> {
             <div>
                 <h2>Cards</h2>
 
-                <p>Selected: {this.state.selected}</p>
-
                 <section>
                     <Button
                         name="Show answer"
@@ -95,6 +94,9 @@ export default class Cards extends React.Component<IProps, IState> {
                         icon={this.isAllSelected() ? "check_box" : "check_box_outline_blank"}
                         action={this.toggleSelectAll}
                     />
+                    <Dropdown name="Bulk" icon="assignment" number={this.state.selected} showDownArrow={true}>
+                        <DropdownItem name="Move" icon="arrow_forward" action={() => console.log("Move")} />
+                    </Dropdown>
                     <div className="search-container">
                         <i className="search-icon material-icons">search</i>
                         <input

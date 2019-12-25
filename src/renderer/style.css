@@ -163,6 +163,13 @@ a.nav i.material-icons {
     padding: 0 0.15rem;
 }
 
+a.nav span, a.btn span {
+    background-color: whitesmoke;
+    border-radius: 50%;
+    padding: 0.1rem 0.25rem;
+    margin-left: 0.1rem;
+}
+
 .cards {
     display: grid;
     grid-gap: 1rem;
@@ -321,6 +328,23 @@ section a.btn:last-child {
     margin-top: 100px;
     padding: 40px;
     overflow: auto;
+}
+
+.dropdown {
+    display: inline-block;
+    position: relative;
+}
+
+.dropdown .btn {
+    margin-right: 0;
+}
+
+.dropdown-menu {
+    position: absolute;
+    white-space: nowrap;
+    background-color: white;
+    right: 0;
+    z-index: 1;
 }
 
 .row {

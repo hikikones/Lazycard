@@ -4,7 +4,7 @@ import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
 import md from '../controller/Markdown';
 
-import Button from './Button';
+import Dropdown, { DropdownItem } from './Dropdown';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
 
@@ -49,7 +49,12 @@ export default class Card extends React.Component<ICardNew | ICard, ICardState> 
 
         return (
             <div className="card shadow">
-                <CardMenu onEdit={this.openEditor} onDelete={this.delete} />
+                
+                <Dropdown name="" icon="more_horiz" className="card-btn" showDownArrow={false}>
+                    <DropdownItem name="Edit" icon="edit" action={this.openEditor} />
+                    <DropdownItem name="Delete" icon="delete" action={this.delete} />
+                </Dropdown>
+
                 {<CardContent markdown={this.props.card.front} />}
                 {this.props.showBack ? <hr /> : null}
                 {this.props.showBack ? <CardContent markdown={this.props.card.back} /> : null}
@@ -87,35 +92,4 @@ const isCardNew = (prop: ICardNew | ICard): prop is ICardNew => {
 
 const CardContent = (props: { markdown: string }): JSX.Element => {
     return <div dangerouslySetInnerHTML={{ __html: md.parse(props.markdown) }} />
-}
-
-const CardMenu = (props: { onEdit(): void, onDelete(): void }): JSX.Element => {
-    const [showMenu, toggleMenu] = React.useState(false);
-
-    const onEdit = () => {
-        toggleMenu(false);
-        props.onEdit();
-    }
-
-    const onDelete = () => {
-        toggleMenu(false);
-        props.onDelete();
-    }
-
-    return (
-        <div className="card-btn">
-            <Button name="" icon="more_horiz" action={() => toggleMenu(!showMenu)} />
-            {showMenu
-                ?   <div className="card-menu shadow">
-                        <a href="#" onClick={onEdit} className="nav">
-                            <i className="material-icons">edit</i> Edit
-                        </a>
-                        <a href="#" onClick={onDelete} className="nav">
-                            <i className="material-icons">delete</i> Delete
-                        </a>
-                    </div>
-                :   null
-            }
-        </div>
-    );
 }
