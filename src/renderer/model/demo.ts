@@ -55,6 +55,26 @@ const demo = (): IDatabase => {
                 attempts: 0,
                 successes: 0,
                 topicId: 1
+            },
+            {
+                id: 6,
+                front: "Use **keyboard shortcuts** for quicker reviewing.",
+                back: "When reviewing, hit `space` for showing answer, `ArrowUp` for successful recall, `ArrowDown` for unsuccessful, and `ArrowRight` for skipping a card.",
+                dueDate: now,
+                dueDays: 0,
+                attempts: 0,
+                successes: 0,
+                topicId: 1
+            },
+            {
+                id: 7,
+                front: "Retain more information with **spaced repetition**.",
+                back: "For each card you recall correctly, the amount of days until next review are _doubled_. If not, the days are _halved_, with a minimum of _one_ day.",
+                dueDate: now,
+                dueDays: 0,
+                attempts: 0,
+                successes: 0,
+                topicId: 1
             }
         ]
     }
