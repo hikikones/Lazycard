@@ -4,7 +4,6 @@ import { Switch, Route } from "react-router-dom";
 import db from '../model/Database';
 import { Card } from '../model/Database';
 
-import Home from './Home';
 import Review from './Review';
 import Cards from './Cards';
 import Settings from './Settings';
@@ -26,10 +25,7 @@ export default class Main extends React.Component<IProps, IState> {
         return (
             <main className="row row-center">
                 <Switch>
-                    <Route exact path="/">
-                        <Home />
-                    </Route>
-                    <Route path="/review/:topicId" render={(props) => (
+                    <Route exact path={["/", "/review/:topicId"]} render={(props) => (
                         <Review {...props} key={props.match.params.topicId} />
                     )} />
                     <Route path="/cards/">

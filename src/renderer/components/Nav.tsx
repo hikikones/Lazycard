@@ -30,8 +30,7 @@ export default class Nav extends React.Component<INavProps> {
     public render() {
         return (
             <nav>
-                <NavItem name="Home" icon="home" to="/" />
-                <NavItem name="Due today" icon="drafts" to="/review/:topicId" matchWith="/review" />
+                <NavItem name="Due today" icon="drafts" to="/" />
                 <NavItem name="All cards" icon="layers" to="/cards/" />
                 <NavItem name="Settings" icon="settings" to="/settings" />
                 <NavItem name="Import" icon="save_alt" action={this.import} />
