@@ -6,6 +6,45 @@
 :root {
     --nav-width: 200px;
     --card-width: 400px;
+    --nav-color: whitesmoke;
+    --main-color: white;
+    --card-color: none;
+    --btn-color: black;
+    --icon-color: grey;
+    --hover-element-color: whitesmoke;
+    --focus-element-color: whitesmoke;
+    --label-background-color: lightgrey;
+    --label-color: darkgrey;
+    --list-active-color: lightgrey;
+    --list-item-color: black;
+    --dropdown-menu-color: whitesmoke;
+    --search-color: white;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --nav-color: #373737;
+        --main-color: #303030;
+        --card-color: #515151;
+        --btn-color: white;
+        --icon-color: lightgrey;
+        --hover-element-color: grey;
+        --focus-element-color: grey;
+        --label-background-color: #515151;
+        --label-color: white;
+        --list-active-color: grey;
+        --list-item-color: white;
+        --dropdown-menu-color: darkgrey;
+        --search-color: #303030;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: white;
+    }
+
+    p, input::placeholder {
+        color: white;
+    }
 }
 
 body {
@@ -27,7 +66,7 @@ h1, h2, h3, h4, h5, h6 {
 nav {
     grid-area: nav;
     padding: 1rem 0;
-    background-color: whitesmoke;
+    background-color: var(--nav-color);
     overflow: auto;
 }
 
@@ -43,7 +82,7 @@ nav a.nav i.material-icons {
 
 main {
     grid-area: main;
-    background-color: white;
+    background-color: var(--main-color);
     overflow: auto;
 }
 
@@ -75,12 +114,12 @@ input:focus {
 
 a.nav:focus {
     outline: none;
-    background-color: lightgrey;
+    background-color: var(--focus-element-color);
 }
 
 a.btn:focus {
     outline: none;
-    background-color: whitesmoke;
+    background-color: var(--focus-element-color);
 }
 
 textarea {
@@ -124,7 +163,7 @@ thead th, tbody td {
 }
 
 h1.topic-name:hover {
-    background-color: whitesmoke;
+    background-color: var(--hover-element-color);
 }
 
 input.topic-name {
@@ -170,11 +209,11 @@ a.nav {
     padding: 0.25rem 0.5rem;
     font-size: 0.9rem;
     text-decoration: none;
-    color: black;
+    color: var(--list-item-color);
 }
 
 a.nav:hover, a.active {
-    background-color: lightgrey;
+    background-color: var(--list-active-color);
 }
 
 a.nav i.material-icons {
@@ -183,7 +222,8 @@ a.nav i.material-icons {
 }
 
 a.nav span, a.btn span {
-    background-color: whitesmoke;
+    background-color: var(--label-background-color);
+    color: var(--label-color);
     border-radius: 50%;
     padding: 0.1rem 0.25rem;
     margin-left: 0.1rem;
@@ -201,6 +241,7 @@ a.nav span, a.btn span {
     border-radius: 2px;
     box-sizing: border-box;
     width: var(--card-width);
+    background-color: var(--card-color);
     overflow-wrap: break-word;
 }
 
@@ -253,6 +294,8 @@ a.nav span, a.btn span {
     padding: 0 0.5rem;
     font-family: Lato;
     border: none;
+    background-color: var(--search-color);
+    color: var(--btn-color)
 }
 
 .search-container input.search:focus {
@@ -311,17 +354,17 @@ a.btn {
     display: inline-block;
     padding: 0.2rem 0.4rem;
     text-decoration: none;
-    color: black;
+    color: var(--btn-color);
 }
 
 a.btn:hover {
-    background-color: whitesmoke;
+    background-color: var(--hover-element-color);
 }
 
 .material-icons {
     font-size: 1.4rem;
     vertical-align: sub;
-    color: grey;
+    color: var(--icon-color );
 }
 
 section a.btn {
@@ -361,7 +404,7 @@ section a.btn:last-child {
 .dropdown-menu {
     position: absolute;
     white-space: nowrap;
-    background-color: white;
+    background-color: var(--dropdown-menu-color);
     right: 0;
     z-index: 2;
 }
