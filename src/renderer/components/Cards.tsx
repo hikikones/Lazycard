@@ -27,7 +27,8 @@ export default class Cards extends React.Component<IProps, IState> {
             selected: this.props.cards.filter(c => c.selected).length,
             showModal: false,
             query: "",
-            sort: CardSort.Newest
+            sort: CardSort.Newest,
+            amount: 40
         }
     }
 
@@ -108,6 +109,14 @@ export default class Cards extends React.Component<IProps, IState> {
         }
     }
 
+    private loadMore = () => {
+        this.setState({ amount: this.state.amount + 40 });
+    }
+
+    private loadAll = () => {
+        this.setState({ amount: this.cards.length });
+    }
+
     public render() {
         if (this.props.cards.length === 0) return null;
 
@@ -156,7 +165,7 @@ export default class Cards extends React.Component<IProps, IState> {
                 </section>
 
                 <section className="cards">
-                    {(this.cards).map(c =>
+                    {this.cards.slice(0, this.state.amount).map(c =>
                         <CardSelectable
                             key={c.id}
                             card={c}
@@ -167,6 +176,14 @@ export default class Cards extends React.Component<IProps, IState> {
                         />
                     )}
                 </section>
+
+                {this.state.amount < this.cards.length
+                    ?   <section className="row row-center">
+                            <Button name="Load More" icon="cached" action={this.loadMore} />
+                            <Button name="Load all" icon="done_all" action={this.loadAll} />
+                        </section>
+                    :   null
+                }
 
                 <Modal show={this.state.showModal} onClickOutside={this.toggleModal}>
                     <h2>Move</h2>
@@ -194,4 +211,5 @@ interface IState {
     showModal: boolean
     query: string
     sort: CardSort
+    amount: number
 }
