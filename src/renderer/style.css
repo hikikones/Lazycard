@@ -3,6 +3,8 @@
 @import "~material-icons/iconfont/material-icons.css";
 @import "~lato-font/css/lato-font.css";
 
+/* TODO: Clean up or use a proper css framework */
+
 :root {
     --nav-width: 200px;
     --card-width: 400px;

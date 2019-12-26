@@ -61,7 +61,7 @@ export default class Settings extends React.Component<IProps, IState> {
 
     public render() {
         return (
-            <section>
+            <div>
                 <h1>Settings</h1>
 
                 <h2>Database</h2>
@@ -89,7 +89,7 @@ export default class Settings extends React.Component<IProps, IState> {
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
                 </select>
-            </section>
+            </div>
         );
     }
 }
