@@ -32,7 +32,7 @@ export default class Main extends React.Component<IProps, IState> {
                         <Cards cards={this.state.cards} onCardChange={this.updateCards} />
                     </Route>
                     <Route path="/settings">
-                        <Settings onTopicChange={this.props.onTopicChange} />
+                        <Settings onTopicChange={this.props.onTopicChange} onThemeChange={this.props.onThemeChange} />
                     </Route>
                     <Route path="/topics/:id" render={(props) => (
                         <Topic {...props} onTopicChange={this.props.onTopicChange} key={props.match.params.id} />
@@ -45,6 +45,7 @@ export default class Main extends React.Component<IProps, IState> {
 
 interface IProps {
     onTopicChange(): void
+    onThemeChange(): void
 }
 
 interface IState {

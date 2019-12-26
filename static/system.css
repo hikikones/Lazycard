@@ -1,0 +1,18 @@
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-color: white;
+        --nav-color: #373737;
+        --main-color: #303030;
+        --card-color: #515151;
+        --btn-color: white;
+        --icon-color: lightgrey;
+        --hover-element-color: grey;
+        --focus-element-color: grey;
+        --label-background-color: #515151;
+        --label-color: white;
+        --list-active-color: grey;
+        --list-item-color: white;
+        --dropdown-menu-color: darkgrey;
+        --search-color: #303030;
+    }
+}

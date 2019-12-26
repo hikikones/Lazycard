@@ -11,7 +11,8 @@ export default class Settings extends React.Component<IProps, IState> {
     public constructor(props: IProps) {
         super(props);
         this.state = {
-            dbPath: cfg.getDatabasePath()
+            dbPath: cfg.getDatabasePath(),
+            useSystem: false
         }
     }
 
@@ -52,9 +53,15 @@ export default class Settings extends React.Component<IProps, IState> {
         this.props.onTopicChange();
     }
 
+    private onThemeChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
+        const theme = e.target.value;
+        cfg.setTheme(theme);
+        this.props.onThemeChange();
+    }
+
     public render() {
         return (
-            <div>
+            <section>
                 <h1>Settings</h1>
 
                 <h2>Database</h2>
@@ -73,15 +80,26 @@ export default class Settings extends React.Component<IProps, IState> {
                 <h3>Restore</h3>
                 <p>Restore your database from a local file.</p>
                 <Button name="Restore" icon="settings_backup_restore" action={this.restoreDatabase} />
-            </div>
+
+                <h2>Theme</h2>
+                
+                <p>Apply a theme for the application.</p>
+                <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => this.onThemeChange(e)} defaultValue={cfg.getTheme()}>
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </section>
         );
     }
 }
 
 interface IProps {
     onTopicChange(): void
+    onThemeChange(): void
 }
 
 interface IState {
     dbPath: string
+    useSystem: boolean
 }
