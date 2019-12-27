@@ -1,3 +1,10 @@
+@import "../../node_modules/prismjs/themes/prism.css" screen and (prefers-color-scheme: light);
+@import "../../node_modules/prismjs/themes/prism-tomorrow.css" screen and (prefers-color-scheme: dark);
+
+@media (prefers-color-scheme: light) {
+    /* No override */
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --text-color: white;

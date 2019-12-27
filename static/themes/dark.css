@@ -1,4 +1,6 @@
-[data-theme="dark"] {
+@import "../../node_modules/prismjs/themes/prism-tomorrow.css";
+
+:root {
     --text-color: white;
     --nav-color: #373737;
     --main-color: #303030;

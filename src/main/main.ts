@@ -9,7 +9,7 @@ function createWindow() {
 	mainWindow = new BrowserWindow({
 		width: 1130,
 		height: 768,
-		show: false,
+		show: isDev,
 		backgroundColor,
 		webPreferences: {
 			nodeIntegration: true
@@ -22,10 +22,10 @@ function createWindow() {
 		mainWindow.webContents.openDevTools();
 	} else {
 		mainWindow.setMenu(null);
+		mainWindow.on("ready-to-show", () => {
+			mainWindow.show();
+		});
 	}
-	mainWindow.on("ready-to-show", () => {
-		mainWindow.show();
-	});
 
 	mainWindow.on("close", (e: Event) => {
 		if (mainWindow) {
