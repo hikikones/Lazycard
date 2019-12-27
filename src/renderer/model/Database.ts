@@ -161,7 +161,9 @@ class Database {
         html.push('.card {padding: 1rem; box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15)}');
         html.push('hr {width: 100%; border: none; border-top: 1px solid lightgray; margin: 0; margin-bottom: 1rem}');
         html.push('img {display: block; margin: 0 auto; max-width: 100%; height: auto}');
-        html.push('table {margin: 0 auto; width: 100%}');
+        html.push('table {width: 100%; border-spacing: 0; border: 1px solid whitesmoke}');
+        html.push('table thead {background-color: whitesmoke}');
+        html.push('thead th, tbody td {padding: 0.25rem; border: 1px solid whitesmoke}');
         html.push('ul, ol {margin-top: 0}');
         html.push('</style>');
         html.push('</head>');
