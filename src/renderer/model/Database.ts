@@ -5,6 +5,7 @@ import cfg from './Config';
 import dialog from '../controller/Dialog';
 import srs from '../controller/SRS';
 import demo from './demo';
+import md from '../controller/Markdown';
 
 class Database {
     public readonly cards: Cards = new Cards();
@@ -110,6 +111,70 @@ class Database {
             cards: data === undefined ? this.cards.getAll().map(c => c.serialize()) : data.cards,
             topics: data === undefined ? this.topics.getAll().map(t => t.serialize()) : data.topics
         }, null, 2);
+    }
+
+    public exportToHTML(topicId: number): void {
+        const path = dialog.saveFile('html', ['html']);
+        if (path === undefined) return;
+
+        const topic = this.topics.get(topicId);
+        const cards = this.cards.getByTopic(topicId);
+        const html: string[] = [];
+
+        html.push('<!DOCTYPE html>');
+        html.push('<html lang="en">');
+        html.push('<head>');
+        html.push('<meta charset="UTF-8">');
+        html.push('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
+        html.push('<meta http-equiv="X-UA-Compatible" content="ie=edge">');
+        html.push('<title>Lazycard</title>');
+        html.push('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">');
+        html.push('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>');
+        html.push('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/themes/prism.min.css">');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-java.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-typescript.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-csharp.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-css.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-c.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>');
+        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-swift.min.js"></script>');
+        html.push('<link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">');
+        html.push('<script>');
+        html.push(`function save() { var data = { "name": "${topic.name}", "cards": [`);
+        cards.forEach(c => { html.push(`{ "front": \`${c.front.replace(/\\/g,"\\\\").replace(/`/g,"\`")}\`, "back": \`${c.back.replace(/\\/g,"\\\\").replace(/`/g,"\\`")}\` },`) });
+        html.push(`]};`);
+        html.push(`var json = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));`);
+        html.push(`var link = document.createElement("a");`);
+        html.push(`link.setAttribute("href", json);`);
+        html.push(`link.setAttribute("download", "${topic.name}.lazytopic");`);
+        html.push(`link.click();`);
+        html.push(`}`);
+        html.push('</script>');
+        html.push('<style>');
+        html.push('body {margin: 2rem auto; max-width: 1360px}');
+        html.push('h1.topic {text-align: center}');
+        html.push('button {margin: 1rem 0}');
+        html.push('.cards {display:grid; grid-gap: 1rem; grid-template-columns: repeat(auto-fill, 400px); justify-content: center}');
+        html.push('.card {padding: 1rem; box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15)}');
+        html.push('hr {width: 100%; border: none; border-top: 1px solid lightgray; margin: 0; margin-bottom: 1rem}');
+        html.push('img {display: block; margin: 0 auto; max-width: 100%; height: auto}');
+        html.push('table {margin: 0 auto; width: 100%}');
+        html.push('ul, ol {margin-top: 0}');
+        html.push('</style>');
+        html.push('</head>');
+        html.push('<body>');
+        html.push(`<h1 class="topic">${topic.name}</h1>`);
+        html.push(`<button class="btn btn-primary p-centered" onClick="save();">Save</button>`);
+        html.push('<div class="cards">');
+        cards.forEach(c => { html.push(`<div class="card">${md.parse(c.front)}<hr/>${md.parse(c.back)}</div>`) });
+        html.push('</div>');
+        html.push('</body>');
+        html.push('</html>');
+
+        fs.writeFileSync(path, html.join(''));
     }
 }
 

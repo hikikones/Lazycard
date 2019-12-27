@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link, RouteComponentProps } from 'react-router-dom';
+import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
 import { Card } from '../model/Database';
@@ -7,6 +7,7 @@ import { Card } from '../model/Database';
 import Cards from './Cards';
 import CardEditor from './CardEditor';
 import Button from './Button';
+import Dropdown, { DropdownItem } from './Dropdown';
 
 export default class Topic extends React.Component<IProps, IState> {
     private readonly topic = db.topics.get(parseInt(this.props.match.params.id));
@@ -93,7 +94,10 @@ export default class Topic extends React.Component<IProps, IState> {
                 <section>
                     {this.state.showCardEditor ? null : <Button name="Add new card" icon="add" action={this.toggleCardEditor} />}
                     <Button name="Review" icon="drafts" to={`/review/${this.topic.id}`} />
-                    <Button name="Export" icon="save" action={() => db.export(this.topic.id)} />
+                    <Dropdown name="Export" icon="save" showDownArrow={true}>
+                        <DropdownItem name="JSON" icon="archive" action={() => db.export(this.topic.id)} />
+                        <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(this.topic.id)} />
+                    </Dropdown>
                     <Button name="Delete" icon="delete" action={this.delete} />
                 </section>
 
