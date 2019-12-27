@@ -146,7 +146,7 @@ class Database {
         html.push(`function save() { var data = { "name": "${topic.name}", "cards": [`);
         cards.forEach(c => { html.push(`{ "front": \`${c.front.replace(/\\/g,"\\\\").replace(/`/g,"\`")}\`, "back": \`${c.back.replace(/\\/g,"\\\\").replace(/`/g,"\\`")}\` },`) });
         html.push(`]};`);
-        html.push(`var json = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));`);
+        html.push(`var json = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));`);
         html.push(`var link = document.createElement("a");`);
         html.push(`link.setAttribute("href", json);`);
         html.push(`link.setAttribute("download", "${topic.name}.lazytopic");`);
