@@ -5,49 +5,34 @@ import { Card as CardEntity } from '../model/Database';
 import Card from './Card';
 import Button from './Button';
 
-export default class CardSelectable extends React.Component<ICard, IState> {
-    public constructor(props: ICard) {
-        super(props);
-        this.state = {
-            showCheckbox: this.props.card.selected
-        }
+const CardSelectable = (props: ICard): JSX.Element => {
+    const [showCheckbox, setShowCheckbox] = React.useState<boolean>(false);
+
+    const toggleSelect = (): void => {
+        props.card.selected = !props.card.selected;
+        if (props.card.selected) props.onSelect();
+        else props.onDeselect();
     }
 
-    private showCheckbox = (): void => {
-        this.setState({ showCheckbox: true });
-    }
-
-    private hideCheckbox = (): void => {
-        this.setState({ showCheckbox: false });
-    }
-
-    private toggleSelect = (): void => {
-        this.props.card.selected = !this.props.card.selected;
-        if (this.props.card.selected) this.props.onSelect();
-        else this.props.onDeselect();
-    }
-
-    public render() {
-        return (
-            <div onMouseEnter={this.showCheckbox} onMouseLeave={this.hideCheckbox}>
-                {this.props.card.selected || this.state.showCheckbox
-                    ?   <div className="card-checkbox-container">
-                            <Button
-                                name=""
-                                icon={this.props.card.selected ? "check_box" : "check_box_outline_blank"}
-                                action={this.toggleSelect}
-                            />
-                        </div>
-                    :   null
-                }
-                <Card
-                    card={this.props.card}
-                    showBack={this.props.showBack}
-                    onDelete={() => this.props.onDelete(this.props.card)}
-                />
-            </div>
-        );
-    }
+    return (
+        <div onMouseEnter={() => setShowCheckbox(true)} onMouseLeave={() => setShowCheckbox(false)}>
+            {props.card.selected || showCheckbox
+                ?   <div className="card-checkbox-container">
+                        <Button
+                            name=""
+                            icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
+                            action={toggleSelect}
+                        />
+                    </div>
+                :   null
+            }
+            <Card
+                card={props.card}
+                showBack={props.showBack}
+                onDelete={() => props.onDelete(props.card)}
+            />
+        </div>
+    );
 }
 
 interface ICard {
@@ -58,6 +43,4 @@ interface ICard {
     onDeselect(): void
 }
 
-interface IState {
-    showCheckbox: boolean
-}
+export default CardSelectable;
