@@ -8,6 +8,7 @@ Lazycard is a simple flashcard application utilizing spaced repetition and cards
 
 * Write cards with Markdown
 * Import and export topics (JSON)
+* Export to [HTML](https://hikikones.github.io/Lazycard/) for easy sharing
 * Simple database (JSON)
 
 ## :bookmark: Install

@@ -127,7 +127,7 @@ class Database {
         html.push('<meta charset="UTF-8">');
         html.push('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
         html.push('<meta http-equiv="X-UA-Compatible" content="ie=edge">');
-        html.push('<title>Lazycard</title>');
+        html.push(`<title>Lazycard - ${topic.name}</title>`);
         html.push('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">');
         html.push('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>');
         html.push('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/themes/prism.min.css">');
