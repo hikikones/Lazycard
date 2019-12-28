@@ -22,20 +22,19 @@ class Database {
 
         if (dbFile === dbMemory) return;
 
-        fs.writeFileSync(file, dbMemory);
+        try { fs.writeFileSync(file, dbMemory); }
+        catch (err) {}
         this.backup(dbMemory);
     }
 
     private backup(data: string): void {
         const files: string[] = [];
-        fs.readdirSync(cfg.getBackupPath()).forEach(file => {
-            files.push(file);
-        });
+        try { fs.readdirSync(cfg.getBackupPath()).forEach(file => { files.push(file); }); }
+        catch (err) { return; }
         files.sort().reverse();
         if (files.length >= cfg.getBackupAmount()) {
-            try {
-                fs.unlinkSync(path.join(cfg.getBackupPath(), files.pop()));
-            } catch(err) {}
+            try { fs.unlinkSync(path.join(cfg.getBackupPath(), files.pop())); }
+            catch (err) {}
         }
         fs.writeFileSync(path.join(cfg.getBackupPath(), `${Date.now()}.lazycard`), data);
     }
