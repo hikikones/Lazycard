@@ -42,9 +42,6 @@ build/
 # Output dist folder
 dist/
 
-# package-lock.json
-package-lock.json
-
 # TypeScript v1 declaration files
 typings/
 
@@ -83,3 +80,6 @@ typings/
 
 # FuseBox cache
 .fusebox/
+
+#XML test results
+test-results.xml
