@@ -8,9 +8,17 @@
     "prod": "webpack --mode production",
     "start": "npm run dev && electron .",
     "pack": "npm run prod && electron-builder --dir",
-    "dist": "npm run prod && electron-builder"
+    "dist": "npm run prod && electron-builder -p never",
+    "test-with-xml-reporter": "mocha --require ts-node/register --reporter mocha-junit-reporter test/**/*.test.ts"
   },
-  "keywords": ["flashcard", "spaced repetition", "markdown", "math", "katex", "electron"],
+  "keywords": [
+    "flashcard",
+    "spaced repetition",
+    "markdown",
+    "math",
+    "katex",
+    "electron"
+  ],
   "author": "hikikones",
   "license": "MIT",
   "build": {
@@ -22,19 +30,25 @@
     ]
   },
   "devDependencies": {
+    "@types/chai": "^4.2.7",
     "@types/markdown-it": "0.0.9",
+    "@types/mocha": "^5.2.7",
     "@types/node": "^12.12.14",
     "@types/react": "^16.9.15",
     "@types/react-dom": "^16.9.4",
     "@types/react-router-dom": "^5.1.3",
+    "chai": "^4.2.0",
     "copy-webpack-plugin": "^5.1.1",
     "css-loader": "^3.3.0",
     "electron": "^7.1.3",
     "electron-builder": "^21.2.0",
     "file-loader": "^5.0.2",
     "html-webpack-plugin": "^3.2.0",
+    "mocha": "^6.2.2",
+    "mocha-junit-reporter": "^1.23.1",
     "style-loader": "^1.0.1",
     "ts-loader": "^6.2.1",
+    "ts-node": "^8.5.4",
     "typescript": "^3.7.3",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10",

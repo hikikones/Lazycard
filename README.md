@@ -1,5 +1,7 @@
 # :black_nib: Lazycard
 
+[![Build Status](https://dev.azure.com/LazyCard/LazyCard/_apis/build/status/olavvatne.Lazycard?branchName=master)](https://dev.azure.com/LazyCard/LazyCard/_build/latest?definitionId=1&branchName=master)
+
 Lazycard is a simple flashcard application utilizing spaced repetition and cards are formatted with Markdown.
 
 ![](demo.png)
