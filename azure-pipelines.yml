@@ -19,18 +19,18 @@ jobs:
     vmImage: 'Windows-latest'
   steps:
     - template: build-template.yml
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+  # condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
 - job: Linux
   pool:
     vmImage: 'ubuntu-latest'
   steps:
     - template: build-template.yml
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+  # condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
 - job: MacOS
   pool:
     vmImage: 'macOS-latest'
   steps:
     - template: build-template.yml
-  condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+  # condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
