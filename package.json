@@ -1,6 +1,6 @@
 {
   "name": "lazycard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A simple flashcard application where cards are formatted with Markdown.",
   "main": "./build/main.js",
   "scripts": {
