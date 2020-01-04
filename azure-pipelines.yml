@@ -4,7 +4,7 @@ trigger:
 
 variables:
   ELECTRON_CACHE: '$(Pipeline.Workspace)/.cache/electron'
-  ELECTRON_BUILDER_CACHE: '$(Pipeline.Workspace)/.cache/electron-builder'
+  ELECTRON_BUILDER_CACHE: '$(Pipeline.Workspace)/.cache/electronbuilder'
   NPM_CONFIG_CACHE: $(Pipeline.Workspace)/.npm
 
 jobs:

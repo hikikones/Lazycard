@@ -18,12 +18,14 @@ steps:
       key: electron | $(Agent.OS)
       path: $(ELECTRON_CACHE)
     displayName: Cache Electron
+    condition: not(eq(variables['Agent.OS'], 'Darwin'))
 
   - task: Cache@2
     inputs:
-      key: electron-builder | $(Agent.OS)
+      key: electronbuilder | $(Agent.OS)
       path: $(ELECTRON_BUILDER_CACHE)
-    displayName: Cache Electron
+    displayName: Cache Electron builder
+    condition: not(eq(variables['Agent.OS'], 'Darwin'))
   
   - script: |
       npm ci
