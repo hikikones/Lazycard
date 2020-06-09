@@ -1,16 +1,14 @@
-import { app, BrowserWindow, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 
 const isDev = process.env.NODE_ENV === "development";
 
 let mainWindow: Electron.BrowserWindow;
 
 function createWindow() {
-	const backgroundColor = nativeTheme.shouldUseDarkColors ? "#303030" : "#ffffff";
 	mainWindow = new BrowserWindow({
 		width: 1130,
 		height: 768,
 		show: isDev,
-		backgroundColor,
 		webPreferences: {
 			nodeIntegration: true
 		}

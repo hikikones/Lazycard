@@ -1,10 +1,9 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const NodeExternals = require("webpack-node-externals");
 
 const BUILD_DIR = path.resolve(__dirname, "build");
-const APP_DIR = path.resolve(__dirname, "src");
+const SRC_DIR = path.resolve(__dirname, "src");
 
 const tsRule = {
     test: /\.ts(x?)$/,
@@ -30,11 +29,9 @@ const nodeSettings = {
     __filename: false
 };
 
-const externalsList = [NodeExternals()];
-
 const mainConfig = {
     target: 'electron-main',
-    entry: path.resolve(APP_DIR, "main", "main.ts"),
+    entry: path.resolve(SRC_DIR, "main", "main.ts"),
     output: {
         path: BUILD_DIR,
         filename: "main.js"
@@ -43,12 +40,11 @@ const mainConfig = {
         rules: [tsRule]
     },
     node: nodeSettings,
-    externals: externalsList
 };
 
 const rendererConfig = {
     target: 'electron-renderer',
-    entry: path.resolve(APP_DIR, "renderer", "renderer.tsx"),
+    entry: path.resolve(SRC_DIR, "renderer", "renderer.tsx"),
     output: {
         path: BUILD_DIR,
         filename: "renderer.js"
@@ -58,13 +54,16 @@ const rendererConfig = {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: path.resolve(APP_DIR, "renderer", "index.html"),
+            template: path.resolve(SRC_DIR, "renderer", "index.html"),
             filename: "index.html"
         }),
-        new CopyWebpackPlugin([{ from: './static', to: BUILD_DIR }])
+        new CopyWebpackPlugin({
+            patterns: [
+              { from: './static', to: BUILD_DIR },
+            ],
+          }),
     ],
     node: nodeSettings,
-    externals: externalsList
 };
 
 module.exports = [mainConfig, rendererConfig];
