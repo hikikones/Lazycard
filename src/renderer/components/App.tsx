@@ -1,24 +1,21 @@
 import * as React from 'react';
+import { Switch, Route } from "react-router-dom";
 
-import Canvas from './Canvas';
+import Review from './Review';
+import Draw from './Draw';
 
 const App = () => {
-    const [front, setFront] = React.useState<boolean>(true);
-    const [color, setColor] = React.useState<string>("black");
-
     return (
-        <div>
-            <Canvas
-                show={front}
-                color={color}
-            />
-            <Canvas
-                show={!front}
-                color={color}
-            />
-            <button onClick={() => setColor("blue")}>Blue</button>
-            <button onClick={() => setFront(!front)}>Flip</button>
-        </div>
+        <main>
+            <Switch>
+                <Route exact path="/">
+                    <Review />
+                </Route>
+                <Route path="/draw/:id" render={(props) => (
+                    <Draw {...props} key={props.match.params.id} />
+                )} />
+            </Switch>
+        </main>
     );
 }
 

@@ -6,6 +6,12 @@ body, html {
     /* overflow: hidden; */
 }
 
+nav {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
 .hide {
     display: none;
 }
