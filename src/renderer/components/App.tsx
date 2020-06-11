@@ -101,12 +101,10 @@ const App = () => {
 
     const resize = () => {
         if (window.innerWidth < canvas.current.width || window.innerHeight < canvas.current.height) return;
-        const drawing = canvas.current.toDataURL();
+        const imageData = context.getImageData(0, 0, canvas.current.width, canvas.current.height);
         canvas.current.width = window.innerWidth;
         canvas.current.height = window.innerHeight;
-        const img = new Image();
-        img.src = drawing;
-        img.onload = () => context.drawImage(img, 0, 0);
+        context.putImageData(imageData, 0, 0);
     }
 
     const crop = (): ImageData => {
