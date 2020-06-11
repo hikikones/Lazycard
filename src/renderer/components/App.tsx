@@ -109,6 +109,45 @@ const App = () => {
         img.onload = () => context.drawImage(img, 0, 0);
     }
 
+    const crop = (): ImageData => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const min = { x: Number.MAX_SAFE_INTEGER, y: Number.MAX_SAFE_INTEGER };
+        const max = { x: Number.MIN_SAFE_INTEGER, y: Number.MIN_SAFE_INTEGER };
+        const imageData = context.getImageData(0, 0, w, h);
+        
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const index = (y * w + x) * 4;
+                const alpha = imageData.data[index + 3];
+                if (alpha > 0) {
+                    min.x = Math.min(min.x, x);
+                    max.x = Math.max(max.x, x);
+                    min.y = Math.min(min.y, y);
+                    max.y = Math.max(max.y, y);
+                }
+            }
+        }
+
+        if (min.x === Number.MAX_SAFE_INTEGER || max.x === Number.MIN_SAFE_INTEGER) {
+            return context.getImageData(0, 0, w, h);
+        }
+
+        const newWidth = max.x - min.x + 1;
+        const newHeight = max.y - min.y + 1;
+        return context.getImageData(min.x, min.y, newWidth, newHeight);
+    }
+
+    const toDataURL = (): string => {
+        const cvs: HTMLCanvasElement = document.createElement("canvas");
+        const ctx: CanvasRenderingContext2D = cvs.getContext("2d");
+        const img: ImageData = crop();
+        cvs.width = img.width;
+        cvs.height = img.height;
+        ctx.putImageData(img, 0, 0);
+        return cvs.toDataURL();
+    }
+
     React.useEffect(() => {
         context = canvas.current.getContext("2d");
         window.addEventListener("paste", (e: ClipboardEvent) => {onImagePaste(e)});
@@ -132,6 +171,8 @@ const App = () => {
             />
             <button onClick={undo}>Undo</button>
             <button onClick={redo}>Redo</button>
+            <button onClick={() => console.log(crop())}>Crop</button>
+            <button onClick={() => console.log(toDataURL())}>toDataURL</button>
         </div>
     );
 }
