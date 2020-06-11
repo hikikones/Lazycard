@@ -44,6 +44,7 @@ const App = () => {
         const x = e.pageX - canvas.current.offsetLeft;
         const y = e.pageY - canvas.current.offsetTop;
         mousePos = { x, y };
+        //mousePos = { x: e.clientX, y: e.clientY };
     }
 
     const drawLine = (from: Point, to: Point) => {
@@ -98,9 +99,20 @@ const App = () => {
         context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     }
 
+    const resize = () => {
+        if (window.innerWidth < canvas.current.width || window.innerHeight < canvas.current.height) return;
+        const drawing = canvas.current.toDataURL();
+        canvas.current.width = window.innerWidth;
+        canvas.current.height = window.innerHeight;
+        const img = new Image();
+        img.src = drawing;
+        img.onload = () => context.drawImage(img, 0, 0);
+    }
+
     React.useEffect(() => {
         context = canvas.current.getContext("2d");
         window.addEventListener("paste", (e: ClipboardEvent) => {onImagePaste(e)});
+        window.onresize = resize;
         return () => {
             window.removeEventListener("paste", (e: ClipboardEvent) => {onImagePaste(e)});
         }
@@ -109,7 +121,9 @@ const App = () => {
     return (
         <div>
             <canvas
-                ref={canvas} width={500} height={500}
+                ref={canvas}
+                width={window.innerWidth}
+                height={window.innerHeight}
                 onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
                 onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
                 onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
