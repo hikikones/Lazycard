@@ -4,6 +4,8 @@ import * as ReactDOM from 'react-dom';
 import { MemoryRouter } from 'react-router-dom';
 
 import App from './components/App';
+import db from './model/Database';
+import cfg from './model/Config';
 import "./style.css";
  
 ReactDOM.render(
@@ -14,5 +16,7 @@ ReactDOM.render(
 );
 
 ipcRenderer.on('app-close', () => {
+    db.save();
+    cfg.save();
     ipcRenderer.send('quit');
 });

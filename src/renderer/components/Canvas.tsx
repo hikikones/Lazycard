@@ -1,9 +1,9 @@
 import * as React from 'react';
 
 const Canvas = (props: IProps) => {
+    type Point = { x: number, y: number }
     const canvas = React.useRef<HTMLCanvasElement>(null);
     let context: CanvasRenderingContext2D;
-    type Point = { x: number, y: number }
     let mousePos: Point;
     let isDrawing: boolean = false;
 
@@ -176,6 +176,7 @@ const Canvas = (props: IProps) => {
 
 interface IProps {
     show: boolean
+    //onSave(base64: string): void
     color: string
 }
 

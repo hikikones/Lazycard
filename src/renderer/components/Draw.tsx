@@ -1,32 +1,30 @@
 import * as React from 'react';
-import { NavLink, RouteComponentProps } from "react-router-dom";
+import { RouteComponentProps } from "react-router-dom";
 
+import Nav from './Nav';
 import Canvas from './Canvas';
 
 const Draw = (props: IProps) => {
     const id = parseInt(props.match.params.id);
-    const [front, setFront] = React.useState<boolean>(true);
+    const [showFront, setShowFront] = React.useState<boolean>(true);
     const [color, setColor] = React.useState<string>("black");
 
     return (
         <div>
-            <nav>
-                <NavLink exact to="/">
-                    <button>Review</button>
-                </NavLink>
-                <button>{id ? "Save" : "Add"}</button>
-            </nav>
+            <Nav id={id} />
+            
             <Canvas
-                show={front}
+                show={showFront}
                 color={color}
             />
             <Canvas
-                show={!front}
+                show={!showFront}
                 color={color}
             />
+
             <div>
                 <button onClick={() => setColor("blue")}>Blue</button>
-                <button onClick={() => setFront(!front)}>Flip</button>
+                <button onClick={() => setShowFront(!showFront)}>Flip</button>
             </div>
         </div>
     );
