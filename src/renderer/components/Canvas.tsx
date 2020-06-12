@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-const Canvas = (props: IProps) => {
+const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     type Point = { x: number, y: number }
     const canvas = React.useRef<HTMLCanvasElement>(null);
     let context: CanvasRenderingContext2D;
@@ -77,7 +77,6 @@ const Canvas = (props: IProps) => {
     }
 
     const undo = () => {
-        console.log(undos);
         if (undos.length === 0) return;
         redos.push(canvas.current.toDataURL());
         const img = new Image();
@@ -156,6 +155,12 @@ const Canvas = (props: IProps) => {
         document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
     });
 
+    React.useImperativeHandle(ref, () => ({
+        toDataURL: (): string => {
+            return toDataURL();
+        }
+    }));
+
     return (
         <div className={props.show ? "" : "hide"}>
             <canvas
@@ -172,12 +177,15 @@ const Canvas = (props: IProps) => {
             <button onClick={() => console.log(toDataURL())}>toDataURL</button>
         </div>
     );
-}
+});
 
 interface IProps {
     show: boolean
-    //onSave(base64: string): void
     color: string
+}
+
+interface Handles {
+    toDataURL(): string
 }
 
 export default Canvas;

@@ -9,15 +9,25 @@ const Draw = (props: IProps) => {
     const [showFront, setShowFront] = React.useState<boolean>(true);
     const [color, setColor] = React.useState<string>("black");
 
+    const front = React.useRef(null);
+    const back = React.useRef(null);
+
+    const save = () => {
+        console.log(front.current.toDataURL());
+        console.log(back.current.toDataURL());
+    }
+
     return (
         <div>
             <Nav id={id} />
             
             <Canvas
+                ref={front}
                 show={showFront}
                 color={color}
             />
             <Canvas
+                ref={back}
                 show={!showFront}
                 color={color}
             />
@@ -25,6 +35,7 @@ const Draw = (props: IProps) => {
             <div>
                 <button onClick={() => setColor("blue")}>Blue</button>
                 <button onClick={() => setShowFront(!showFront)}>Flip</button>
+                <button onClick={save}>SAVE</button>
             </div>
         </div>
     );
