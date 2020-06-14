@@ -34,8 +34,45 @@ nav a i.material-icons {
     margin: 10px;
 }
 
-nav a.active i.material-icons {
+nav a.active i.material-icons, nav a:hover i.material-icons {
     color: #eeeeee;
+}
+
+a::selection, i::selection {
+    user-select: none;
+}
+
+.draw-menu {
+    position: absolute;
+    top: 0;
+    left: 78px;
+    margin-top: 20px;
+}
+
+.draw-menu a {
+    margin: 0 5px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.draw-menu a i.material-icons {
+    font-size: 32px;
+}
+
+.colors-menu {
+    position: absolute;
+    top: 0;
+    right: 30px;
+    margin-top: 20px;
+}
+
+.colors-menu a {
+    height: 32px;
+    width: 32px;
+    margin: 0 5px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-block;
 }
 
 .hide {
