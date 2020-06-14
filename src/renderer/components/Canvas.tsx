@@ -7,6 +7,9 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     let mousePos: Point;
     let isDrawing: boolean = false;
 
+    const [width] = React.useState<number>(window.innerWidth);
+    const [height] = React.useState<number>(window.innerHeight);
+
     const [undos] = React.useState<Array<string>>([]);
     const [redos] = React.useState<Array<string>>([]);
 
@@ -103,7 +106,7 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     }
 
     const resize = () => {
-        if (window.innerWidth < canvas.current.width || window.innerHeight < canvas.current.height) return;
+        if (window.innerWidth < width || window.innerHeight < height) return;
         const imageData = context.getImageData(0, 0, canvas.current.width, canvas.current.height);
         canvas.current.width = document.body.clientWidth;
         canvas.current.height = document.body.clientHeight;
@@ -153,6 +156,9 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         context = canvas.current.getContext("2d");
         window.addEventListener("resize", resize);
         document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
+        return () => {
+            window.removeEventListener("resize", resize);
+        }
     });
 
     React.useImperativeHandle(ref, () => ({
@@ -165,6 +171,8 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         <div className={props.show ? "" : "hide"}>
             <canvas
                 ref={canvas}
+                width={width}
+                height={height}
                 onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
                 onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
                 onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
