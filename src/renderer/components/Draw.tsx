@@ -3,7 +3,6 @@ import { RouteComponentProps } from "react-router-dom";
 
 import db from '../model/Database';
 
-import Nav from './Nav';
 import Canvas from './Canvas';
 
 const Draw = (props: IProps) => {
@@ -22,8 +21,6 @@ const Draw = (props: IProps) => {
 
     return (
         <div>
-            <Nav id={id} />
-            
             <Canvas
                 ref={front}
                 show={showFront}

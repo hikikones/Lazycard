@@ -2,8 +2,6 @@ import * as React from 'react';
 
 import db, { Card } from '../model/Database';
 
-import Nav from './Nav';
-
 const shuffle = (arr: Card[]): Card[] => {
     for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
         const newIndex = Math.floor(Math.random() * (currentIndex + 1));
@@ -48,7 +46,6 @@ const Review = () => {
     if (db.cards.size() === 0) {
         return (
             <div>
-                <Nav id={0} />
                 <h2>No cards...</h2>
             </div>
         );
@@ -57,7 +54,6 @@ const Review = () => {
     if (card === undefined) {
         return (
             <div>
-                <Nav id={0} />
                 <h2>Good job!</h2>
             </div>
         );
@@ -65,7 +61,6 @@ const Review = () => {
 
     return (
         <div>
-            <Nav id={card.id} />
             <h1>Review</h1>
             <img src={showAnswer ? card.back : card.front} />
             <div>

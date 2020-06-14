@@ -1,8 +1,6 @@
 import { shell } from 'electron';
 import * as React from 'react';
 
-import Nav from './Nav';
-
 import db from '../model/Database';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
@@ -49,8 +47,6 @@ const Settings = () => {
 
     return (
         <div>
-            <Nav id={0} />
-
             <h1>Settings</h1>
 
             <h2>Database</h2>
