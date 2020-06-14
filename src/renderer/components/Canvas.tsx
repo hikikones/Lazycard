@@ -106,7 +106,7 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     }
 
     const resize = () => {
-        if (window.innerWidth < width || window.innerHeight < height) return;
+        if (window.innerWidth < canvas.current.width || window.innerHeight < canvas.current.height) return;
         const imageData = context.getImageData(0, 0, canvas.current.width, canvas.current.height);
         canvas.current.width = document.body.clientWidth;
         canvas.current.height = document.body.clientHeight;
