@@ -46,26 +46,40 @@ const Settings = () => {
     }
 
     return (
-        <div>
+        <div className="content">
             <h1>Settings</h1>
 
             <h2>Database</h2>
 
             <h3>Location</h3>
             <p>The location of your database file.</p>
-            <label>{dbPath}</label>
-            <button onClick={openDatabaseDir}>Open</button>
-            <button onClick={changeDatabasePath}>Change</button>
+            <p><label>{dbPath}</label></p>
+            <Button name="Open" icon="folder_open" action={openDatabaseDir} />
+            <Button name="Change" icon="edit" action={changeDatabasePath} />
 
             <h3>Backups</h3>
-            <p>The amount of backups before new ones starts replacing old ones.</p>
-            <button onClick={openBackupDir}>Open</button>
-            <input type="number" defaultValue={cfg.getBackupAmount()} min="1" max="100" onInput={(e: React.FormEvent<HTMLInputElement>) => changeBackupAmount(e)} />
+            <p>The amount of backups before old ones are removed.</p>
+            <Button name="Open" icon="folder_open" action={openBackupDir} />
+            <input
+                type="number"
+                defaultValue={cfg.getBackupAmount()}
+                min="1"
+                max="100"
+                onInput={(e: React.FormEvent<HTMLInputElement>) => changeBackupAmount(e)}
+            />
 
             <h3>Restore</h3>
             <p>Restore your database from a local file.</p>
-            <button onClick={restoreDatabase}>Restore</button>
+            <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />
         </div>
+    );
+}
+
+const Button = (props: {name: string, icon: string, action(): void}) => {
+    return (
+        <a className="button" onClick={props.action}>
+                <i className="material-icons">{props.icon}</i> {props.name}
+        </a>
     );
 }
 

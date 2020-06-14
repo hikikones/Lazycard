@@ -26,8 +26,6 @@ const Review = () => {
         showCard();
     }, [index, cards]);
 
-    
-
     const handleReview = (success: boolean) => {
         card.review(success);
         setCards(cards.filter(c => c.id !== card.id));
@@ -45,7 +43,7 @@ const Review = () => {
 
     if (db.cards.size() === 0) {
         return (
-            <div>
+            <div className="content">
                 <h2>No cards...</h2>
             </div>
         );
@@ -53,24 +51,31 @@ const Review = () => {
 
     if (card === undefined) {
         return (
-            <div>
+            <div className="content">
                 <h2>Good job!</h2>
             </div>
         );
     }
 
     return (
-        <div>
+        <div className="content review">
             <h1>Review</h1>
             <img src={showAnswer ? card.back : card.front} />
-            <div>
-                {showAnswer ? null : <button onClick={() => setShowAnswer(true)}>Show</button>}
-                <button onClick={() => handleReview(true)}>Yes</button>
-                <button onClick={() => handleReview(false)}>No</button>
-                <button onClick={() => skip()}>Skip</button>
-                <button onClick={() => console.log("COUNT:" + index)}>COUNT</button>
+            <div className="review-buttons">
+                {showAnswer || <ReviewButton icon="lock_open" action={() => setShowAnswer(true)} />}
+                {showAnswer && <ReviewButton icon="done" action={() => handleReview(true)} />}
+                {showAnswer && <ReviewButton icon="close" action={() => handleReview(false)} />}
+                <ReviewButton icon="double_arrow" action={() => skip()} />
             </div>
         </div>
+    );
+}
+
+const ReviewButton = (props: {icon: string, action(): void}) => {
+    return (
+        <a onClick={props.action}>
+                <i className="material-icons">{props.icon}</i>
+        </a>
     );
 }
 

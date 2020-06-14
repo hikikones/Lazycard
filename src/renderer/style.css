@@ -24,6 +24,19 @@ main {
     background-color: #eeeeee;
 }
 
+a:hover {
+    cursor: pointer;
+}
+
+a::selection, i::selection {
+    user-select: none;
+}
+
+.material-icons {
+    color: #7b7b7d;
+    vertical-align: bottom;
+}
+
 nav a {
     display: block;
 }
@@ -38,8 +51,34 @@ nav a.active i.material-icons, nav a:hover i.material-icons {
     color: #eeeeee;
 }
 
-a::selection, i::selection {
-    user-select: none;
+.content {
+    margin: 1rem;
+}
+
+.review {
+    height: 100%;
+    margin: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.review img {
+    max-width: 80%;
+    max-height: 50%;
+}
+
+.review-buttons {
+    margin-bottom: 1rem;
+}
+
+.review-buttons a {
+    margin: 0 10px;
+}
+
+.review-buttons a i.material-icons {
+    font-size: 36px;
 }
 
 .draw-menu {
@@ -51,8 +90,6 @@ a::selection, i::selection {
 
 .draw-menu a {
     margin: 0 5px;
-    cursor: pointer;
-    display: inline-block;
 }
 
 .draw-menu a i.material-icons {
@@ -71,8 +108,17 @@ a::selection, i::selection {
     width: 32px;
     margin: 0 5px;
     border-radius: 50%;
-    cursor: pointer;
     display: inline-block;
+}
+
+.button {
+    margin-right: 5px;
+    padding: 4px 6px;
+    display: inline-block;
+}
+
+a.button:hover {
+    background-color: whitesmoke;
 }
 
 .hide {
