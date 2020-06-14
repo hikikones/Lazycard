@@ -6,6 +6,7 @@ import srs from '../controller/SRS';
 
 class Database {
     public readonly cards: Cards = new Cards();
+    private version: string;
 
     public constructor() {
         this.parse(this.read());
@@ -51,6 +52,7 @@ class Database {
     }
 
     private parse(data: IDatabase): void {
+        this.version = data.version;
         data.cards.forEach(c => {
             const card: Card = new Card();
             card.id = c.id;
@@ -66,7 +68,8 @@ class Database {
 
     private toJSON(data?: IDatabase): string {
         return JSON.stringify({
-            cards: data === undefined ? this.cards.getAll().map(c => c.serialize()) : data.cards,
+            version: data === undefined ? this.version : data.version,
+            cards: data === undefined ? this.cards.getAll().map(c => c.serialize()) : data.cards
         }, null, 2);
     }
 
@@ -82,11 +85,11 @@ abstract class Table<T extends Entity<EntityData>> {
     public idCounter: number = 1;
     private items: T[] = [];
 
-    protected abstract create(field: string|number): T;
+    protected abstract create(): T;
     public abstract exists(field: string): boolean;
 
-    public new(field: string|number): T {
-        const item = this.create(field);
+    public new(): T {
+        const item = this.create();
         item.id = this.idCounter;
         this.idCounter++;
         this.items.push(item);
@@ -140,7 +143,7 @@ class Cards extends Table<Card> {
         const card = new Card();
         card.attempts = 0;
         card.successes = 0;
-        srs.tomorrow(card);
+        srs.today(card);
         return card;
     }
 

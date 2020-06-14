@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { RouteComponentProps } from "react-router-dom";
 
+import db from '../model/Database';
+
 import Nav from './Nav';
 import Canvas from './Canvas';
 
@@ -13,8 +15,9 @@ const Draw = (props: IProps) => {
     const back = React.useRef(null);
 
     const save = () => {
-        console.log(front.current.toDataURL());
-        console.log(back.current.toDataURL());
+        const card = id ? db.cards.get(id) : db.cards.new();
+        card.front = front.current.toDataURL();
+        card.back = back.current.toDataURL();
     }
 
     return (
