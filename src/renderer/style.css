@@ -1,25 +1,41 @@
+@import "~material-icons/iconfont/material-icons.css";
+@import "~lato-font/css/lato-font.css";
+
 body, html {
+    font-family: Lato;
     margin: 0;
-    padding: 0;
-    /* overflow: hidden; */
+    overflow: hidden;
 }
 
 #app > div {
     display: grid;
     grid-template-rows: 100vh;
-    grid-template-columns: 60px auto;
+    grid-template-columns: 48px auto;
     grid-template-areas: "nav main";
 }
 
 nav {
     grid-area: nav;
-    padding: 1rem 0;
-    background-color: grey;
+    background-color: #333333;
 }
 
 main {
     grid-area: main;
-    background-color: white;
+    background-color: #eeeeee;
+}
+
+nav a {
+    display: block;
+}
+
+nav a i.material-icons {
+    color: #7b7b7d;
+    font-size: 28px;
+    margin: 10px;
+}
+
+nav a.active i.material-icons {
+    color: #eeeeee;
 }
 
 .hide {
