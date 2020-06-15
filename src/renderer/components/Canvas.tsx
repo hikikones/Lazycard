@@ -155,9 +155,10 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     React.useEffect(() => {
         context = canvas.current.getContext("2d");
         window.addEventListener("resize", resize);
-        document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
+        if (props.show) document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
         return () => {
             window.removeEventListener("resize", resize);
+            if (!props.show) document.onpaste = null;
         }
     });
 
