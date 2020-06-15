@@ -27,8 +27,10 @@ const Draw = (props: IDrawProps) => {
     return (
         <div>
             <Menu
-                onFlip={() => setShowFront(!showFront)}
                 onSave={save}
+                onFlip={() => setShowFront(!showFront)}
+                onUndo={() => showFront ? front.current.undo() : back.current.undo()}
+                onRedo={() => showFront ? front.current.redo() : back.current.redo()}
             />
             <Colors onColorPick={onColorPick} />
 
@@ -58,11 +60,17 @@ const Menu = (props: IDrawMenuProps) => {
 
     return (
         <div className="draw-menu">
+            <a onClick={props.onSave}>
+                <i className="material-icons">done</i>
+            </a>
             <a onClick={flip}>
                 <i className="material-icons">{isFlipped ? "flip_to_front" : "flip_to_back"}</i>
             </a>
-            <a onClick={props.onSave}>
-                <i className="material-icons">done</i>
+            <a onClick={props.onUndo}>
+                <i className="material-icons">undo</i>
+            </a>
+            <a onClick={props.onRedo}>
+                <i className="material-icons">redo</i>
             </a>
         </div>
     );
@@ -71,6 +79,8 @@ const Menu = (props: IDrawMenuProps) => {
 interface IDrawMenuProps {
     onFlip(): void
     onSave(): void
+    onUndo(): void
+    onRedo(): void
 }
 
 export default Draw;

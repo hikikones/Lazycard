@@ -163,9 +163,9 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     });
 
     React.useImperativeHandle(ref, () => ({
-        toDataURL: (): string => {
-            return toDataURL();
-        }
+        toDataURL: (): string => toDataURL(),
+        undo: () => undo(),
+        redo: () => redo()
     }));
 
     return (
@@ -195,6 +195,8 @@ interface IProps {
 
 interface Handles {
     toDataURL(): string
+    undo(): void
+    redo(): void
 }
 
 export default Canvas;
