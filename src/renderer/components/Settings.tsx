@@ -56,19 +56,23 @@ const Settings = () => {
             <h3>Location</h3>
             <p>The location of your database file.</p>
             <p><label>{dbPath}</label></p>
-            <Button name="Open" icon="folder_open" action={openDatabaseDir} />
-            <Button name="Change" icon="edit" action={changeDatabasePath} />
+            <div className="row-of-items">
+                <Button name="Open" icon="folder_open" action={openDatabaseDir} />
+                <Button name="Change" icon="edit" action={changeDatabasePath} />
+            </div>
 
             <h3>Backups</h3>
             <p>The amount of backups before old ones are removed.</p>
-            <Button name="Open" icon="folder_open" action={openBackupDir} />
-            <input
-                type="number"
-                defaultValue={cfg.getBackupAmount()}
-                min="1"
-                max="100"
-                onInput={(e: React.FormEvent<HTMLInputElement>) => changeBackupAmount(e)}
-            />
+            <div className="row-of-items">
+                <Button name="Open" icon="folder_open" action={openBackupDir} />
+                <input
+                    type="number"
+                    defaultValue={cfg.getBackupAmount()}
+                    min="1"
+                    max="100"
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => changeBackupAmount(e)}
+                />
+            </div>
 
             <h3>Restore</h3>
             <p>Restore your database from a local file.</p>

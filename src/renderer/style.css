@@ -39,7 +39,7 @@ a.nav {
 a.nav i.icon {
     color: #7b7b7d;
     font-size: 28px;
-    margin: 10px;
+    padding: 10px;
 }
 
 a.nav.active i.icon, nav a.nav:hover i.icon {
@@ -47,7 +47,7 @@ a.nav.active i.icon, nav a.nav:hover i.icon {
 }
 
 a.button {
-    margin-right: 5px;
+    margin: 0 5px;
     padding: 4px 6px;
     color: #333333;
     display: inline-block;
@@ -103,6 +103,33 @@ a.button i.icon {
 
 .draw-menu .icon, .colors-menu .icon {
     font-size: 32px;
+}
+
+.slider {
+    -webkit-appearance: none;
+    outline: none;
+    width: 75px;
+    height: 4px;
+    margin: 0 5px;
+    background-color: #7b7b7d;
+    border: 1px solid #7b7b7d;
+    border-radius: 25px;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #333333;
+    cursor: pointer;
+}
+
+.row-of-items {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    /* gap: 5px; */
 }
 
 .hide {

@@ -22,7 +22,7 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         context.lineCap = "round";
         context.fillStyle = props.color;
         context.strokeStyle = props.color;
-        context.lineWidth = 5;
+        context.lineWidth = props.size;
         drawCircle();
     }
     
@@ -169,27 +169,23 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     }));
 
     return (
-        <div className={props.show ? "" : "hide"}>
-            <canvas
-                ref={canvas}
-                width={width}
-                height={height}
-                onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
-                onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
-                onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
-                onMouseLeave={(e: React.MouseEvent) => handleDrawEnd(e)}
-                onMouseEnter={(e: React.MouseEvent) => handleDrawEnter(e)}
-            />
-            <button onClick={undo}>Undo</button>
-            <button onClick={redo}>Redo</button>
-            <button onClick={() => console.log(crop())}>Crop</button>
-            <button onClick={() => console.log(toDataURL())}>toDataURL</button>
-        </div>
+        <canvas
+            className={props.show ? null : "hide"}
+            ref={canvas}
+            width={width}
+            height={height}
+            onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
+            onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
+            onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
+            onMouseLeave={(e: React.MouseEvent) => handleDrawEnd(e)}
+            onMouseEnter={(e: React.MouseEvent) => handleDrawEnter(e)}
+        />
     );
 });
 
 interface IProps {
     show: boolean
+    size: number
     color: string
 }
 

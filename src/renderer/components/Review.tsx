@@ -65,7 +65,7 @@ const Review = () => {
         <div className="content review">
             <h1>Review</h1>
             <img src={showAnswer ? card.back : card.front} />
-            <div className="review-buttons">
+            <div className="review-buttons row-of-items">
                 {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
                 {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
                 {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
