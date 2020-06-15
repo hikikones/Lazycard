@@ -62,12 +62,13 @@ a.button i.icon {
 }
 
 .content {
-    margin: 1rem;
+    height: 100%;
+    padding: 1rem;
+    overflow: auto;
+    box-sizing: border-box;
 }
 
 .review {
-    height: 100%;
-    margin: 0 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -79,26 +80,24 @@ a.button i.icon {
     max-height: 60%;
 }
 
-.review-buttons {
-    margin-bottom: 1rem;
-}
-
 .review-buttons .icon {
     font-size: 36px;
 }
 
+.draw-editor {
+    overflow: hidden;
+}
+
 .draw-menu {
     position: absolute;
-    top: 0;
+    top: 20px;
     left: 78px;
-    margin-top: 20px;
 }
 
 .colors-menu {
     position: absolute;
-    top: 0;
+    top: 20px;
     right: 30px;
-    margin-top: 20px;
 }
 
 .draw-menu .icon, .colors-menu .icon {

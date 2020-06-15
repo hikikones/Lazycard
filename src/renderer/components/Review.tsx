@@ -4,8 +4,6 @@ import db, { Card } from '../model/Database';
 
 import Button from './Button';
 
-// TODO: Fix janky rerender when show() -> skip()
-
 const shuffle = (arr: Card[]): Card[] => {
     for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
         const newIndex = Math.floor(Math.random() * (currentIndex + 1));
@@ -69,7 +67,7 @@ const Review = () => {
                 {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
                 {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
                 {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
-                <Button icon="double_arrow" action={() => skip()} />
+                {showAnswer || <Button icon="double_arrow" action={() => skip()} />}
             </div>
         </div>
     );
