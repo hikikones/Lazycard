@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+// TODO: Fix image paste not working after slider/brush changes
+
 const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     type Point = { x: number, y: number }
     const canvas = React.useRef<HTMLCanvasElement>(null);
@@ -18,11 +20,7 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         redos.length = 0;
         isDrawing = true;
         updateMousePos(e);
-        context.lineJoin = "round";
-        context.lineCap = "round";
-        context.fillStyle = props.color;
-        context.strokeStyle = props.color;
-        context.lineWidth = props.size;
+        applyBrush();
         drawCircle();
     }
     
@@ -38,12 +36,14 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
 
     const handleDrawEnd = (e: React.MouseEvent) => {
         isDrawing = false;
+        context.globalCompositeOperation = "source-over";
     }
 
     const handleDrawEnter = (e: React.MouseEvent) => {
         if (e.buttons === 0) return;
         isDrawing = true;
         updateMousePos(e);
+        applyBrush();
     }
 
     const updateMousePos = (e: React.MouseEvent) => {
@@ -65,6 +65,27 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         context.arc(mousePos.x, mousePos.y, context.lineWidth / 2, 0, 2 * Math.PI, false);
         context.closePath();
         context.fill();
+    }
+
+    const applyBrush = () => {
+        context.lineJoin = "round";
+        context.lineCap = "round";
+        context.fillStyle = props.color;
+        context.strokeStyle = props.color;
+        context.lineWidth = props.size;
+        
+        switch(props.brush) {
+            case "eraser": {
+                context.globalCompositeOperation = "destination-out";
+                context.fillStyle = "#ff0000";
+                context.strokeStyle= "#ff0000";
+                break;
+            }
+            default: {
+                context.globalCompositeOperation = "source-over";
+                break;
+            }
+        }
     }
 
     const onImagePaste = (e: ClipboardEvent) => {
@@ -185,6 +206,7 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
 
 interface IProps {
     show: boolean
+    brush: string
     size: number
     color: string
 }

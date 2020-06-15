@@ -84,10 +84,6 @@ a.button i.icon {
     font-size: 36px;
 }
 
-.draw-editor {
-    overflow: hidden;
-}
-
 .draw-menu {
     position: absolute;
     top: 20px;

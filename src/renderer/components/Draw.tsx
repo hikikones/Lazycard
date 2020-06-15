@@ -11,6 +11,7 @@ import Slider from './Slider';
 const Draw = (props: IDrawProps) => {
     const id = parseInt(props.match.params.id);
     const [showFront, setShowFront] = React.useState<boolean>(true);
+    const [brush, setBrush] = React.useState<string>("default");
     const [size, setSize] = React.useState<number>(5);
     const [color, setColor] = React.useState<string>("black");
 
@@ -50,6 +51,14 @@ const Draw = (props: IDrawProps) => {
                     icon="redo"
                     action={() => showFront ? front.current.redo() : back.current.redo()}
                 />
+                <Button
+                    icon="create"
+                    action={() => setBrush("default")}
+                />
+                <Button
+                    icon="clear"
+                    action={() => setBrush("eraser")}
+                />
                 <Slider onChange={onSizeChange} defaultSize={size} />
             </div>
             <Colors onColorPick={onColorPick} />
@@ -57,12 +66,14 @@ const Draw = (props: IDrawProps) => {
             <Canvas
                 ref={front}
                 show={showFront}
+                brush={brush}
                 size={size}
                 color={color}
             />
             <Canvas
                 ref={back}
                 show={!showFront}
+                brush={brush}
                 size={size}
                 color={color}
             />
