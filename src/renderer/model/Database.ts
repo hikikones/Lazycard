@@ -4,6 +4,8 @@ import * as path from 'path';
 import cfg from './Config';
 import srs from '../controller/SRS';
 
+// TODO: Add hash values to cards for easy comparisons
+
 class Database {
     public readonly cards: Cards = new Cards();
     private version: string;

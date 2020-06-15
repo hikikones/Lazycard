@@ -1,23 +1,39 @@
 import * as React from 'react';
 
-// TODO: Fix image paste not working after slider/brush changes
+import Button from './Button';
+import Slider from './Slider';
+import Colors from './Colors';
 
-const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
+const frontUndos = new Array<string>();
+const frontRedos = new Array<string>();
+const backUndos = new Array<string>();
+const backRedos = new Array<string>();
+
+let frontImageData: ImageData = null;
+let backImageData: ImageData = null;
+let width: number = window.innerWidth;
+let height: number = window.innerHeight;
+let showFront: boolean = true;
+
+// TODO: also remember brush, size and color?
+// TODO: implement save
+// TODO: Fix blank bug when draw -> resize -> change slider
+
+const Canvas = () => {
     type Point = { x: number, y: number }
     const canvas = React.useRef<HTMLCanvasElement>(null);
     let context: CanvasRenderingContext2D;
     let mousePos: Point;
     let isDrawing: boolean = false;
 
-    const [width] = React.useState<number>(window.innerWidth);
-    const [height] = React.useState<number>(window.innerHeight);
-
-    const [undos] = React.useState<Array<string>>([]);
-    const [redos] = React.useState<Array<string>>([]);
+    const [isFront, setIsFront] = React.useState<boolean>(showFront);
+    const [brush, setBrush] = React.useState<string>("default");
+    const [size, setSize] = React.useState<number>(5);
+    const [color, setColor] = React.useState<string>("black");
 
     const handleDrawStart = (e: React.MouseEvent) => {
-        undos.push(canvas.current.toDataURL());
-        redos.length = 0;
+        addUndo();
+        clearRedos();
         isDrawing = true;
         updateMousePos(e);
         applyBrush();
@@ -70,11 +86,11 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     const applyBrush = () => {
         context.lineJoin = "round";
         context.lineCap = "round";
-        context.fillStyle = props.color;
-        context.strokeStyle = props.color;
-        context.lineWidth = props.size;
+        context.fillStyle = color;
+        context.strokeStyle = color;
+        context.lineWidth = size;
         
-        switch(props.brush) {
+        switch(brush) {
             case "eraser": {
                 context.globalCompositeOperation = "destination-out";
                 context.fillStyle = "#ff0000";
@@ -88,23 +104,20 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         }
     }
 
-    const onImagePaste = (e: ClipboardEvent) => {
-        for (let i = 0 ; i < e.clipboardData.items.length; i++) {
-            const item = e.clipboardData.items[i];
-            if (item.type.indexOf("image") === -1) continue;
-            undos.push(canvas.current.toDataURL());
-            const blob = item.getAsFile();
-            const img = new Image();
-            img.src = (window.URL || window.webkitURL).createObjectURL(blob);
-            img.onload = () => context.drawImage(img, mousePos.x - img.width/2, mousePos.y - img.height/2);
-        }
+    const flip = () => {
+        setImageData();
+        showFront = !showFront;
+        clear();
+        const otherSide = getImageData();
+        if (otherSide !== null) replaceDrawing(otherSide);
+        setIsFront(showFront);
     }
 
     const undo = () => {
-        if (undos.length === 0) return;
-        redos.push(canvas.current.toDataURL());
+        if (getUndos().length === 0) return;
+        addRedo();
         const img = new Image();
-        img.src = undos.pop();
+        img.src = getUndos().pop();
         img.onload = () => {
             clear();
             context.drawImage(img, 0, 0);
@@ -112,10 +125,10 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
     }
 
     const redo = () => {
-        if (redos.length === 0) return;
-        undos.push(canvas.current.toDataURL());
+        if (getRedos().length === 0) return;
+        addUndo();
         const img = new Image();
-        img.src = redos.pop();
+        img.src = getRedos().pop();
         img.onload = () => {
             clear();
             context.drawImage(img, 0, 0);
@@ -126,12 +139,51 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     }
 
+    const getImageData = (): ImageData => {
+        if (showFront) return frontImageData;
+        return backImageData;
+    }
+
+    const setImageData = () => {
+        if (showFront) {
+            frontImageData = getCanvasImageData();
+        } else {
+            backImageData = getCanvasImageData();
+        }
+    }
+
+    const getCanvasImageData = (): ImageData => {
+        return context.getImageData(0, 0, canvas.current.width, canvas.current.height);
+    }
+
+    const replaceDrawing = (imageData: ImageData) => {
+        context.putImageData(imageData, 0, 0);
+    }
+
+    const snapshot = (): string => {
+        return canvas.current.toDataURL();
+    }
+
+    const onImagePaste = (e: ClipboardEvent) => {
+        for (let i = 0 ; i < e.clipboardData.items.length; i++) {
+            const item = e.clipboardData.items[i];
+            if (item.type.indexOf("image") === -1) continue;
+            addUndo();
+            const blob = item.getAsFile();
+            const img = new Image();
+            img.src = (window.URL || window.webkitURL).createObjectURL(blob);
+            img.onload = () => context.drawImage(img, mousePos.x - img.width/2, mousePos.y - img.height/2);
+        }
+    }
+
     const resize = () => {
         if (window.innerWidth < canvas.current.width || window.innerHeight < canvas.current.height) return;
-        const imageData = context.getImageData(0, 0, canvas.current.width, canvas.current.height);
-        canvas.current.width = document.body.clientWidth;
-        canvas.current.height = document.body.clientHeight;
-        context.putImageData(imageData, 0, 0);
+        const imageData = getCanvasImageData();
+        width = document.body.clientWidth;
+        height = document.body.clientHeight;
+        canvas.current.width = width;
+        canvas.current.height = height;
+        replaceDrawing(imageData);
     }
 
     const crop = (): ImageData => {
@@ -173,48 +225,88 @@ const Canvas = React.forwardRef<Handles, IProps>((props, ref) => {
         return cvs.toDataURL();
     }
 
+    const addUndo = () => {
+        getUndos().push(snapshot());
+    }
+
+    const addRedo = () => {
+        getRedos().push(snapshot());
+    }
+
+    const clearRedos = () => {
+        getRedos().length = 0;
+    }
+
+    const getUndos = (): string[] => {
+        if (showFront) return frontUndos;
+        return backUndos;
+    }
+
+    const getRedos = (): string[] => {
+        if (showFront) return frontRedos;
+        return backRedos;
+    }
+
     React.useEffect(() => {
         context = canvas.current.getContext("2d");
-        window.addEventListener("resize", resize);
-        if (props.show) document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
+        document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
         return () => {
-            window.removeEventListener("resize", resize);
-            if (!props.show) document.onpaste = null;
+            setImageData();
         }
     });
 
-    React.useImperativeHandle(ref, () => ({
-        toDataURL: (): string => toDataURL(),
-        undo: () => undo(),
-        redo: () => redo()
-    }));
+    React.useEffect(() => {
+        window.onresize = () => resize();
+        const imageData = getImageData();
+        if (imageData !== null) replaceDrawing(getImageData());
+        return () => {
+            window.onresize = null;
+            document.onpaste = null;
+        }
+    }, []);
 
     return (
-        <canvas
-            className={props.show ? null : "hide"}
-            ref={canvas}
-            width={width}
-            height={height}
-            onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
-            onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
-            onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
-            onMouseLeave={(e: React.MouseEvent) => handleDrawEnd(e)}
-            onMouseEnter={(e: React.MouseEvent) => handleDrawEnter(e)}
-        />
+        <div>
+            <canvas
+                ref={canvas}
+                width={width}
+                height={height}
+                onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
+                onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
+                onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
+                onMouseLeave={(e: React.MouseEvent) => handleDrawEnd(e)}
+                onMouseEnter={(e: React.MouseEvent) => handleDrawEnter(e)}
+            />
+            <div className="draw-menu row-of-items">
+                <Button
+                    icon="done"
+                    action={() => console.log(toDataURL())}
+                />
+                <Button
+                    icon={isFront ? "flip_to_back" : "flip_to_front"}
+                    action={flip}
+                />
+                <Button
+                    icon="undo"
+                    action={undo}
+                />
+                <Button
+                    icon="redo"
+                    action={redo}
+                />
+                <Button
+                    icon="create"
+                    action={() => setBrush("default")}
+                />
+                <Button
+                    icon="clear"
+                    action={() => setBrush("eraser")}
+                />
+                <Slider onChange={(val: number) => setSize(val)} defaultSize={size} />
+            </div>
+            <Colors onColorPick={(col: string) => setColor(col)} />
+        </div>
     );
-});
-
-interface IProps {
-    show: boolean
-    brush: string
-    size: number
-    color: string
-}
-
-interface Handles {
-    toDataURL(): string
-    undo(): void
-    redo(): void
 }
 
 export default Canvas;
