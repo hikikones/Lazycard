@@ -13,8 +13,8 @@ const Nav = () => {
 
 const NavButton = (props: {to: string, icon: string}) => {
     return (
-        <NavLink exact to={props.to}>
-            <i className="material-icons">{props.icon}</i>
+        <NavLink exact to={props.to} className="nav">
+            <i className="material-icons icon">{props.icon}</i>
         </NavLink>
     );
 }

@@ -1,23 +1,20 @@
 import * as React from 'react';
 
+import Button from './Button';
+
 const colors = ["black", "blue", "red", "yellow", "pink"];
 
 const Colors = (props: {onColorPick(color: string): void}) => {
     return (
         <div className="colors-menu">
             {colors.map((c, i) =>
-                <Color color={c} onPick={() => props.onColorPick(c)} key={i} />
+                <Button
+                    icon="lens"
+                    action={() => props.onColorPick(c)}
+                    color={c}
+                />
             )}
         </div>
-    );
-}
-
-const Color = (props: {color: string, onPick(color: string): void}) => {
-    return (
-        <a
-            style={{backgroundColor: props.color}}
-            onClick={() => props.onPick(props.color)}
-        />
     );
 }
 

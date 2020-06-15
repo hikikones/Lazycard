@@ -5,6 +5,8 @@ import db from '../model/Database';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
 
+import Button from './Button';
+
 const Settings = () => {
 
     const [dbPath, setDbPath] = React.useState<string>(cfg.getDatabasePath());
@@ -72,14 +74,6 @@ const Settings = () => {
             <p>Restore your database from a local file.</p>
             <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />
         </div>
-    );
-}
-
-const Button = (props: {name: string, icon: string, action(): void}) => {
-    return (
-        <a className="button" onClick={props.action}>
-                <i className="material-icons">{props.icon}</i> {props.name}
-        </a>
     );
 }
 

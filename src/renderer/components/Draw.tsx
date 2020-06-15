@@ -5,6 +5,7 @@ import db from '../model/Database';
 
 import Colors from './Colors';
 import Canvas from './Canvas';
+import Button from './Button';
 
 const Draw = (props: IDrawProps) => {
     const id = parseInt(props.match.params.id);
@@ -26,12 +27,24 @@ const Draw = (props: IDrawProps) => {
 
     return (
         <div>
-            <Menu
-                onSave={save}
-                onFlip={() => setShowFront(!showFront)}
-                onUndo={() => showFront ? front.current.undo() : back.current.undo()}
-                onRedo={() => showFront ? front.current.redo() : back.current.redo()}
-            />
+            <div className="draw-menu">
+                <Button
+                    icon="done"
+                    action={save}
+                />
+                <Button
+                    icon={showFront ? "flip_to_back" : "flip_to_front"}
+                    action={() => setShowFront(!showFront)}
+                />
+                <Button
+                    icon="undo"
+                    action={() => showFront ? front.current.undo() : back.current.undo()}
+                />
+                <Button
+                    icon="redo"
+                    action={() => showFront ? front.current.redo() : back.current.redo()}
+                />
+            </div>
             <Colors onColorPick={onColorPick} />
 
             <Canvas
@@ -49,38 +62,5 @@ const Draw = (props: IDrawProps) => {
 }
 
 interface IDrawProps extends RouteComponentProps<{ id: string }> {}
-
-const Menu = (props: IDrawMenuProps) => {
-    const [isFlipped, setIsFlipped] = React.useState<boolean>(false);
-
-    const flip = () => {
-        setIsFlipped(!isFlipped);
-        props.onFlip();
-    }
-
-    return (
-        <div className="draw-menu">
-            <a onClick={props.onSave}>
-                <i className="material-icons">done</i>
-            </a>
-            <a onClick={flip}>
-                <i className="material-icons">{isFlipped ? "flip_to_front" : "flip_to_back"}</i>
-            </a>
-            <a onClick={props.onUndo}>
-                <i className="material-icons">undo</i>
-            </a>
-            <a onClick={props.onRedo}>
-                <i className="material-icons">redo</i>
-            </a>
-        </div>
-    );
-}
-
-interface IDrawMenuProps {
-    onFlip(): void
-    onSave(): void
-    onUndo(): void
-    onRedo(): void
-}
 
 export default Draw;

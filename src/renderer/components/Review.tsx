@@ -2,6 +2,10 @@ import * as React from 'react';
 
 import db, { Card } from '../model/Database';
 
+import Button from './Button';
+
+// TODO: Fix janky rerender when show() -> skip()
+
 const shuffle = (arr: Card[]): Card[] => {
     for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
         const newIndex = Math.floor(Math.random() * (currentIndex + 1));
@@ -62,20 +66,12 @@ const Review = () => {
             <h1>Review</h1>
             <img src={showAnswer ? card.back : card.front} />
             <div className="review-buttons">
-                {showAnswer || <ReviewButton icon="lock_open" action={() => setShowAnswer(true)} />}
-                {showAnswer && <ReviewButton icon="done" action={() => handleReview(true)} />}
-                {showAnswer && <ReviewButton icon="close" action={() => handleReview(false)} />}
-                <ReviewButton icon="double_arrow" action={() => skip()} />
+                {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
+                {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
+                {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
+                <Button icon="double_arrow" action={() => skip()} />
             </div>
         </div>
-    );
-}
-
-const ReviewButton = (props: {icon: string, action(): void}) => {
-    return (
-        <a onClick={props.action}>
-                <i className="material-icons">{props.icon}</i>
-        </a>
     );
 }
 

@@ -32,23 +32,33 @@ a::selection, i::selection {
     user-select: none;
 }
 
-.material-icons {
-    color: #7b7b7d;
-    vertical-align: bottom;
-}
-
-nav a {
+a.nav {
     display: block;
 }
 
-nav a i.material-icons {
+a.nav i.icon {
     color: #7b7b7d;
     font-size: 28px;
     margin: 10px;
 }
 
-nav a.active i.material-icons, nav a:hover i.material-icons {
+a.nav.active i.icon, nav a.nav:hover i.icon {
     color: #eeeeee;
+}
+
+a.button {
+    margin-right: 5px;
+    padding: 4px 6px;
+    color: #333333;
+    display: inline-block;
+}
+
+a.button:hover {
+    background-color: whitesmoke;
+}
+
+a.button i.icon {
+    vertical-align: bottom;
 }
 
 .content {
@@ -66,18 +76,14 @@ nav a.active i.material-icons, nav a:hover i.material-icons {
 
 .review img {
     max-width: 80%;
-    max-height: 50%;
+    max-height: 60%;
 }
 
 .review-buttons {
     margin-bottom: 1rem;
 }
 
-.review-buttons a {
-    margin: 0 10px;
-}
-
-.review-buttons a i.material-icons {
+.review-buttons .icon {
     font-size: 36px;
 }
 
@@ -88,14 +94,6 @@ nav a.active i.material-icons, nav a:hover i.material-icons {
     margin-top: 20px;
 }
 
-.draw-menu a {
-    margin: 0 5px;
-}
-
-.draw-menu a i.material-icons {
-    font-size: 32px;
-}
-
 .colors-menu {
     position: absolute;
     top: 0;
@@ -103,22 +101,8 @@ nav a.active i.material-icons, nav a:hover i.material-icons {
     margin-top: 20px;
 }
 
-.colors-menu a {
-    height: 32px;
-    width: 32px;
-    margin: 0 5px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.button {
-    margin-right: 5px;
-    padding: 4px 6px;
-    display: inline-block;
-}
-
-a.button:hover {
-    background-color: whitesmoke;
+.draw-menu .icon, .colors-menu .icon {
+    font-size: 32px;
 }
 
 .hide {
