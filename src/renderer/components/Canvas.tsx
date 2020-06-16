@@ -1,5 +1,6 @@
 import * as React from 'react';
 
+import db from '../model/Database';
 import Keyboard from '../controller/Keyboard';
 
 import Button from './Button';
@@ -19,8 +20,6 @@ let brush: string = "default";
 let size: number = 5;
 let color: string = "black";
 let showFront: boolean = true;
-
-// TODO: implement save
 
 const Canvas = () => {
     type Point = { x: number, y: number }
@@ -183,17 +182,23 @@ const Canvas = () => {
         replaceDrawing(imageData);
     }
 
-    const crop = (): ImageData => {
+    const crop = (image: ImageData): ImageData => {
+        const cvs: HTMLCanvasElement = document.createElement("canvas");
+        const ctx: CanvasRenderingContext2D = cvs.getContext("2d");
+        cvs.width = image.width;
+        cvs.height = image.height;
+        ctx.putImageData(image, 0, 0);
+
         const w = window.innerWidth;
         const h = window.innerHeight;
         const min = { x: Number.MAX_SAFE_INTEGER, y: Number.MAX_SAFE_INTEGER };
         const max = { x: Number.MIN_SAFE_INTEGER, y: Number.MIN_SAFE_INTEGER };
-        const imageData = context.getImageData(0, 0, w, h);
+        const croppedImage = ctx.getImageData(0, 0, w, h);
         
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
                 const index = (y * w + x) * 4;
-                const alpha = imageData.data[index + 3];
+                const alpha = croppedImage.data[index + 3];
                 if (alpha > 0) {
                     min.x = Math.min(min.x, x);
                     max.x = Math.max(max.x, x);
@@ -204,22 +209,41 @@ const Canvas = () => {
         }
 
         if (min.x === Number.MAX_SAFE_INTEGER || max.x === Number.MIN_SAFE_INTEGER) {
-            return context.getImageData(0, 0, w, h);
+            return ctx.getImageData(0, 0, w, h);
         }
 
         const newWidth = max.x - min.x + 1;
         const newHeight = max.y - min.y + 1;
-        return context.getImageData(min.x, min.y, newWidth, newHeight);
+        return ctx.getImageData(min.x, min.y, newWidth, newHeight);
     }
 
-    const toDataURL = (): string => {
+    const toDataURL = (image: ImageData): string => {
         const cvs: HTMLCanvasElement = document.createElement("canvas");
         const ctx: CanvasRenderingContext2D = cvs.getContext("2d");
-        const img: ImageData = crop();
-        cvs.width = img.width;
-        cvs.height = img.height;
-        ctx.putImageData(img, 0, 0);
+        const croppedImage = crop(image);
+        cvs.width = croppedImage.width;
+        cvs.height = croppedImage.height;
+        ctx.putImageData(croppedImage, 0, 0);
         return cvs.toDataURL();
+    }
+
+    const save = () => {
+        setImageData();
+        if (frontImageData === null || backImageData === null) return;
+        const card = db.cards.new();
+        card.front = toDataURL(frontImageData);
+        card.back = toDataURL(backImageData);
+        reset();
+    }
+
+    const reset = () => {
+        clear();
+        frontImageData = null;
+        backImageData = null;
+        frontUndos.length = 0;
+        frontRedos.length = 0;
+        backUndos.length = 0;
+        backRedos.length = 0;
     }
 
     const addUndo = () => {
@@ -276,7 +300,7 @@ const Canvas = () => {
             <div className="draw-menu row-of-items">
                 <Button
                     icon="done"
-                    action={() => console.log(toDataURL())}
+                    action={save}
                 />
                 <Button
                     icon="flip_to_back"

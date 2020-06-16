@@ -36,7 +36,6 @@ const Slider = (props: ISliderProps) => {
             onChange={(e: React.FormEvent<HTMLInputElement>) => setSize(Number(e.currentTarget.value))}
             min={min}
             max={max}
-            onInput={(e: React.FormEvent<HTMLInputElement>) => props.onChange(Number(e.currentTarget.value))}
         />
     );
 }
