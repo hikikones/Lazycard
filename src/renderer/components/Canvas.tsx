@@ -277,10 +277,9 @@ const Canvas = () => {
     });
 
     React.useLayoutEffect(() => {
-        resize();
         window.onresize = () => resize();
         const imageData = getImageData();
-        if (imageData !== null) replaceDrawing(getImageData());
+        if (imageData !== null) replaceDrawing(imageData);
         return () => {
             window.onresize = null;
             document.onpaste = null;
@@ -291,6 +290,8 @@ const Canvas = () => {
         <div>
             <canvas
                 ref={canvas}
+                width={width}
+                height={height}
                 onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
                 onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
                 onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}

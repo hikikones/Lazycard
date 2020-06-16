@@ -10,7 +10,8 @@ function createWindow() {
 		height: 768,
 		show: isDev,
 		webPreferences: {
-			nodeIntegration: true
+			nodeIntegration: true,
+			webSecurity: !isDev
 		}
 	});
 
