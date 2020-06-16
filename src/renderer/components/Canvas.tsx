@@ -15,9 +15,11 @@ let frontImageData: ImageData = null;
 let backImageData: ImageData = null;
 let width: number = window.innerWidth;
 let height: number = window.innerHeight;
+let brush: string = "default";
+let size: number = 5;
+let color: string = "black";
 let showFront: boolean = true;
 
-// TODO: also remember brush, size and color?
 // TODO: implement save
 
 const Canvas = () => {
@@ -26,11 +28,6 @@ const Canvas = () => {
     let context: CanvasRenderingContext2D;
     let mousePos: Point;
     let isDrawing: boolean = false;
-
-    const [isFront, setIsFront] = React.useState<boolean>(showFront);
-    const [brush, setBrush] = React.useState<string>("default");
-    const [size, setSize] = React.useState<number>(5);
-    const [color, setColor] = React.useState<string>("black");
 
     const handleDrawStart = (e: React.MouseEvent) => {
         addUndo();
@@ -111,7 +108,6 @@ const Canvas = () => {
         clear();
         const otherSide = getImageData();
         if (otherSide !== null) replaceDrawing(otherSide);
-        setIsFront(showFront);
     }
 
     const undo = () => {
@@ -299,15 +295,15 @@ const Canvas = () => {
                 />
                 <Button
                     icon="create"
-                    action={() => setBrush("default")}
+                    action={() => brush = "default"}
                 />
                 <Button
                     icon="clear"
-                    action={() => setBrush("eraser")}
+                    action={() => brush = "eraser"}
                 />
-                <Slider onChange={(val: number) => setSize(val)} defaultSize={size} />
+                <Slider onChange={(val: number) => size = val} size={size} enableShortcut={true} />
             </div>
-            <Colors onColorPick={(col: string) => setColor(col)} />
+            <Colors onColorPick={(col: string) => color = col} />
         </div>
     );
 }
