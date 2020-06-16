@@ -1,5 +1,7 @@
 import * as React from 'react';
 
+import Keyboard from '../controller/Keyboard';
+
 import Button from './Button';
 import Slider from './Slider';
 import Colors from './Colors';
@@ -281,8 +283,11 @@ const Canvas = () => {
                     action={() => console.log(toDataURL())}
                 />
                 <Button
-                    icon={isFront ? "flip_to_back" : "flip_to_front"}
+                    icon="flip_to_back"
+                    icon2="flip_to_front"
+                    toggle={showFront}
                     action={flip}
+                    shortcut={Keyboard.Space}
                 />
                 <Button
                     icon="undo"
