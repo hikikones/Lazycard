@@ -17,7 +17,6 @@ let showFront: boolean = true;
 
 // TODO: also remember brush, size and color?
 // TODO: implement save
-// TODO: Fix blank bug when draw -> resize -> change slider
 
 const Canvas = () => {
     type Point = { x: number, y: number }
@@ -247,7 +246,7 @@ const Canvas = () => {
         return backRedos;
     }
 
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         context = canvas.current.getContext("2d");
         document.onpaste = (e: ClipboardEvent) => onImagePaste(e);
         return () => {
@@ -255,7 +254,8 @@ const Canvas = () => {
         }
     });
 
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
+        resize();
         window.onresize = () => resize();
         const imageData = getImageData();
         if (imageData !== null) replaceDrawing(getImageData());
@@ -269,8 +269,6 @@ const Canvas = () => {
         <div>
             <canvas
                 ref={canvas}
-                width={width}
-                height={height}
                 onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
                 onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
                 onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
