@@ -61,7 +61,11 @@ const rendererConfig = {
             template: path.resolve(APP_DIR, "renderer", "index.html"),
             filename: "index.html"
         }),
-        new CopyWebpackPlugin([{ from: './static', to: BUILD_DIR }])
+        new CopyWebpackPlugin({
+            patterns: [
+              { from: './static', to: BUILD_DIR },
+            ],
+        }),
     ],
     node: nodeSettings,
     externals: externalsList

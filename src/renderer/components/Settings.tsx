@@ -27,7 +27,7 @@ export default class Settings extends React.Component<IProps, IState> {
     }
 
     private openDatabaseDir = (): void => {
-        shell.openItem(cfg.getDatabaseDir());
+        shell.openPath(cfg.getDatabaseDir());
     }
 
     private changeBackupAmount = (e: React.FormEvent<HTMLInputElement>) => {
@@ -40,7 +40,7 @@ export default class Settings extends React.Component<IProps, IState> {
     }
 
     private openBackupDir = (): void => {
-        shell.openItem(cfg.getBackupPath());
+        shell.openPath(cfg.getBackupPath());
     }
 
     private restoreDatabase = () => {
