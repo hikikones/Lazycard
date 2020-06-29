@@ -2,9 +2,9 @@ import * as React from 'react';
 
 import db, { Card } from '../model/Database';
 
+import Layout, { Sidebar, SidebarItem, Content } from './Layout';
 import Topic from './Topic';
 
-// TODO: Generalise sidebar|content layout so other pages can use it
 // TODO: Add Import to sidebar
 // TODO: Add New Topic to sidebar
 
@@ -25,60 +25,25 @@ const Topics = () => {
     }
 
     return (
-        <div className="topics">
+        <Layout sidebarWidth={150}>
 
-            <div className="topics-sidebar">
+            <Sidebar>
                 {db.topics.getAll().map(t =>
-                    <TopicLink name={t.name} icon="bookmark" active={t.id === id} onClick={() => setId(t.id)} key={t.id} />
+                    <SidebarItem name={t.name} icon="bookmark" active={t.id === id} onClick={() => setId(t.id)} key={t.id} />
                 )}
-            </div>
+            </Sidebar>
 
-            <div className="topics-content content">
+            <Content>
                 <Topic
                     topic={db.topics.get(id)}
                     cards={cards}
                     onTopicChange={updateTopics}
                     onCardChange={updateCards}
                 />
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-                <h3>content.....</h3>
-            </div>
+            </Content>
 
-        </div>
+        </Layout>
     );
-}
-
-const TopicLink = (props: ITopicLinkProps) => {
-    const classNames = props.active ? "topic-nav active" : "topic-nav";
-    return (
-        <a onClick={props.onClick} className={classNames}>
-            <i className="material-icons">{props.icon}</i> {props.name}
-        </a>
-    );
-}
-
-interface ITopicLinkProps {
-    name: string
-    icon: string
-    active: boolean
-    onClick(): void
 }
 
 export default Topics;

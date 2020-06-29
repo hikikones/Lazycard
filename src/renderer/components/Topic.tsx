@@ -29,7 +29,7 @@ const Topic = (props: ITopicProps) => {
     }
 
     return (
-        <div>
+        <div className="content">
             <h1>{props.topic.name}</h1>
 
             <section>

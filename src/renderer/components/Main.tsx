@@ -11,25 +11,23 @@ import Topics from './Topics';
 
 const Main = () => {
     return (
-        <main>
-            <Switch>
-                <Route exact path={"/"}>
-                    <Redirect to="/review/0" />
-                </Route>
-                <Route path={"/review/:topicId"}>
-                    <Review />
-                </Route>
-                <Route exact path="/cards">
-                    <CardsContainer />
-                </Route>
-                <Route path="/settings">
-                    <Settings />
-                </Route>
-                <Route path="/topics">
-                    <Topics />
-                </Route>
-            </Switch>
-        </main>
+        <Switch>
+            <Route exact path={"/"}>
+                <Redirect to="/review/0" />
+            </Route>
+            <Route path={"/review/:topicId"}>
+                <Review />
+            </Route>
+            <Route exact path="/cards">
+                <CardsContainer />
+            </Route>
+            <Route path="/settings">
+                <Settings />
+            </Route>
+            <Route path="/topics">
+                <Topics />
+            </Route>
+        </Switch>
     );
 }
 
@@ -41,7 +39,9 @@ const CardsContainer = () => {
     }
 
     return (
-        <Cards cards={cards} onCardChange={updateCards} />
+        <div className="content">
+            <Cards cards={cards} onCardChange={updateCards} />
+        </div>
     );
 }
 

@@ -47,22 +47,22 @@ body, html {
 }
 
 #app > div {
-    display: grid;
+    /* display: grid;
     grid-template-rows: 100vh;
     grid-template-columns: 48px auto;
-    grid-template-areas: "nav main";
+    grid-template-areas: "nav main"; */
 }
 
 nav {
-    grid-area: nav;
+    /* grid-area: nav; */
     background-color: #333333;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 main {
-    grid-area: main;
-    background-color: #eeeeee;
-    overflow: auto;
+    /* grid-area: main;
+    background-color: #eeeeee; */
+    /* overflow: auto; */
 }
 
 a:hover {
@@ -200,7 +200,7 @@ a.btn:focus {
 
 
 
-.topics {
+/* .topics {
     display: grid;
     grid-template-rows: 100vh;
     grid-template-columns: 150px auto;
@@ -221,11 +221,34 @@ a.btn:focus {
 
 a.topic-nav.active {
     color: brown;
+} */
+
+
+
+
+
+
+
+
+
+.layout {
+    display: grid;
+    grid-template-rows: 100vh;
 }
 
+.layout-sidebar {
+    background-color: darkslategrey;
+    overflow: hidden;
+}
 
+.layout-main {
+    background-color: #eeeeee;
+    overflow: auto;
+}
 
-
+a.sidebar-item.active {
+    color: mediumvioletred;
+}
 
 
 

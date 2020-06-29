@@ -82,7 +82,7 @@ const Cards = (props: ICardsProps) => {
     }
 
     return (
-        <div className="content">
+        <div>
             <h2>Cards</h2>
 
             <section>
