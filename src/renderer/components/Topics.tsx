@@ -28,8 +28,12 @@ const Topics = () => {
         <Layout sidebarWidth={150}>
 
             <Sidebar>
+                <SidebarItem name="Import" icon="save_alt" active={false} onClick={() => db.import()} />
+
+                <hr />
+
                 {db.topics.getAll().map(t =>
-                    <SidebarItem name={t.name} icon="bookmark" active={t.id === id} onClick={() => setId(t.id)} key={t.id} />
+                    <SidebarItem name={t.name} active={t.id === id} onClick={() => setId(t.id)} key={t.id} />
                 )}
             </Sidebar>
 

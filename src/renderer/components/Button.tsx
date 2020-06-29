@@ -25,7 +25,10 @@ const Button = (props: IButtonProps) => {
     }
 
     return (
-        <a className="button" onClick={click}>
+        <a
+            className={props.className !== undefined ? `button ${props.className}` : "button"}
+            onClick={click}
+        >
             <i
                 className="material-icons icon"
                 style={props.color === undefined ? null : { color: props.color }}
@@ -43,6 +46,7 @@ interface IButtonProps {
     name?: string
     color?: string
     shortcut?: number
+    className?: string
 }
 
 export default Button;

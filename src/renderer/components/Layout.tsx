@@ -25,18 +25,24 @@ export const Sidebar = (props: {children: React.ReactNode}) => {
 }
 
 export const SidebarItem = (props: ISidebarItemProps) => {
+    const name = (): string => {
+        if (props.icon === undefined) return props.name;
+        return ` ${props.name}`;
+    }
+
     return (
         <a onClick={props.onClick} className={props.active ? "sidebar-item active" : "sidebar-item"}>
-            <i className="material-icons">{props.icon}</i> {props.name}
+            {props.icon && <i className="material-icons icon">{props.icon}</i>}
+            {name()}
         </a>
     );
 }
 
 interface ISidebarItemProps {
     name: string
-    icon: string
     active: boolean
     onClick(): void
+    icon?: string
 }
 
 export const Content = (props: {children: React.ReactNode}) => {

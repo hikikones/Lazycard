@@ -7,12 +7,12 @@ const Input = (props: IInputProps) => {
 
     const clear = () => {
         input.current.value = "";
-        props.onClear();
+        if (props.onClear !== undefined) props.onClear();
     }
 
     return (
-        <div className="search-container">
-            {props.icon && <i className="search-icon material-icons">search</i>}
+        <div className="input-container col-center">
+            {props.icon && <i className="material-icons">{props.icon}</i>}
             <input
                 ref={input}
                 className={props.className || null}
@@ -20,7 +20,7 @@ const Input = (props: IInputProps) => {
                 type="text"
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => props.onChange(e.target.value)}
             />
-            {props.onClear && <i onClick={clear} className="material-icons clear-icon">close</i>}
+            <i onClick={clear} className="material-icons clear-icon">close</i>
         </div>
     );
 }

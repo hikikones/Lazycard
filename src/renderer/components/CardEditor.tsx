@@ -71,8 +71,8 @@ const CardEditor = (props: ICardEditorProps) => {
     }
 
     return (
-        <section className="row">
-            <div className="card-editor col">
+        <section className="row space-fixed">
+            <section className="col">
                 <label>Front</label>
                 <textarea
                     ref={frontInput}
@@ -81,7 +81,6 @@ const CardEditor = (props: ICardEditorProps) => {
                     onChange={onFrontChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
                 />
-
                 <label>Back</label>
                 <textarea
                     ref={backInput}
@@ -90,17 +89,16 @@ const CardEditor = (props: ICardEditorProps) => {
                     onChange={onBackChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, false)}
                 />
-
-                <div className="row space-between">
+                <section className="row space-between">
                     <Button name="Save" icon="done" action={save} />
                     <Button name="Cancel" icon="close" action={cancel} />
-                </div>
-            </div>
-            
-            <div className="col">
+                </section>
+            </section>
+
+            <section className="col">
                 <label>Preview</label>
                 <CardView front={front} back={back} showBack={true} />
-            </div>
+            </section>
         </section>
     );
 }

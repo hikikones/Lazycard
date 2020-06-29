@@ -14,7 +14,7 @@ const Dropdown = (props: IDropdownProps) => {
     }
 
     return (
-        <div className="dropdown">
+        <div className={props.className !== undefined ? `dropdown ${props.className}` : "dropdown"}>
             <a className="button" onClick={open}>
                 <i
                     className="material-icons icon"
@@ -52,7 +52,7 @@ const DropdownMenu = (props: IDropdownMenuProps) => {
     });
 
     return (
-        <div className="dropdown-menu">
+        <div className="dropdown-menu col">
             {props.children}
         </div>
     );
@@ -61,7 +61,7 @@ const DropdownMenu = (props: IDropdownMenuProps) => {
 export const DropdownItem = (props: IDropdownItemProps) => {
     return (
         <a className="button" onClick={props.action}>
-            <i className="material-icons">{props.icon}</i> {props.name}
+            <i className="material-icons icon">{props.icon}</i> {props.name}
         </a>
     );
 }
@@ -71,6 +71,7 @@ interface IDropdownProps {
     icon: string
     showDownArrow: boolean
     children: React.ReactNode
+    className?: string
     color?: string
 }
 

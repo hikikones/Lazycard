@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const ButtonLink = (props: IButtonLinkProps) => {
     return (
         <Link className="button" to={props.to}>
-            <i className="material-icons">{props.icon}</i> {props.name}
+            <i className="material-icons icon">{props.icon}</i> {props.name}
         </Link>
     );
 }

@@ -10,6 +10,7 @@ import Input from './Input';
 import Modal from './Modal';
 
 // TODO: Show amount of selected cards somewhere
+// TODO: Fix bug where isAllSelected() returns true when switching between topics that have the same amount of cards
 
 enum CardSort {
     Newest,
@@ -82,10 +83,10 @@ const Cards = (props: ICardsProps) => {
     }
 
     return (
-        <div>
+        <div className="col col-center full-width">
             <h2>Cards</h2>
 
-            <section>
+            <section className="row row-center col-center wrap space-fixed">
                 <Button
                     name="Show answer"
                     icon={showBack ? "check_box" : "check_box_outline_blank"}
@@ -108,10 +109,9 @@ const Cards = (props: ICardsProps) => {
                 <Dropdown name="Bulk" icon="assignment" showDownArrow={true}>
                     <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
                 </Dropdown>
-            </section>
 
-            <section>
                 <Input
+                    className="search-input"
                     placeholder="Search..."
                     onChange={onSearch}
                     onClear={onClearSearch}
@@ -119,7 +119,7 @@ const Cards = (props: ICardsProps) => {
                 />
             </section>
 
-            <section className="cards">
+            <section className="cards row-center full-width">
                 {sort(cards()).slice(0, showAmount).map(c =>
                     <CardSelectable
                         card={c}
@@ -133,7 +133,7 @@ const Cards = (props: ICardsProps) => {
             </section>
 
             {showAmount < cards().length
-                ?   <section className="row row-center">
+                ?   <section className="row space-fixed">
                         <Button name="Load more" icon="cached" action={() => setShowAmount(amount => amount + 20)} />
                         <Button name="Load all" icon="done_all" action={() => setShowAmount(props.cards.length)} />
                     </section>

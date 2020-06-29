@@ -29,10 +29,10 @@ const Topic = (props: ITopicProps) => {
     }
 
     return (
-        <div className="content">
+        <div className="col col-center content">
             <h1>{props.topic.name}</h1>
 
-            <section>
+            <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
                 <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />
                 <Dropdown name="Export" icon="save" showDownArrow={true}>

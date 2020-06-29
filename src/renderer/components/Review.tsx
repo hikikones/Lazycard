@@ -70,7 +70,7 @@ const Review = () => {
     }
 
     return (
-        <div className="content review">
+        <div className="content col col-center space-between full-height">
             <h1>Review</h1>
 
             <Card
@@ -79,7 +79,7 @@ const Review = () => {
                 onDelete={onDelete}
             />
 
-            <div className="review-buttons row-of-items">
+            <div className="review-buttons space-fixed">
                 {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
                 {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
                 {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
