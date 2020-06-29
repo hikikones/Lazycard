@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import Layout, { Content } from './Layout';
 import Nav from './Nav';
-import Main from './Main';
+import Routes from './Routes';
 
 const App = () => {
     return (
@@ -11,7 +11,7 @@ const App = () => {
             <Layout sidebarWidth={48}>
                 <Nav />
                 <Content>
-                    <Main />
+                    <Routes />
                 </Content>
             </Layout>
         </MemoryRouter>

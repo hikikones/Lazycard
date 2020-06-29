@@ -9,7 +9,7 @@ import Cards from './Cards';
 import Settings from './Settings';
 import Topics from './Topics';
 
-const Main = () => {
+const Routes = () => {
     return (
         <Switch>
             <Route exact path={"/"}>
@@ -45,4 +45,4 @@ const CardsContainer = () => {
     );
 }
 
-export default Main;
+export default Routes;
