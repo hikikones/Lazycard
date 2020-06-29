@@ -1,5 +1,7 @@
 import { remote } from "electron";
 
+// TODO: default filename
+
 class Dialog {
     public saveFile(name: string, extensions: string[]): string {
         return remote.dialog.showSaveDialogSync(remote.getCurrentWindow(), {

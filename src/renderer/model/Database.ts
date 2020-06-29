@@ -29,14 +29,14 @@ class Database {
 
     private backup(data: string): void {
         const files: string[] = [];
-        try { fs.readdirSync(cfg.getBackupPath()).forEach(file => { files.push(file); }); }
+        try { fs.readdirSync(cfg.getBackupDir()).forEach(file => { files.push(file); }); }
         catch (err) { return; }
         files.sort().reverse();
         if (files.length >= cfg.getBackupAmount()) {
-            try { fs.unlinkSync(path.join(cfg.getBackupPath(), files.pop())); }
+            try { fs.unlinkSync(path.join(cfg.getBackupDir(), files.pop())); }
             catch (err) {}
         }
-        fs.writeFileSync(path.join(cfg.getBackupPath(), `${Date.now()}.lazycard`), data);
+        fs.writeFileSync(path.join(cfg.getBackupDir(), `${Date.now()}.lazycard`), data);
     }
 
     public export(topicId: number): void {

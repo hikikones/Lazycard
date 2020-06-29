@@ -6,7 +6,10 @@ import search from '../controller/Search';
 import CardSelectable from './CardSelectable';
 import Button from './Button';
 import Dropdown, { DropdownItem } from './Dropdown';
+import Input from './Input';
 import Modal from './Modal';
+
+// TODO: Show amount of selected cards somewhere
 
 enum CardSort {
     Newest,
@@ -15,201 +18,145 @@ enum CardSort {
     RetentionRateDesc
 }
 
-export default class Cards extends React.Component<IProps, IState> {
-    private readonly searchInput = React.createRef<HTMLInputElement>();
-    private readonly topics = React.createRef<HTMLSelectElement>();
-    private cards: Card[];
+const Cards = (props: ICardsProps) => {
+    const [showBack, setShowBack] = React.useState<boolean>(false);
+    const [showAmount, setShowAmount] = React.useState<number>(20);
+    const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length); // TODO: should use db.cards.getAll()?
+    const [searchResults, setSearchResults] = React.useState<Card[]>(null);
 
-    public constructor(props: IProps) {
-        super(props);
-        this.state = {
-            showBack: false,
-            selected: this.props.cards.filter(c => c.selected).length,
-            showModal: false,
-            query: "",
-            sort: CardSort.Newest,
-            amount: 40
-        }
+    const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.Newest);
+    const [showBulkMove, setShowBulkMove] = React.useState<boolean>(false);
+
+    const cards = (): Card[] => {
+        return searchResults || props.cards;
     }
 
-    private toggleAnswer = (): void => {
-        this.setState({ showBack: !this.state.showBack });
+    const onSelect = () => {
+        setSelected(s => s + 1);
     }
 
-    private select = (): void => {
-        this.setState({ selected: this.state.selected + 1 });
-        this.props.onCardChange();
+    const onDeselect = () => {
+        setSelected(s => s - 1);
     }
 
-    private deselect = (): void => {
-        this.setState({ selected: this.state.selected - 1 });
-        this.props.onCardChange();
+    const onDelete = (card: Card) => {
+        if (card.selected) onDeselect();
+        updateCards();
     }
 
-    private toggleSelectAll = (): void => {
-        if (this.isAllSelected()) {
-            this.cards.forEach(c => c.selected = false);
-        } else {
-            this.cards.forEach(c => c.selected = true);
-        }
-        this.setState({ selected: this.props.cards.filter(c => c.selected).length });
-        this.props.onCardChange();
+    const toggleSelectAll = () => {
+        cards().forEach(c => c.selected = !isAllSelected());
+        setSelected(props.cards.filter(c => c.selected).length);
     }
 
-    private isAllSelected = (): boolean => {
-        return this.state.selected === this.props.cards.length;
+    const isAllSelected = (): boolean => {
+        return selected === props.cards.length;
     }
 
-    private delete = (card: Card): void => {
-        if (card.selected) this.deselect();
-        else this.props.onCardChange();
+    const onSearch = (query: string) => {
+        if (query === "") onClearSearch();
+        else setSearchResults(search.query(query, props.cards));
     }
 
-    private onSearch = (): void => {
-        this.setState({ query: this.searchInput.current.value });
+    const onClearSearch = () => {
+        setSearchResults(null);
     }
 
-    private clearSearch = (): void => {
-        this.searchInput.current.value = "";
-        this.setState({ query: "" });
-    }
-
-    private toggleModal = (): void => {
-        this.setState({ showModal: !this.state.showModal });
-    }
-
-    private move = (): void => {
-        const selectedCards = this.props.cards.filter(c => c.selected);
-        if (selectedCards.length === 0) return;
-        selectedCards.forEach(c => {
-            c.topicId = Number(this.topics.current.value);
-            c.selected = false;
-        });
-        this.setState({ selected: 0 });
-        this.props.onCardChange();
-        this.toggleModal();
-    }
-
-    private setSort(sortType: CardSort): void {
-        this.setState({ sort: sortType });
-    }
-
-    private sort = (): void => {
-        switch (this.state.sort) {
+    const sort = (cards: Card[]): Card[] => {
+        switch (sortBy) {
             case CardSort.Newest:
-                this.cards.sort((a, b) => b.id - a.id); break;
+                return cards.sort((a, b) => b.id - a.id);
             case CardSort.Oldest:
-                this.cards.sort((a, b) => a.id - b.id); break;
+                return cards.sort((a, b) => a.id - b.id);
             case CardSort.RetentionRateDesc:
-                this.cards.sort((a, b) => b.retentionRate() - a.retentionRate()); break;
+                return cards.sort((a, b) => b.retentionRate() - a.retentionRate());
             case CardSort.RetentionRateAsc:
-                this.cards.sort((a, b) => a.retentionRate() - b.retentionRate()); break;
+                return cards.sort((a, b) => a.retentionRate() - b.retentionRate());
             default:
-                this.cards.sort((a, b) => b.id - a.id); break;
+                return cards;
         }
     }
 
-    private loadMore = () => {
-        this.setState({ amount: this.state.amount + 40 });
+    const updateCards = () => {
+        props.onCardChange();
     }
 
-    private loadAll = () => {
-        this.setState({ amount: this.cards.length });
-    }
+    return (
+        <div className="content">
+            <h2>Cards</h2>
 
-    public render() {
-        if (this.props.cards.length === 0) return null;
+            <section>
+                <Button
+                    name="Show answer"
+                    icon={showBack ? "check_box" : "check_box_outline_blank"}
+                    action={() => setShowBack(show => !show)}
+                />
 
-        this.cards = [...this.props.cards];
-        if (this.state.query !== "") this.cards = search.query(this.state.query, this.cards);
-        this.sort();
+                <Button
+                    name="Select all"
+                    icon={isAllSelected() ? "check_box" : "check_box_outline_blank"}
+                    action={toggleSelectAll}
+                />
 
-        return (
-            <div>
-                <h2>Cards</h2>
+                <Dropdown name="Sort" icon="sort" showDownArrow={true}>
+                    <DropdownItem name="Newest" icon="arrow_upward" action={() => setSortBy(CardSort.Newest)} />
+                    <DropdownItem name="Oldest" icon="arrow_downward" action={() => setSortBy(CardSort.Oldest)} />
+                    <DropdownItem name="Retention Rate" icon="trending_down" action={() => setSortBy(CardSort.RetentionRateDesc)} />
+                    <DropdownItem name="Retention Rate" icon="trending_up" action={() => setSortBy(CardSort.RetentionRateAsc)} />
+                </Dropdown>
 
-                <section>
-                    <div className="search-container">
-                        <i className="search-icon material-icons">search</i>
-                        <input
-                            ref={this.searchInput}
-                            className="search"
-                            placeholder="Search..."
-                            type="text"
-                            onInput={this.onSearch}
-                        />
-                        <i onClick={this.clearSearch} className="clear-icon material-icons">close</i>
-                    </div>
-                </section>
+                <Dropdown name="Bulk" icon="assignment" showDownArrow={true}>
+                    <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
+                </Dropdown>
+            </section>
 
-                <section>
-                    <Button
-                        name="Show answer"
-                        icon={this.state.showBack ? "check_box" : "check_box_outline_blank"}
-                        action={this.toggleAnswer}
+            <section>
+                <Input
+                    placeholder="Search..."
+                    onChange={onSearch}
+                    onClear={onClearSearch}
+                    icon="search"
+                />
+            </section>
+
+            <section className="cards">
+                {sort(cards()).slice(0, showAmount).map(c =>
+                    <CardSelectable
+                        card={c}
+                        showBack={showBack}
+                        onDelete={onDelete}
+                        onSelect={onSelect}
+                        onDeselect={onDeselect}
+                        key={c.id}
                     />
-                    <Button
-                        name="Select all"
-                        icon={this.isAllSelected() ? "check_box" : "check_box_outline_blank"}
-                        action={this.toggleSelectAll}
-                    />
-                    <Dropdown name="Sort" icon="sort" showDownArrow={true}>
-                        <DropdownItem name="Newest" icon="arrow_upward" action={() => this.setSort(CardSort.Newest)} />
-                        <DropdownItem name="Oldest" icon="arrow_downward" action={() => this.setSort(CardSort.Oldest)} />
-                        <DropdownItem name="Retention Rate" icon="trending_down" action={() => this.setSort(CardSort.RetentionRateDesc)} />
-                        <DropdownItem name="Retention Rate" icon="trending_up" action={() => this.setSort(CardSort.RetentionRateAsc)} />
-                    </Dropdown>
-                    <Dropdown name="Bulk" icon="assignment" number={this.state.selected} showDownArrow={true}>
-                        <DropdownItem name="Move" icon="arrow_forward" action={this.toggleModal} />
-                    </Dropdown>
-                </section>
+                )}
+            </section>
 
-                <section className="cards">
-                    {this.cards.slice(0, this.state.amount).map(c =>
-                        <CardSelectable
-                            key={c.id}
-                            card={c}
-                            showBack={this.state.showBack}
-                            onDelete={this.delete}
-                            onSelect={this.select}
-                            onDeselect={this.deselect}
-                        />
-                    )}
-                </section>
+            {showAmount < cards().length
+                ?   <section className="row row-center">
+                        <Button name="Load more" icon="cached" action={() => setShowAmount(amount => amount + 20)} />
+                        <Button name="Load all" icon="done_all" action={() => setShowAmount(props.cards.length)} />
+                    </section>
+                :   null
+            }
 
-                {this.state.amount < this.cards.length
-                    ?   <section className="row row-center">
-                            <Button name="Load More" icon="cached" action={this.loadMore} />
-                            <Button name="Load all" icon="done_all" action={this.loadAll} />
-                        </section>
-                    :   null
-                }
-
-                <Modal show={this.state.showModal} onClickOutside={this.toggleModal}>
-                    <h2>Move</h2>
-                    <p>Move selected cards to another topic.</p>
-                    <label>Topics</label>
-                    <select ref={this.topics}>
-                        {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                    <Button name="Move" icon="done" action={this.move} />
-                    <Button name="Cancel" icon="close" action={this.toggleModal} />
-                </Modal>
-            </div>
-        );
-    }
+            <Modal show={showBulkMove} onClickOutside={() => setShowBulkMove(false)}>
+                <h2>Move</h2>
+                <p>Move selected cards to another topic.</p>
+                <label>Topics</label>
+                <select>
+                    {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <Button name="Move" icon="done" action={() => console.log("TODO: bulk move cards...")} />
+                <Button name="Cancel" icon="close" action={() => setShowBulkMove(false)} />
+            </Modal>
+        </div>
+    );
 }
 
-interface IProps {
-    cards: readonly Card[]
+interface ICardsProps {
+    cards: Card[]
     onCardChange(): void
 }
 
-interface IState {
-    showBack: boolean
-    selected: number
-    showModal: boolean
-    query: string
-    sort: CardSort
-    amount: number
-}
+export default Cards;

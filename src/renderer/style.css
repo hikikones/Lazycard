@@ -23,10 +23,99 @@
     --search-color: white;
 }
 
-body {
-    margin: 0;
+/* button {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    margin: 0 5px;
+    padding: 4px 6px;
+    font-size: 1rem;
     font-family: Lato;
 }
+
+button i.icon {
+    vertical-align: bottom;
+}
+
+button:hover {
+    background-color: RoyalBlue;
+} */
+
+body, html {
+    font-family: Lato;
+    margin: 0;
+}
+
+#app > div {
+    display: grid;
+    grid-template-rows: 100vh;
+    grid-template-columns: 48px auto;
+    grid-template-areas: "nav main";
+}
+
+nav {
+    grid-area: nav;
+    background-color: #333333;
+    overflow: hidden;
+}
+
+main {
+    grid-area: main;
+    background-color: #eeeeee;
+    overflow: auto;
+}
+
+a:hover {
+    cursor: pointer;
+}
+
+a::selection, i::selection {
+    user-select: none;
+}
+
+a.nav {
+    display: block;
+}
+
+a.nav i.icon {
+    color: #7b7b7d;
+    font-size: 28px;
+    padding: 10px;
+}
+
+a.nav.active i.icon, nav a.nav:hover i.icon {
+    color: #eeeeee;
+}
+
+a.button {
+    display: inline-block;
+    margin: 0 5px;
+    padding: 4px 6px;
+    color: #333333;
+    text-decoration: none;
+}
+
+a.button:hover {
+    background-color: whitesmoke;
+}
+
+a.button i.icon {
+    vertical-align: bottom;
+}
+
+
+
+
+
+
+
+
+
+
+/* body {
+    margin: 0;
+    font-family: Lato;
+} */
 
 h1, h2, h3, h4, h5, h6, p, input::placeholder {
     color: var(--text-color);
@@ -36,7 +125,7 @@ h1, h2, h3, h4, h5, h6 {
     margin: 1rem 0;
 }
 
-#app > div {
+/* #app > div {
     display: grid;
     grid-template-rows: 100vh;
     grid-template-columns: var(--nav-width) auto;
@@ -74,7 +163,7 @@ nav label {
     margin-top: 1rem;
     margin-left: 0.5rem;
     margin-bottom: 0.5rem;
-}
+} */
 
 section {
     margin: 1rem 0;
@@ -92,7 +181,7 @@ input:focus {
     border: 1px solid darkgrey;
 }
 
-a.nav:focus {
+/* a.nav:focus {
     outline: none;
     background-color: var(--focus-element-color);
 }
@@ -100,7 +189,86 @@ a.nav:focus {
 a.btn:focus {
     outline: none;
     background-color: var(--focus-element-color);
+} */
+
+
+
+
+
+
+
+
+
+
+.topics {
+    display: grid;
+    grid-template-rows: 100vh;
+    grid-template-columns: 150px auto;
+    grid-template-areas: "sidebar content";
 }
+
+.topics-sidebar {
+    grid-area: sidebar;
+    background-color: red;
+    overflow: hidden;
+}
+
+.topics-content {
+    grid-area: content;
+    background-color: blue;
+    overflow: auto;
+}
+
+a.topic-nav.active {
+    color: brown;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+.dropdown {
+    display: inline-block;
+    position: relative;
+}
+
+/* .dropdown {
+    display: inline-block;
+    position: relative;
+} */
+
+/* .dropdown .btn {
+    margin-right: 0;
+} */
+
+.dropdown-menu {
+    position: absolute;
+    white-space: nowrap;
+    background-color: lightblue;
+    right: 0;
+    z-index: 2;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 textarea {
     width: 250px;
@@ -184,7 +352,7 @@ select:focus, option:focus, optgroup:focus {
     outline: none;
 }
 
-a.nav {
+/* a.nav {
     display: block;
     padding: 0.25rem 0.5rem;
     font-size: 0.9rem;
@@ -207,7 +375,38 @@ a.nav span, a.btn span {
     border-radius: 50%;
     padding: 0.1rem 0.25rem;
     margin-left: 0.1rem;
+} */
+
+.content {
+    padding: 1rem;
+    box-sizing: border-box;
 }
+
+.review {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.review-buttons .icon {
+    font-size: 36px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .cards {
     display: grid;
@@ -372,7 +571,7 @@ section a.btn:last-child {
     overflow: auto;
 }
 
-.dropdown {
+/* .dropdown {
     display: inline-block;
     position: relative;
 }
@@ -387,7 +586,7 @@ section a.btn:last-child {
     background-color: var(--dropdown-menu-color);
     right: 0;
     z-index: 2;
-}
+} */
 
 .row {
     display: flex;

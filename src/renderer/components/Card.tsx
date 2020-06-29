@@ -2,123 +2,79 @@ import * as React from 'react';
 
 import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
-import md from '../controller/Markdown';
 
+import CardView from './CardView';
 import Dropdown, { DropdownItem } from './Dropdown';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
 
-export default class Card extends React.Component<ICardNew | ICard, ICardState> {
-    public constructor(props: ICardNew | ICard) {
-        super(props);
-        this.state = {
-            showEditor: false,
-            showStats: false
-        }
+const Card = (props: ICardProps) => {
+    const [showEditor, setShowEditor] = React.useState<boolean>(false);
+    const [showStats, setShowStats] = React.useState<boolean>(false);
+
+    const toggleEditor = () => {
+        setShowEditor(show => !show);
     }
 
-    private openEditor = (): void => {
-        this.setState({ showEditor: true });
+    const toggleStats = () => {
+        setShowStats(show => !show);
     }
 
-    private closeEditor = (): void => {
-        this.setState({ showEditor: false });
+    const onDelete = () => {
+        db.cards.delete(props.card.id);
+        props.onDelete();
     }
 
-    private onSave = (): void => {
-        this.closeEditor();
-        this.forceUpdate();
-    }
-
-    private delete = (): void => {
-        if (!isCardNew(this.props)) {
-            db.cards.delete(this.props.card.id);
-            this.props.onDelete();
-        }
-    }
-
-    private toggleStats = (): void => {
-        this.setState({ showStats: !this.state.showStats });
-    }
-
-    public render() {
-        if (isCardNew(this.props)) {
-            return (
-                <div className="card shadow">
-                    {<CardContent markdown={this.props.front} />}
-                    {<hr />}
-                    {<CardContent markdown={this.props.back} />}
-                </div>
-            );
-        }
-
-        return (
-            <div className="card shadow">
-                
-                <Dropdown name="" icon="more_horiz" className="card-btn" showDownArrow={false}>
-                    <DropdownItem name="Edit" icon="edit" action={this.openEditor} />
-                    <DropdownItem name="Stats" icon="assessment" action={this.toggleStats} />
-                    <DropdownItem name="Delete" icon="delete" action={this.delete} />
+    return (
+        <div>
+            <CardView front={props.card.front} back={props.card.back} showBack={props.showBack}>
+                <Dropdown name="" icon="more_horiz" showDownArrow={false}>
+                    <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
+                    <DropdownItem name="Stats" icon="assessment" action={toggleStats} />
+                    <DropdownItem name="Delete" icon="delete" action={onDelete} />
                 </Dropdown>
 
-                {<CardContent markdown={this.props.card.front} />}
-                {this.props.showBack ? <hr /> : null}
-                {this.props.showBack ? <CardContent markdown={this.props.card.back} /> : null}
+                {props.children || null}
+            </CardView>
 
-                <Modal show={this.state.showEditor} onClickOutside={this.closeEditor}>
-                    <CardEditor
-                        onSave={this.onSave}
-                        onCancel={this.closeEditor}
-                        card={this.props.card}
-                    />
-                </Modal>
+            <Modal show={showEditor} onClickOutside={toggleEditor}>
+                <CardEditor
+                    onSave={toggleEditor}
+                    onCancel={toggleEditor}
+                    card={props.card}
+                />
+            </Modal>
 
-                <Modal show={this.state.showStats} onClickOutside={this.toggleStats}>
-                    <h2>Stats</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Attempts</th>
-                                <th>Successes</th>
-                                <th>Retention Rate</th>
-                                <th>Due date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>{this.props.card.attempts}</td>
-                                <td>{this.props.card.successes}</td>
-                                <td>{this.props.card.retentionRate()}</td>
-                                <td>{this.props.card.dueDate.toLocaleDateString()}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </Modal>
-            </div>
-        );
-    }
+            <Modal show={showStats} onClickOutside={toggleStats}>
+                <h2>Stats</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Attempts</th>
+                            <th>Successes</th>
+                            <th>Retention Rate</th>
+                            <th>Due date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{props.card.attempts}</td>
+                            <td>{props.card.successes}</td>
+                            <td>{props.card.retentionRate()}</td>
+                            <td>{props.card.dueDate.toLocaleDateString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </Modal>
+        </div>
+    );
 }
 
-interface ICardNew {
-    front: string
-    back: string
-}
-
-interface ICard {
+interface ICardProps {
     card: CardEntity
     showBack: boolean
     onDelete(): void
+    children?: React.ReactNode
 }
 
-interface ICardState {
-    showEditor: boolean
-    showStats: boolean
-}
-
-const isCardNew = (prop: ICardNew | ICard): prop is ICardNew => {
-    return (prop as ICardNew).front !== undefined;
-}
-
-const CardContent = (props: { markdown: string }): JSX.Element => {
-    return <div dangerouslySetInnerHTML={{ __html: md.parse(props.markdown) }} />
-}
+export default Card;
