@@ -76,16 +76,18 @@ const CardEditor = (props: ICardEditorProps) => {
                 <label>Front</label>
                 <textarea
                     ref={frontInput}
+                    className="card-textarea"
                     defaultValue={front}
-                    rows={4}
+                    rows={5}
                     onChange={onFrontChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
                 />
                 <label>Back</label>
                 <textarea
                     ref={backInput}
+                    className="card-textarea"
                     defaultValue={back}
-                    rows={4}
+                    rows={5}
                     onChange={onBackChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, false)}
                 />

@@ -11,6 +11,8 @@ import Modal from './Modal';
 
 // TODO: Show amount of selected cards somewhere
 // TODO: Fix bug where isAllSelected() returns true when switching between topics that have the same amount of cards
+// TODO: Make sort button change icon based on selected sorting type?
+// TODO: Display something nice when no cards
 
 enum CardSort {
     Newest,
@@ -86,6 +88,16 @@ const Cards = (props: ICardsProps) => {
         <div className="col col-center full-width">
             <h2>Cards</h2>
 
+            <section>
+                <Input
+                    className="search-input"
+                    placeholder="Search..."
+                    onChange={onSearch}
+                    onClear={onClearSearch}
+                    icon="search"
+                />
+            </section>
+
             <section className="row row-center col-center wrap space-fixed">
                 <Button
                     name="Show answer"
@@ -109,14 +121,6 @@ const Cards = (props: ICardsProps) => {
                 <Dropdown name="Bulk" icon="assignment" showDownArrow={true}>
                     <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
                 </Dropdown>
-
-                <Input
-                    className="search-input"
-                    placeholder="Search..."
-                    onChange={onSearch}
-                    onClear={onClearSearch}
-                    icon="search"
-                />
             </section>
 
             <section className="cards row-center full-width">
@@ -143,12 +147,18 @@ const Cards = (props: ICardsProps) => {
             <Modal show={showBulkMove} onClickOutside={() => setShowBulkMove(false)}>
                 <h2>Move</h2>
                 <p>Move selected cards to another topic.</p>
-                <label>Topics</label>
-                <select>
-                    {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <Button name="Move" icon="done" action={() => console.log("TODO: bulk move cards...")} />
-                <Button name="Cancel" icon="close" action={() => setShowBulkMove(false)} />
+                <section>
+                    <section className="col">
+                        <label>Topics</label>
+                        <select>
+                            {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                    </section>
+                    <section className="row space-between">
+                        <Button name="Move" icon="done" action={() => console.log("TODO: bulk move cards...")} />
+                        <Button name="Cancel" icon="close" action={() => setShowBulkMove(false)} />
+                    </section>
+                </section>
             </Modal>
         </div>
     );

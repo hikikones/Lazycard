@@ -4,6 +4,7 @@ const demo = (): IDatabase => {
     const now = new Date(Date.now()).toLocaleDateString();
 
     return {
+        version: "1.1.0",
         topics: [{id: 1, name: "Demo"}],
         cards: [
             {

@@ -15,7 +15,7 @@ const Dropdown = (props: IDropdownProps) => {
 
     return (
         <div className={props.className !== undefined ? `dropdown ${props.className}` : "dropdown"}>
-            <a className="button" onClick={open}>
+            <a className="button" onClick={open} href="#">
                 <i
                     className="material-icons icon"
                     style={props.color === undefined ? null : { color: props.color }}
@@ -52,7 +52,7 @@ const DropdownMenu = (props: IDropdownMenuProps) => {
     });
 
     return (
-        <div className="dropdown-menu col">
+        <div className="dropdown-menu col shadow">
             {props.children}
         </div>
     );
@@ -60,7 +60,7 @@ const DropdownMenu = (props: IDropdownMenuProps) => {
 
 export const DropdownItem = (props: IDropdownItemProps) => {
     return (
-        <a className="button" onClick={props.action}>
+        <a className="button" onClick={props.action} href="#">
             <i className="material-icons icon">{props.icon}</i> {props.name}
         </a>
     );

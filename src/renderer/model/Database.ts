@@ -10,6 +10,7 @@ import md from '../controller/Markdown';
 class Database {
     public readonly cards: Cards = new Cards();
     public readonly topics: Topics = new Topics();
+    private version: string;
 
     public constructor() {
         this.parse(this.read());
@@ -86,6 +87,7 @@ class Database {
     }
 
     private parse(data: IDatabase): void {
+        this.version = data.version;
         data.cards.forEach(c => {
             const card: Card = new Card(c.topicId);
             card.id = c.id;
@@ -97,7 +99,6 @@ class Database {
             card.successes = c.successes;
             this.cards.add(card);
         });
-
         data.topics.forEach(t => {
             const topic: Topic = new Topic(t.name);
             topic.id = t.id;
@@ -106,9 +107,17 @@ class Database {
     }
 
     private toJSON(data?: IDatabase): string {
+        if (data !== undefined)
+            return JSON.stringify({
+                version: data.version,
+                cards: data.cards,
+                topics: data.topics
+            }, null, 2);
+
         return JSON.stringify({
-            cards: data === undefined ? this.cards.getAll().map(c => c.serialize()) : data.cards,
-            topics: data === undefined ? this.topics.getAll().map(t => t.serialize()) : data.topics
+            version: this.version,
+            cards: this.cards.getAll().map(c => c.serialize()),
+            topics: this.topics.getAll().map(t => t.serialize())
         }, null, 2);
     }
 
@@ -356,6 +365,7 @@ export class Topic extends Entity<TopicData, TopicExport> {
 }
 
 export interface IDatabase {
+    version: string
     cards: CardData[]
     topics: TopicData[]
 }

@@ -5,12 +5,10 @@ const isDev = process.env.NODE_ENV === "development";
 let mainWindow: Electron.BrowserWindow;
 
 function createWindow() {
-	const backgroundColor = nativeTheme.shouldUseDarkColors ? "#303030" : "#ffffff";
 	mainWindow = new BrowserWindow({
 		width: 1130,
 		height: 768,
 		show: isDev,
-		backgroundColor,
 		webPreferences: {
 			nodeIntegration: true
 		}
@@ -34,6 +32,13 @@ function createWindow() {
 			mainWindow.webContents.send("app-close");
 		}
 	});
+
+	mainWindow.webContents.on('will-navigate', (e, url) => {
+		e.preventDefault()
+		const newWindow = new BrowserWindow();
+		newWindow.setMenu(null);
+		newWindow.loadURL(url);
+	})
 }
 
 const gotTheLock = app.requestSingleInstanceLock();

@@ -9,7 +9,7 @@ import Cards from './Cards';
 import Settings from './Settings';
 import Topics from './Topics';
 
-const Routes = () => {
+const Routes = (props: IRoutesProps) => {
     return (
         <Switch>
             <Route exact path={"/"}>
@@ -22,7 +22,7 @@ const Routes = () => {
                 <CardsContainer />
             </Route>
             <Route path="/settings">
-                <Settings />
+                <Settings onThemeChange={props.onThemeChange} />
             </Route>
             <Route path="/topics">
                 <Topics />
@@ -43,6 +43,10 @@ const CardsContainer = () => {
             <Cards cards={cards} onCardChange={updateCards} />
         </div>
     );
+}
+
+interface IRoutesProps {
+    onThemeChange(): void
 }
 
 export default Routes;

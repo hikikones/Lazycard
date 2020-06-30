@@ -1,7 +1,5 @@
 import * as React from 'react';
 
-// TODO: fix classnames
-
 const Input = (props: IInputProps) => {
     const input = React.useRef<HTMLInputElement>();
 
@@ -12,7 +10,7 @@ const Input = (props: IInputProps) => {
 
     return (
         <div className="input-container col-center">
-            {props.icon && <i className="material-icons">{props.icon}</i>}
+            {props.icon && <i className="material-icons icon">{props.icon}</i>}
             <input
                 ref={input}
                 className={props.className || null}
@@ -20,7 +18,7 @@ const Input = (props: IInputProps) => {
                 type="text"
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => props.onChange(e.target.value)}
             />
-            <i onClick={clear} className="material-icons clear-icon">close</i>
+            <i onClick={clear} className="material-icons clear-icon icon">close</i>
         </div>
     );
 }

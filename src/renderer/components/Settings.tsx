@@ -7,7 +7,7 @@ import dialog from '../controller/Dialog';
 
 import Button from './Button';
 
-const Settings = () => {
+const Settings = (props: ISettingsProps) => {
     const [dbPath, setDbPath] = React.useState<string>(cfg.getDatabasePath());
     
     const openDatabaseDir = () => {
@@ -46,6 +46,11 @@ const Settings = () => {
         db.restore(dbFile);
     }
 
+    const onThemeSelect = (value: string): void => {
+        cfg.setTheme(value);
+        props.onThemeChange();
+    }
+
     return (
         <div className="content">
             <h1>Settings</h1>
@@ -76,8 +81,20 @@ const Settings = () => {
             <h3>Restore</h3>
             <p>Restore your database from a local file.</p>
             <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />
+
+            <p>Apply a theme for the application.</p>
+            <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onThemeSelect(e.target.value)} defaultValue={cfg.getTheme()}>
+                {/* <option value="system">System</option> */}
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="cyan">Cyan</option>
+            </select>
         </div>
     );
+}
+
+interface ISettingsProps {
+    onThemeChange(): void
 }
 
 export default Settings;

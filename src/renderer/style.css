@@ -4,6 +4,7 @@
 @import "~typeface-roboto-mono/index.css";
 
 /* TODO: Fix margin bleeding outside parent div for cards in grid */
+/* TODO: Coloring <hr /> */
 
 :root {
     --card-min-width: 250px;
@@ -12,13 +13,58 @@
     --content-padding: 1rem;
 }
 
+.light-theme {
+    --primary-color: #333333;
+    --primary-variant-color: #7b7b7d;
+    --on-primary-color: white;
+    --secondary-color: #eeeeee;
+    --secondary-variant-color: #f7f7f7;
+    --on-secondary-color: black;
+    --background-color: ghostwhite;
+    --surface-color: white;
+    --on-surface-color: black;
+    --shadow-color: rgba(0, 0, 0, 0.15);
+}
+
+.dark-theme {
+    --primary-color: #333333;
+    --primary-variant-color: #7b7b7d;
+    --on-primary-color: white;
+    --secondary-color: #252526;
+    --secondary-variant-color: #515151;
+    --on-secondary-color: #f7f7f7;
+    --background-color: black; 
+    --surface-color: #1e1e1e;
+    --on-surface-color: #eeeeee;
+    --shadow-color: rgba(255, 255, 255, 0.15);
+}
+
+.cyan-theme {
+    --primary-color: #23a9a6;
+    --primary-variant-color: #b3e0e1;
+    --on-primary-color: white;
+    --secondary-color: #b3e0e1;
+    --secondary-variant-color: #e1f2f3;
+    --on-secondary-color: black;
+    --background-color: ghostwhite;
+    --surface-color: white;
+    --on-surface-color: black;
+    --shadow-color: rgba(0, 0, 0, 0.15);
+}
+
+
+
 body, html {
     font-family: Lato;
     margin: 0;
 }
 
+h1, h2, h3, h4, h5, h6, p, span, table, label, a {
+    color: var(--on-surface-color);
+}
+
 nav {
-    background-color: #333333;
+    background-color: var(--primary-color);
     overflow: hidden;
 }
 
@@ -26,28 +72,57 @@ section {
     margin: 0.5rem 0;
 }
 
-textarea {
-    width: var(--card-min-width);
-    border-radius: 2px;
-    border-color: lightgrey;
-    padding: 0.25rem;
-    font-family: 'Roboto Mono';
-    resize: vertical;
+table {
+    margin: 0 auto;
+    width: 100%;
+    border-spacing: 0;
+    border: 1px solid var(--secondary-color);
 }
 
-textarea:focus {
+table thead {
+    background-color: var(--secondary-color);
+}
+
+thead th, tbody td {
+    padding: 0.5rem;
+    border: 1px solid var(--secondary-color);
+}
+
+input, select, textarea {
+    border: 1px solid var(--secondary-color);
+    color: var(--on-surface-color);
+    background-color: var(--surface-color);
+    font-family: 'Roboto Mono';
+    padding: 0.25rem;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary-color);
+    color: var(--on-surface-color);
+}
+
+input:focus, select:focus, option:focus, textarea:focus, a:focus {
     outline: none;
-    border: 1px solid darkgrey;
+}
+
+input::placeholder {
+    color: var(--on-surface-color);
+    opacity: 0.5;
+}
+
+label {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin: 5px 0;
+    opacity: 0.5;
 }
 
 hr { 
     border: 0;
     height: 1px;
-    background-image: -webkit-linear-gradient(left,whitesmoke, lightgrey, whitesmoke);
+    background-image: -webkit-linear-gradient(left, whitesmoke, lightgrey, whitesmoke);
     margin: 1rem 0.5rem;
 }
-
-
 
 .layout {
     display: grid;
@@ -55,71 +130,55 @@ hr {
 }
 
 .layout-sidebar {
-    background-color: ghostwhite;
     overflow: auto;
     padding-top: 1rem;
+    background-color: var(--secondary-color);
 }
 
 .layout-main {
-    background-color: #eeeeee;
+    background-color: var(--background-color);
     overflow: auto;
 }
 
-a.sidebar-item {
-    display: block;
-    padding: 0.2rem 0.4rem;
+.content {
+    padding: var(--content-padding);
+    box-sizing: border-box;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
 }
 
-a.sidebar-item.active {
-    color: mediumvioletred;
+.cards {
+    display: grid;
+    grid-gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
 }
 
-
-
-
-a:hover {
-    cursor: pointer;
+.cards .card {
+    height: 100%;
 }
 
-a::selection, i::selection {
-    user-select: none;
+.card {
+    padding: 1rem;
+    border-radius: 2px;
+    position: relative;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    min-width: var(--card-min-width);
+    max-width: var(--card-max-width);
+    background-color: var(--surface-color);
 }
 
-a.nav {
-    display: block;
+.card-checkbox {
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
-a.nav i.icon {
-    color: #7b7b7d;
-    font-size: 28px;
-    padding: 10px;
+.card-textarea {
+    width: var(--card-min-width);
+    border-radius: 2px;
+    resize: vertical;
 }
-
-a.nav.active i.icon, nav a.nav:hover i.icon {
-    color: #eeeeee;
-}
-
-a.button {
-    display: inline-block;
-    padding: 4px 6px;
-    color: #333333;
-    text-decoration: none;
-}
-
-a.button:hover {
-    background-color: whitesmoke;
-}
-
-a i.icon {
-    vertical-align: bottom;
-}
-
-
-
-
-
-
-
 
 .dropdown {
     display: inline-block;
@@ -129,91 +188,36 @@ a i.icon {
 .dropdown-menu {
     position: absolute;
     white-space: nowrap;
-    background-color: lightblue;
+    background-color: var(--surface-color);
     right: 0;
     z-index: 2;
 }
 
-
-
-
-
-.content {
-    padding: var(--content-padding);
-    box-sizing: border-box;
-    max-width: var(--content-max-width);
-    margin: 0 auto;
-}
-
-
-
-.review-buttons .icon {
-    font-size: 36px;
-}
-
-
-
-
-.cards {
-    display: grid;
-    grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
-}
-
-.card {
-    position: relative;
-    padding: 1rem;
-    border-radius: 2px;
-    box-sizing: border-box;
-    min-width: var(--card-min-width);
-    max-width: var(--card-max-width);
-    background-color: ghostwhite;
-    overflow-wrap: break-word;
-}
-
-.cards .card {
-    height: 100%;
-}
-
-.card-dropdown {
+.dropdown.card-dropdown {
     position: absolute;
     top: 0;
     right: 0;
 }
 
-.card-checkbox {
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-.shadow {
-    box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15);
-}
-
-
-
-
 .input-container {
     display: flex;
-    border: 1px solid black;
+    border: 1px solid var(--secondary-color);
+    background-color: var(--surface-color);
     border-radius: 1rem;
     padding: 0 0.25rem;
 }
 
 .input-container input {
-    outline: none;
     border: none;
-    background-color: transparent;
+}
+
+.input-container i.icon {
+    color: var(--on-secondary-color);
 }
 
 .input-container .clear-icon {
     cursor: pointer;
 }
-
-
-
-
 
 .modal-container {
     position: fixed;
@@ -228,26 +232,62 @@ a i.icon {
 .modal-content {
     position: absolute;
     top: 15%;
-    margin-left: calc(48px - var(--content-padding)); /* width of navigation minus content padding */
+    margin-left: calc(48px - var(--content-padding));
     padding: 40px;
     overflow: auto;
-    background-color: white;
+    background-color: var(--surface-color);
 }
 
-
-
-
-
-label {
-    font-size: 0.9rem;
-    font-weight: bold;
-    color: darkgrey;
-    margin: 5px 0;
+a.sidebar-item {
+    display: block;
+    padding: 0.2rem 0.4rem;
+    color: var(--on-secondary-color);
 }
 
+a.sidebar-item:hover, a.sidebar-item.active {
+    background-color: var(--secondary-variant-color);
+}
 
+a:hover {
+    cursor: pointer;
+}
 
+a::selection, i::selection {
+    user-select: none;
+}
 
+a.nav {
+    display: block;
+}
+
+a.nav i.icon {
+    color: var(--primary-variant-color);
+    font-size: 28px;
+    padding: 10px;
+}
+
+a.nav.active i.icon, nav a.nav:hover i.icon {
+    color: var(--on-primary-color);
+}
+
+a.button {
+    display: inline-block;
+    text-decoration: none;
+    padding: 4px 6px;
+    color: var(--on-secondary-color);
+}
+
+a.button:hover, a.button:focus {
+    background-color: var(--secondary-color);
+}
+
+a i.icon {
+    vertical-align: bottom;
+}
+
+.review-buttons .icon {
+    font-size: 36px;
+}
 
 .full-width {
     width: 100%;
@@ -292,10 +332,9 @@ label {
     margin-right: 0;
 }
 
-
-
-
-
+.shadow {
+    box-shadow: 0 0.25rem 1rem var(--shadow-color);
+}
 
 ::-webkit-scrollbar {
     width: 0.4rem;
@@ -303,6 +342,6 @@ label {
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: darkgrey;
+    background-color: var(--primary-variant-color);
     border-radius: 1rem;
 }

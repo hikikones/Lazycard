@@ -28,6 +28,7 @@ const Button = (props: IButtonProps) => {
         <a
             className={props.className !== undefined ? `button ${props.className}` : "button"}
             onClick={click}
+            href="#"
         >
             <i
                 className="material-icons icon"
