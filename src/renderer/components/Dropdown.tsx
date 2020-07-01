@@ -1,7 +1,5 @@
 import * as React from 'react';
 
-// TODO: Fix styling
-
 const Dropdown = (props: IDropdownProps) => {
     const [showMenu, setShowMenu] = React.useState<boolean>(false);
 

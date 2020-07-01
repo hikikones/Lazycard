@@ -1,12 +1,13 @@
 import * as React from 'react';
+import { useParams } from "react-router-dom";
 
 import db, { Card as CardEntity } from '../model/Database';
 
 import Card from './Card';
 import Button from './Button';
 
-// TODO: rework?
 // TODO: custom study
+// TODO: display something nice when no cards left
 
 const shuffle = (arr: CardEntity[]): CardEntity[] => {
     for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
@@ -19,10 +20,15 @@ const shuffle = (arr: CardEntity[]): CardEntity[] => {
 }
 
 const Review = () => {
-    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(db.cards.getDue()));
+    const { topicId } = useParams<{topicId: string}>();
+    const id = Number(topicId);
+
+    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(id ? db.cards.getDue(id) : db.cards.getDue()));
     const [index, setIndex] = React.useState<number>(0);
     const [card, setCard] = React.useState<CardEntity>(cards[index]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
+
+    const [total, setTotal] = React.useState<number>(cards.length);
     
     React.useLayoutEffect(() => {
         if (index > cards.length - 1) {
@@ -48,9 +54,8 @@ const Review = () => {
     }
 
     const onDelete = () => {
-        // this.total--;
-        // this.showNextCard();
-        console.log("TODO: onDelete from review");
+        setTotal(t => t - 1);
+        setCards(oldCards => oldCards.filter(c => c.id !== card.id));
     }
 
     if (db.cards.size() === 0) {
@@ -71,7 +76,9 @@ const Review = () => {
 
     return (
         <div className="content col col-center space-between full-height">
-            <h1>Review</h1>
+            <section>
+                <label>{total - cards.length} / {total}</label>
+            </section>
 
             <Card
                 card={card}
