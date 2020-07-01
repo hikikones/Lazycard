@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import db, { Card } from '../model/Database';
+import db, { Card as CardEntity, Topic as TopicEntity } from '../model/Database';
 
 import Layout, { Sidebar, SidebarItem, Content } from './Layout';
 import Topic from './Topic';
@@ -10,9 +10,10 @@ import Topic from './Topic';
 
 const Topics = () => {
     const [id, setId] = React.useState<number>(1);
-    const [cards, setCards] = React.useState<Card[]>(db.cards.getByTopic(id));
+    const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
+    const [cards, setCards] = React.useState<CardEntity[]>(db.cards.getByTopic(id));
 
-    React.useEffect(() => {
+    React.useLayoutEffect(() => {
         updateCards();
     }, [id]);
 
@@ -21,7 +22,7 @@ const Topics = () => {
     }
 
     const updateTopics = () => {
-        console.log("TODO: onTopicChange... update sidebar");
+        setTopics([...db.topics.getAll()]);
     }
 
     return (
@@ -29,12 +30,8 @@ const Topics = () => {
 
             <Sidebar>
                 <SidebarItem name="Import" icon="save_alt" active={false} onClick={() => db.import()} />
-
                 <hr />
-
-                {db.topics.getAll().map(t =>
-                    <SidebarItem name={t.name} active={t.id === id} onClick={() => setId(t.id)} key={t.id} />
-                )}
+                {topics.map(t => <SidebarItem name={t.name} active={t.id === id} onClick={() => setId(t.id)} key={t.id} />)}
             </Sidebar>
 
             <Content>

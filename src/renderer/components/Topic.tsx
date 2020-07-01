@@ -3,19 +3,24 @@ import * as React from 'react';
 import db from '../model/Database';
 import { Card as CardEntity, Topic as TopicEntity } from '../model/Database';
 
+import EditableHeader from './EditableHeader';
 import Cards from './Cards';
 import CardEditor from './CardEditor';
 import Button from './Button';
 import ButtonLink from './ButtonLink';
 import Dropdown, { DropdownItem } from './Dropdown';
 
-// TODO: Make <EditableHeader />
-
 const Topic = (props: ITopicProps) => {
     const [showCardEditor, setShowCardEditor] = React.useState<boolean>(false);
 
     const toggleCardEditor = () => {
         setShowCardEditor(show => !show);
+    }
+
+    const onNameChange = (newName: string) => {
+        if (newName === "") return;
+        props.topic.name = newName;
+        props.onTopicChange();
     }
 
     const onDelete = () => {
@@ -30,7 +35,7 @@ const Topic = (props: ITopicProps) => {
 
     return (
         <div className="col col-center content">
-            <h1>{props.topic.name}</h1>
+            <EditableHeader title={props.topic.name} onSubmit={onNameChange} />
 
             <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}

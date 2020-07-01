@@ -7,6 +7,8 @@
 /* TODO: Coloring <hr /> */
 
 :root {
+    --main-font-family: 'Lato';
+    --input-font-family: 'Roboto Mono';
     --card-min-width: 250px;
     --card-max-width: 400px;
     --content-max-width: 1920px;
@@ -55,7 +57,7 @@
 
 
 body, html {
-    font-family: Lato;
+    font-family: var(--main-font-family);
     margin: 0;
 }
 
@@ -92,7 +94,7 @@ input, select, textarea {
     border: 1px solid var(--secondary-color);
     color: var(--on-surface-color);
     background-color: var(--surface-color);
-    font-family: 'Roboto Mono';
+    font-family: var(--input-font-family);
     padding: 0.25rem;
 }
 
@@ -122,6 +124,24 @@ hr {
     height: 1px;
     background-image: -webkit-linear-gradient(left, whitesmoke, lightgrey, whitesmoke);
     margin: 1rem 0.5rem;
+}
+
+h1.topic-name {
+    padding: 0.25rem;
+}
+
+h1.topic-name:hover {
+    background-color: var(--secondary-color);
+}
+
+input.topic-name {
+    border: none;
+    font-family: var(--main-font-family);
+    text-align: center;
+    font-size: 2em;
+    font-weight: bold;
+    margin: 0.67em 0;
+    background-color: var(--secondary-color);
 }
 
 .layout {
