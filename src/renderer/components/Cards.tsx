@@ -24,7 +24,7 @@ enum CardSort {
 const Cards = (props: ICardsProps) => {
     const [showBack, setShowBack] = React.useState<boolean>(false);
     const [showAmount, setShowAmount] = React.useState<number>(20);
-    const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length); // TODO: should use db.cards.getAll()?
+    const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
     const [searchResults, setSearchResults] = React.useState<Card[]>(null);
 
     const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.Newest);

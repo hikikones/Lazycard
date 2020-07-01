@@ -10,8 +10,15 @@ import Button from './Button';
 import ButtonLink from './ButtonLink';
 import Dropdown, { DropdownItem } from './Dropdown';
 
+// TODO: Display something nice when deleted
+
 const Topic = (props: ITopicProps) => {
     const [showCardEditor, setShowCardEditor] = React.useState<boolean>(false);
+    const [isDeleted, setIsDeleted] = React.useState<boolean>(false);
+
+    React.useLayoutEffect(() => {
+        setIsDeleted(false);
+    }, [props.topic]);
 
     const toggleCardEditor = () => {
         setShowCardEditor(show => !show);
@@ -24,13 +31,18 @@ const Topic = (props: ITopicProps) => {
     }
 
     const onDelete = () => {
-        // this.setState({ deleted: true });
-        // db.topics.delete(this.topic.id);
-        // this.props.onTopicChange();
-        // this.state.cards.forEach(c => db.cards.delete(c.id));
-
-        console.log("TODO: delete topic and its cards");
+        db.topics.delete(props.topic.id);
+        props.cards.forEach(c => db.cards.delete(c.id));
         props.onTopicChange();
+        setIsDeleted(true);
+    }
+
+    if (isDeleted) {
+        return (
+            <div className="content">
+                <h2>Topic has been deleted.</h2>
+            </div>
+        );
     }
 
     return (
