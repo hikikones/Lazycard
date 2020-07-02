@@ -20,8 +20,9 @@ const shuffle = (arr: CardEntity[]): CardEntity[] => {
 
 const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
+    const id = Number(topicId);
 
-    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(db.cards.getDue(Number(topicId))));
+    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(db.cards.getDue(id)));
     const [index, setIndex] = React.useState<number>(0);
     const [card, setCard] = React.useState<CardEntity>(cards[index]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
@@ -54,14 +55,13 @@ const Review = () => {
     }
 
     const initCustomStudy = () => {
-        const id = Number(topicId);
         const cardsToStudy = id ? db.cards.getByTopic(id) : [...db.cards.getAll()];
         setCards(cardsToStudy);
         setTotal(cardsToStudy.length);
         setCustomStudy(true);
     }
 
-    if (db.cards.size() === 0) {
+    if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
         return (
             <div className="content">
                 <Empty icon="content_copy" message="No cards" />

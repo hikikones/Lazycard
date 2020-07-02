@@ -50,11 +50,13 @@ const Topic = (props: ITopicProps) => {
 
             <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
-                <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />
-                <Dropdown name="Export" icon="save" showDownArrow={true}>
-                    <DropdownItem name="JSON" icon="archive" action={() => db.export(props.topic.id)} />
-                    <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(props.topic.id)} />
-                </Dropdown>
+                {props.cards.length > 0 && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
+                {props.cards.length > 0 &&
+                    <Dropdown name="Export" icon="save" showDownArrow={true}>
+                        <DropdownItem name="JSON" icon="archive" action={() => db.export(props.topic.id)} />
+                        <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(props.topic.id)} />
+                    </Dropdown>
+                }
                 <Button name="Delete" icon="delete" action={onDelete} />
             </section>
 
