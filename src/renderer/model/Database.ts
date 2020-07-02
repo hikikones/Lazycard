@@ -265,10 +265,10 @@ class Cards extends Table<Card> {
         return false;
     }
 
-    public getDue(topicId?: number): Card[] {
+    public getDue(topicId: number): Card[] {
         const now = new Date(Date.now());
 
-        if (topicId === undefined) {
+        if (topicId === 0) {
             return this.getAll().filter((card: Card) => card.dueDate <= now);
         }
 

@@ -8,8 +8,6 @@ import Card from './Card';
 import Button from './Button';
 import Empty from './Empty';
 
-// TODO: custom study
-
 const shuffle = (arr: CardEntity[]): CardEntity[] => {
     for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
         const newIndex = Math.floor(Math.random() * (currentIndex + 1));
@@ -22,25 +20,22 @@ const shuffle = (arr: CardEntity[]): CardEntity[] => {
 
 const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
-    const id = Number(topicId);
 
-    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(id ? db.cards.getDue(id) : db.cards.getDue()));
+    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(db.cards.getDue(Number(topicId))));
     const [index, setIndex] = React.useState<number>(0);
     const [card, setCard] = React.useState<CardEntity>(cards[index]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
-
     const [total, setTotal] = React.useState<number>(cards.length);
     
+    const [customStudy, setCustomStudy] = React.useState<boolean>(false);
+
     React.useEffect(() => {
-        if (index > cards.length - 1) {
-            //shuffle(cards);
-            setIndex(0);
-        }
+        if (index > cards.length - 1) setIndex(0);
         showCard();
     }, [index, cards]);
 
     const handleReview = (success: boolean) => {
-        card.review(success);
+        if (!customStudy) card.review(success);
         setCards(oldCards => oldCards.filter(c => c.id !== card.id));
     }
 
@@ -58,6 +53,14 @@ const Review = () => {
         setCards(oldCards => oldCards.filter(c => c.id !== card.id));
     }
 
+    const initCustomStudy = () => {
+        const id = Number(topicId);
+        const cardsToStudy = id ? db.cards.getByTopic(id) : [...db.cards.getAll()];
+        setCards(cardsToStudy);
+        setTotal(cardsToStudy.length);
+        setCustomStudy(true);
+    }
+
     if (db.cards.size() === 0) {
         return (
             <div className="content">
@@ -69,7 +72,9 @@ const Review = () => {
     if (card === undefined) {
         return (
             <div className="content">
-                <Empty icon="mood" message="No cards to review" />
+                <Empty icon="mood" message="No cards to review">
+                    <Button icon="redo" name="Custom study" action={initCustomStudy} />
+                </Empty>
             </div>
         );
     }
