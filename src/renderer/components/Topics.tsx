@@ -21,6 +21,9 @@ const Topics = () => {
     }
 
     const updateTopics = () => {
+        if (topic === undefined || topics.length === 0) {
+            setTopic(db.topics.getAll()[0]);
+        }
         setTopics([...db.topics.getAll()]);
     }
 
@@ -31,9 +34,6 @@ const Topics = () => {
 
     const onNewTopic = () => {
         db.topics.new("New Topic");
-        if (topic === undefined || topics.length === 0) {
-            setTopic(db.topics.getAll()[0]);
-        }
         updateTopics();
     }
 
