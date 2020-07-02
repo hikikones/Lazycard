@@ -12,7 +12,7 @@ const Topics = () => {
     const [topic, setTopic] = React.useState<TopicEntity>(topics[0]);
     const [cards, setCards] = React.useState<CardEntity[]>(topic === undefined ? [] : db.cards.getByTopic(topic.id));
 
-    React.useLayoutEffect(() => {
+    React.useEffect(() => {
         updateCards();
     }, [topic]);
 

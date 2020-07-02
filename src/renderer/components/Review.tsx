@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useParams } from "react-router-dom";
 
 import db, { Card as CardEntity } from '../model/Database';
+import KeyCodes from '../controller/KeyCodes';
 
 import Card from './Card';
 import Button from './Button';
@@ -30,7 +31,7 @@ const Review = () => {
 
     const [total, setTotal] = React.useState<number>(cards.length);
     
-    React.useLayoutEffect(() => {
+    React.useEffect(() => {
         if (index > cards.length - 1) {
             //shuffle(cards);
             setIndex(0);
@@ -45,7 +46,6 @@ const Review = () => {
 
     const skip = () => {
         setIndex(i => i + 1);
-        showCard();
     }
 
     const showCard = () => {
@@ -87,10 +87,10 @@ const Review = () => {
             />
 
             <div className="review-buttons space-fixed">
-                {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
-                {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
-                {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
-                <Button icon="double_arrow" action={() => skip()} />
+                {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
+                {showAnswer && <Button icon="done" action={() => handleReview(true)} shortcut={KeyCodes.ArrowUp} />}
+                {showAnswer && <Button icon="close" action={() => handleReview(false)} shortcut={KeyCodes.ArrowDown} />}
+                <Button icon="double_arrow" action={skip} shortcut={KeyCodes.ArrowRight} />
             </div>
         </div>
     );

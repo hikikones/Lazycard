@@ -16,7 +16,7 @@ const Topic = (props: ITopicProps) => {
     const [showCardEditor, setShowCardEditor] = React.useState<boolean>(false);
     const [isDeleted, setIsDeleted] = React.useState<boolean>(false);
 
-    React.useLayoutEffect(() => {
+    React.useEffect(() => {
         setIsDeleted(false);
     }, [props.topic]);
 
@@ -25,7 +25,7 @@ const Topic = (props: ITopicProps) => {
     }
 
     const onNameChange = (newName: string) => {
-        if (newName === "") return;
+        if (newName === "" || newName === props.topic.name) return;
         props.topic.name = newName;
         props.onTopicChange();
     }
