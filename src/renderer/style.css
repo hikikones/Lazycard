@@ -74,6 +74,12 @@ section {
     margin: 0.5rem 0;
 }
 
+img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+}
+
 table {
     margin: 0 auto;
     width: 100%;
