@@ -22,13 +22,21 @@ enum CardSort {
 }
 
 const Cards = (props: ICardsProps) => {
+    
+    if (props.cards.length === 0) {
+        return (
+            <Empty icon="content_copy" message="No cards" />
+        );
+    }
+
     const [showBack, setShowBack] = React.useState<boolean>(false);
     const [showAmount, setShowAmount] = React.useState<number>(20);
     const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
     const [searchResults, setSearchResults] = React.useState<Card[]>(null);
-
     const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.Newest);
+
     const [showBulkMove, setShowBulkMove] = React.useState<boolean>(false);
+    const [bulkMoveTopicId, setBulkMoveTopicId] = React.useState<number>(db.topics.getAll()[0].id);
 
     const cards = (): Card[] => {
         return searchResults || props.cards;
@@ -80,14 +88,22 @@ const Cards = (props: ICardsProps) => {
         }
     }
 
-    const updateCards = () => {
-        props.onCardChange();
+    const bulkMove = () => {
+        const cards = props.cards.filter(c => c.selected);
+        cards.forEach(c => c.topicId = bulkMoveTopicId);
+        setShowBulkMove(false);
+        updateCards();
     }
 
-    if (props.cards.length === 0) {
-        return (
-            <Empty icon="content_copy" message="No cards" />
-        );
+    const bulkDelete = () => {
+        const cards = props.cards.filter(c => c.selected);
+        if (cards.length === 0) return;
+        cards.forEach(c => db.cards.delete(c.id));
+        updateCards();
+    }
+
+    const updateCards = () => {
+        props.onCardChange();
     }
 
     return (
@@ -126,6 +142,7 @@ const Cards = (props: ICardsProps) => {
 
                 <Dropdown name="Bulk" icon="assignment" showDownArrow={true}>
                     <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
+                    <DropdownItem name="Delete" icon="delete" action={bulkDelete} />
                 </Dropdown>
             </section>
 
@@ -156,12 +173,12 @@ const Cards = (props: ICardsProps) => {
                 <section>
                     <section className="col">
                         <label>Topics</label>
-                        <select>
+                        <select defaultValue={bulkMoveTopicId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBulkMoveTopicId(Number(e.target.value))}>
                             {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                     </section>
                     <section className="row space-between">
-                        <Button name="Move" icon="done" action={() => console.log("TODO: bulk move cards...")} />
+                        <Button name="Move" icon="done" action={bulkMove} />
                         <Button name="Cancel" icon="close" action={() => setShowBulkMove(false)} />
                     </section>
                 </section>
