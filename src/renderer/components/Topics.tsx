@@ -6,8 +6,6 @@ import Layout, { Sidebar, SidebarItem, Content } from './Layout';
 import Topic from './Topic';
 import Empty from './Empty';
 
-// TODO: update topics sidebar on import
-
 const Topics = () => {
     const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
     const [topic, setTopic] = React.useState<TopicEntity>(topics[0]);
@@ -26,9 +24,16 @@ const Topics = () => {
         setTopics([...db.topics.getAll()]);
     }
 
-    const newTopic = () => {
+    const onImport = () => {
+        const success = db.import();
+        if (success) updateTopics();
+    }
+
+    const onNewTopic = () => {
         db.topics.new("New Topic");
-        if (topic === undefined) setTopic(db.topics.getAll()[0]);
+        if (topic === undefined || topics.length === 0) {
+            setTopic(db.topics.getAll()[0]);
+        }
         updateTopics();
     }
 
@@ -36,8 +41,8 @@ const Topics = () => {
         <Layout sidebarWidth={150}>
 
             <Sidebar>
-                <SidebarItem name="Import" icon="save_alt" active={false} onClick={() => db.import()} />
-                <SidebarItem name="New topic" icon="add" active={false} onClick={newTopic} />
+                <SidebarItem name="Import" icon="save_alt" active={false} onClick={onImport} />
+                <SidebarItem name="New topic" icon="add" active={false} onClick={onNewTopic} />
                 <hr />
                 {topics.map(t =>
                     <SidebarItem name={t.name} active={t.id === topic.id} onClick={() => setTopic(db.topics.get(t.id))} key={t.id} />

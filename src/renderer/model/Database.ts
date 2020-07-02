@@ -50,9 +50,11 @@ class Database {
         fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
-    public import(): void {
+    public import(): boolean {
+        // TODO: Add some options. Import into existing or new topic? Import duplicate cards?
         const lazytopic = dialog.openFile('lazytopic', ['lazytopic']);
-        if (lazytopic === undefined) return;
+        
+        if (lazytopic === undefined) return false;
 
         const buffer = fs.readFileSync(lazytopic);
         const json: TopicExport = JSON.parse(buffer.toString());
@@ -68,6 +70,8 @@ class Database {
                 srs.today(card);
             }
         });
+
+        return true;
     }
 
     public restore(dbFile: string): void {
