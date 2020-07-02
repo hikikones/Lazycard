@@ -10,8 +10,6 @@ import Input from './Input';
 import Modal from './Modal';
 import Empty from './Empty';
 
-// TODO: Show amount of selected cards somewhere
-// TODO: Fix bug where isAllSelected() returns true when switching between topics that have the same amount of cards
 // TODO: Make sort button change icon based on selected sorting type?
 
 enum CardSort {
@@ -106,6 +104,10 @@ const Cards = (props: ICardsProps) => {
         props.onCardChange();
     }
 
+    React.useEffect(() => {
+        setSelected(props.cards.filter(c => c.selected).length);
+    }, [props.cards]);
+
     return (
         <div className="col col-center full-width">
             <h2>Cards</h2>
@@ -140,7 +142,7 @@ const Cards = (props: ICardsProps) => {
                     <DropdownItem name="Retention Rate" icon="trending_up" action={() => setSortBy(CardSort.RetentionRateAsc)} />
                 </Dropdown>
 
-                <Dropdown name="Bulk" icon="assignment" showDownArrow={true}>
+                <Dropdown name={`Bulk (${selected})`} icon="assignment" showDownArrow={true}>
                     <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
                     <DropdownItem name="Delete" icon="delete" action={bulkDelete} />
                 </Dropdown>
