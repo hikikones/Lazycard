@@ -307,6 +307,10 @@ a.button:hover, a.button:focus {
     background-color: var(--secondary-color);
 }
 
+a.button:active {
+    background-color: var(--secondary-variant-color);
+}
+
 a i.icon {
     vertical-align: bottom;
 }
