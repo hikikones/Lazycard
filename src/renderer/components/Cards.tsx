@@ -10,13 +10,11 @@ import Input from './Input';
 import Modal from './Modal';
 import Empty from './Empty';
 
-// TODO: Make sort button change icon based on selected sorting type?
-
 enum CardSort {
-    Newest,
-    Oldest,
-    RetentionRateAsc,
-    RetentionRateDesc
+    Newest = "arrow_upward",
+    Oldest = "arrow_downward",
+    RetentionRateAsc = "trending_up",
+    RetentionRateDesc = "trending_down"
 }
 
 const Cards = (props: ICardsProps) => {
@@ -135,7 +133,7 @@ const Cards = (props: ICardsProps) => {
                     action={toggleSelectAll}
                 />
 
-                <Dropdown name="Sort" icon="sort" showDownArrow={true}>
+                <Dropdown name="Sort" icon={sortBy} showDownArrow={true}>
                     <DropdownItem name="Newest" icon="arrow_upward" action={() => setSortBy(CardSort.Newest)} />
                     <DropdownItem name="Oldest" icon="arrow_downward" action={() => setSortBy(CardSort.Oldest)} />
                     <DropdownItem name="Retention Rate" icon="trending_down" action={() => setSortBy(CardSort.RetentionRateDesc)} />
