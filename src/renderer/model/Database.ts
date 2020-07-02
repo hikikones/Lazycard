@@ -334,7 +334,7 @@ export class Card extends Entity<CardData, CardExport> {
             id: this.id,
             front: this.front,
             back: this.back,
-            dueDate: this.dueDate.toLocaleDateString(),
+            dueDate: this.dueDate.toISOString(),
             dueDays: this.dueDays,
             attempts: this.attempts,
             successes: this.successes,

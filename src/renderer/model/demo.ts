@@ -1,7 +1,7 @@
 import { IDatabase } from './Database';
 
 const demo = (): IDatabase => {
-    const now = new Date(Date.now()).toLocaleDateString();
+    const now = new Date(Date.now()).toISOString();
 
     return {
         version: "1.1.0",
