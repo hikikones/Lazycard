@@ -7,6 +7,8 @@ import dialog from '../controller/Dialog';
 
 import Button from './Button';
 
+// TODO: redesign
+
 const Settings = (props: ISettingsProps) => {
     const [dbPath, setDbPath] = React.useState<string>(cfg.getDatabasePath());
     
@@ -82,9 +84,11 @@ const Settings = (props: ISettingsProps) => {
             <p>Restore your database from a local file.</p>
             <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />
 
+            <h2>Theme</h2>
+
             <p>Apply a theme for the application.</p>
             <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onThemeSelect(e.target.value)} defaultValue={cfg.getTheme()}>
-                {/* <option value="system">System</option> */}
+                <option value="system">System</option>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
                 <option value="cyan">Cyan</option>

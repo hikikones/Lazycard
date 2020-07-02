@@ -2,8 +2,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app, remote } from "electron";
 
-// TODO: System theme.
-
 class Config {
     private readonly userDataPath: string;
     private readonly backupPath: string;
