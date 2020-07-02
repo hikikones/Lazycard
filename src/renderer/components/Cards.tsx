@@ -8,11 +8,11 @@ import Button from './Button';
 import Dropdown, { DropdownItem } from './Dropdown';
 import Input from './Input';
 import Modal from './Modal';
+import Empty from './Empty';
 
 // TODO: Show amount of selected cards somewhere
 // TODO: Fix bug where isAllSelected() returns true when switching between topics that have the same amount of cards
 // TODO: Make sort button change icon based on selected sorting type?
-// TODO: Display something nice when no cards
 
 enum CardSort {
     Newest,
@@ -82,6 +82,12 @@ const Cards = (props: ICardsProps) => {
 
     const updateCards = () => {
         props.onCardChange();
+    }
+
+    if (props.cards.length === 0) {
+        return (
+            <Empty icon="content_copy" message="No cards" />
+        );
     }
 
     return (

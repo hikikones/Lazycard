@@ -132,6 +132,14 @@ hr {
     margin: 1rem 0.5rem;
 }
 
+a:hover {
+    cursor: pointer;
+}
+
+a::selection, i::selection {
+    user-select: none;
+}
+
 h1.topic-name {
     padding: 0.25rem;
 }
@@ -171,6 +179,15 @@ input.topic-name {
     box-sizing: border-box;
     max-width: var(--content-max-width);
     margin: 0 auto;
+    height: 100%;
+}
+
+.empty-state {
+    opacity: 0.2;
+}
+
+.empty-state i.icon {
+    font-size: 4rem;
 }
 
 .cards {
@@ -274,14 +291,6 @@ a.sidebar-item:hover, a.sidebar-item.active {
     background-color: var(--secondary-variant-color);
 }
 
-a:hover {
-    cursor: pointer;
-}
-
-a::selection, i::selection {
-    user-select: none;
-}
-
 a.nav {
     display: block;
 }
@@ -311,11 +320,15 @@ a.button:active {
     background-color: var(--secondary-variant-color);
 }
 
-a i.icon {
+a.button i.icon {
+    font-size: 24px;
+}
+
+i.icon {
     vertical-align: bottom;
 }
 
-.review-buttons .icon {
+.review-buttons a.button i.icon {
     font-size: 36px;
 }
 

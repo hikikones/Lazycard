@@ -6,9 +6,9 @@ import KeyCodes from '../controller/KeyCodes';
 
 import Card from './Card';
 import Button from './Button';
+import Empty from './Empty';
 
 // TODO: custom study
-// TODO: display something nice when no cards left
 
 const shuffle = (arr: CardEntity[]): CardEntity[] => {
     for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
@@ -61,7 +61,7 @@ const Review = () => {
     if (db.cards.size() === 0) {
         return (
             <div className="content">
-                <h2>No cards...</h2>
+                <Empty icon="content_copy" message="No cards" />
             </div>
         );
     }
@@ -69,7 +69,7 @@ const Review = () => {
     if (card === undefined) {
         return (
             <div className="content">
-                <h2>Good job!</h2>
+                <Empty icon="mood" message="No cards to review" />
             </div>
         );
     }

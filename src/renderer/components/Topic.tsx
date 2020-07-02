@@ -9,8 +9,7 @@ import CardEditor from './CardEditor';
 import Button from './Button';
 import ButtonLink from './ButtonLink';
 import Dropdown, { DropdownItem } from './Dropdown';
-
-// TODO: Display something nice when deleted
+import Empty from './Empty';
 
 const Topic = (props: ITopicProps) => {
     const [showCardEditor, setShowCardEditor] = React.useState<boolean>(false);
@@ -40,7 +39,7 @@ const Topic = (props: ITopicProps) => {
     if (isDeleted) {
         return (
             <div className="content">
-                <h2>Topic has been deleted.</h2>
+                <Empty icon="delete_forever" message="Topic has been deleted" />
             </div>
         );
     }

@@ -4,8 +4,9 @@ import db, { Card as CardEntity, Topic as TopicEntity } from '../model/Database'
 
 import Layout, { Sidebar, SidebarItem, Content } from './Layout';
 import Topic from './Topic';
+import Empty from './Empty';
 
-// TODO: Display something nice when no topics
+// TODO: update topics sidebar on import
 
 const Topics = () => {
     const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
@@ -46,7 +47,7 @@ const Topics = () => {
             <Content>
                 {topic === undefined
                     ?   <div className="content">
-                            <h2>No topics...</h2>
+                            <Empty icon="content_paste" message="No topics" />
                         </div>
                     :   <Topic
                             topic={topic}
