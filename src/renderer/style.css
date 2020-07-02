@@ -4,7 +4,6 @@
 @import "~typeface-roboto-mono/index.css";
 
 /* TODO: Fix margin bleeding outside parent div for cards in grid */
-/* TODO: Coloring <hr /> */
 
 :root {
     --main-font-family: 'Lato';
@@ -61,7 +60,7 @@ body, html {
     margin: 0;
 }
 
-h1, h2, h3, h4, h5, h6, p, span, table, label, a {
+#app > div {
     color: var(--on-surface-color);
 }
 
@@ -128,7 +127,8 @@ label {
 hr { 
     border: 0;
     height: 1px;
-    background-image: -webkit-linear-gradient(left, whitesmoke, lightgrey, whitesmoke);
+    background-image: -webkit-linear-gradient(left, var(--surface-color), var(--on-surface-color), var(--surface-color));
+    opacity: 0.25;
     margin: 1rem 0.5rem;
 }
 
@@ -252,7 +252,7 @@ input.topic-name {
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: rgba(24, 24, 24, 0.4);
 }
 
 .modal-content {
@@ -370,4 +370,8 @@ a i.icon {
 ::-webkit-scrollbar-thumb {
     background-color: var(--primary-variant-color);
     border-radius: 1rem;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-color);
 }
