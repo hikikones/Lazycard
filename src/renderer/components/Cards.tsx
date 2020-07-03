@@ -10,6 +10,8 @@ import Input from './Input';
 import Modal from './Modal';
 import Empty from './Empty';
 
+// TODO: maybe add more specific events such as delete single card, bulk delete cards etc...?
+
 enum CardSort {
     Newest = "arrow_upward",
     Oldest = "arrow_downward",

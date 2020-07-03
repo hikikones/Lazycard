@@ -18,7 +18,7 @@ const Routes = (props: IRoutesProps) => {
             <Route path={"/review/:topicId"}>
                 <Review />
             </Route>
-            <Route exact path="/cards">
+            <Route path="/cards">
                 <CardsContainer />
             </Route>
             <Route path="/settings">

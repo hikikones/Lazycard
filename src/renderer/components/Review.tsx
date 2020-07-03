@@ -32,7 +32,7 @@ const Review = () => {
 
     React.useEffect(() => {
         if (index > cards.length - 1) setIndex(0);
-        else showCard();
+        showCard();
     }, [index, cards]);
 
     const handleReview = (success: boolean) => {
@@ -41,7 +41,7 @@ const Review = () => {
     }
 
     const skip = () => {
-        setIndex(i => i + 1);
+        setIndex((i) => { return i === cards.length - 1 ? 0 : i + 1 });
     }
 
     const showCard = () => {

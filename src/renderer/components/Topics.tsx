@@ -1,31 +1,15 @@
 import * as React from 'react';
+import { Switch, Route, useRouteMatch, useParams, Redirect } from "react-router-dom";
 
-import db, { Card as CardEntity, Topic as TopicEntity } from '../model/Database';
+import db, { Topic as TopicEntity } from '../model/Database';
 
-import Layout, { Sidebar, SidebarItem, Content } from './Layout';
+import Layout, { Sidebar, SidebarItem, SidebarLink, Content } from './Layout';
 import Topic from './Topic';
 import Empty from './Empty';
 
 const Topics = () => {
     const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
-    const [topic, setTopic] = React.useState<TopicEntity>(topics[0]);
-    const [cards, setCards] = React.useState<CardEntity[]>(topic === undefined ? [] : db.cards.getByTopic(topic.id));
-
-    React.useEffect(() => {
-        updateCards();
-    }, [topic]);
-
-    const updateCards = () => {
-        if (topic === undefined) return;
-        setCards(db.cards.getByTopic(topic.id));
-    }
-
-    const updateTopics = () => {
-        if (topic === undefined || topics.length === 0) {
-            setTopic(db.topics.getAll()[0]);
-        }
-        setTopics([...db.topics.getAll()]);
-    }
+    const match = useRouteMatch();
 
     const onImport = () => {
         const success = db.import();
@@ -37,6 +21,10 @@ const Topics = () => {
         updateTopics();
     }
 
+    const updateTopics = () => {
+        setTopics([...db.topics.getAll()]);
+    }
+
     return (
         <Layout sidebarWidth={150}>
 
@@ -45,26 +33,40 @@ const Topics = () => {
                 <SidebarItem name="New topic" icon="add" active={false} onClick={onNewTopic} />
                 <hr />
                 {topics.map(t =>
-                    <SidebarItem name={t.name} active={t.id === topic.id} onClick={() => setTopic(db.topics.get(t.id))} key={t.id} />
+                    <SidebarLink name={t.name} to={`${match.path}/${t.id}`} key={t.id} />
                 )}
             </Sidebar>
 
             <Content>
-                {topic === undefined
-                    ?   <div className="content">
-                            <Empty icon="content_paste" message="No topics" />
-                        </div>
-                    :   <Topic
-                            topic={topic}
-                            cards={cards}
-                            onTopicChange={updateTopics}
-                            onCardChange={updateCards}
-                        />
-                }
+
+                <div className="content">
+                <Switch>
+                    <Route exact path={match.path}>
+                        {topics.length === 0
+                            ?   <Empty icon="content_paste" message="No topics" />
+                            :   <Redirect to={`${match.path}/${topics[0].id}`} />
+                        }
+                    </Route>
+                    <Route path={`${match.path}/:topicId`}>
+                        <TopicContainer onTopicChange={updateTopics} />
+                    </Route>
+                </Switch>
+                </div>
             </Content>
 
         </Layout>
     );
+}
+
+const TopicContainer = (props: {onTopicChange(): void}) => {
+    const { topicId } = useParams();
+    const [topic, setTopic] = React.useState<TopicEntity>(db.topics.get(Number(topicId)));
+
+    React.useEffect(() => {
+        setTopic(db.topics.get(Number(topicId)));
+    }, [topicId]);
+
+    return <Topic topic={topic} onTopicChange={props.onTopicChange} />
 }
 
 export default Topics;

@@ -12,10 +12,12 @@ import Dropdown, { DropdownItem } from './Dropdown';
 import Empty from './Empty';
 
 const Topic = (props: ITopicProps) => {
+    const [cards, setCards] = React.useState<CardEntity[]>(db.cards.getByTopic(props.topic.id));
     const [showCardEditor, setShowCardEditor] = React.useState<boolean>(false);
     const [isDeleted, setIsDeleted] = React.useState<boolean>(false);
 
     React.useEffect(() => {
+        setCards(db.cards.getByTopic(props.topic.id));
         setIsDeleted(false);
     }, [props.topic]);
 
@@ -31,27 +33,29 @@ const Topic = (props: ITopicProps) => {
 
     const onDelete = () => {
         db.topics.delete(props.topic.id);
-        props.cards.forEach(c => db.cards.delete(c.id));
+        cards.forEach(c => db.cards.delete(c.id));
         props.onTopicChange();
         setIsDeleted(true);
     }
 
+    const updateCards = () => {
+        setCards(db.cards.getByTopic(props.topic.id));
+    }
+
     if (isDeleted) {
         return (
-            <div className="content">
-                <Empty icon="delete_forever" message="Topic has been deleted" />
-            </div>
+            <Empty icon="delete_forever" message="Topic has been deleted" />
         );
     }
 
     return (
-        <div className="col col-center content">
+        <div className="col col-center full-height">
             <EditableHeader title={props.topic.name} onSubmit={onNameChange} />
 
             <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
-                {props.cards.length > 0 && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
-                {props.cards.length > 0 &&
+                {cards.length > 0 && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
+                {cards.length > 0 &&
                     <Dropdown name="Export" icon="save" showDownArrow={true}>
                         <DropdownItem name="JSON" icon="archive" action={() => db.export(props.topic.id)} />
                         <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(props.topic.id)} />
@@ -60,18 +64,16 @@ const Topic = (props: ITopicProps) => {
                 <Button name="Delete" icon="delete" action={onDelete} />
             </section>
 
-            {showCardEditor && <CardEditor topicId={props.topic.id} onSave={props.onCardChange} onCancel={toggleCardEditor} />}
+            {showCardEditor && <CardEditor topicId={props.topic.id} onSave={updateCards} onCancel={toggleCardEditor} />}
 
-            <Cards cards={props.cards} onCardChange={props.onCardChange} />
+            <Cards cards={cards} onCardChange={updateCards} />
         </div>
     );
 }
 
 interface ITopicProps {
     topic: TopicEntity
-    cards: CardEntity[]
     onTopicChange(): void
-    onCardChange(): void
 }
 
 export default Topic;
