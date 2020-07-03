@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { NavLink } from "react-router-dom";
 
 const Layout = (props: ILayoutProps) => {
     return (
@@ -50,6 +51,20 @@ export const Content = (props: {children: React.ReactNode}) => {
         <div className="layout-main">
             {props.children}
         </div>
+    );
+}
+
+export const SidebarLink = (props: {to: string, name: string, icon?: string}) => {
+    const name = (): string => {
+        if (props.icon === undefined) return props.name;
+        return ` ${props.name}`;
+    }
+    
+    return (
+        <NavLink to={props.to} className="sidebar-item">
+            {props.icon && <i className="material-icons icon">{props.icon}</i>}
+            {name()}
+        </NavLink>
     );
 }
 

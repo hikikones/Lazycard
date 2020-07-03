@@ -178,7 +178,6 @@ input.topic-name {
     padding: var(--content-padding);
     box-sizing: border-box;
     max-width: var(--content-max-width);
-    margin: 0 auto;
     height: 100%;
 }
 
@@ -194,10 +193,6 @@ input.topic-name {
     display: grid;
     grid-gap: 1rem;
     grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
-}
-
-.cards .card {
-    height: 100%;
 }
 
 .card {
@@ -281,16 +276,6 @@ input.topic-name {
     background-color: var(--surface-color);
 }
 
-a.sidebar-item {
-    display: block;
-    padding: 0.2rem 0.4rem;
-    color: var(--on-secondary-color);
-}
-
-a.sidebar-item:hover, a.sidebar-item.active {
-    background-color: var(--secondary-variant-color);
-}
-
 a.nav {
     display: block;
 }
@@ -303,6 +288,17 @@ a.nav i.icon {
 
 a.nav.active i.icon, nav a.nav:hover i.icon {
     color: var(--on-primary-color);
+}
+
+a.sidebar-item {
+    display: block;
+    text-decoration: none;
+    padding: 0.2rem 0.4rem;
+    color: var(--on-secondary-color);
+}
+
+a.sidebar-item:hover, a.sidebar-item.active {
+    background-color: var(--secondary-variant-color);
 }
 
 a.button {

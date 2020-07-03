@@ -1,15 +1,72 @@
 import { shell } from 'electron';
 import * as React from 'react';
+import { Switch, Route, useRouteMatch, Redirect } from "react-router-dom";
 
 import db from '../model/Database';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
 
+import Layout, { Sidebar, SidebarLink, Content } from './Layout';
 import Button from './Button';
 
-// TODO: redesign
-
 const Settings = (props: ISettingsProps) => {
+    const match = useRouteMatch();
+
+    return (
+        <Layout sidebarWidth={150}>
+
+            <Sidebar>
+                <SidebarLink name="General" to={`${match.path}/general`} />
+                <SidebarLink name="Database" to={`${match.path}/database`} />
+            </Sidebar>
+
+            <Content>
+                <div className="content">
+                    <Switch>
+                        <Route exact path={match.path}>
+                            <Redirect to={`${match.path}/general`}/>
+                        </Route>
+                        <Route path={`${match.path}/general`}>
+                            <SettingsGeneral onThemeChange={props.onThemeChange} />
+                        </Route>
+                        <Route path={`${match.path}/database`}>
+                            <SettingsDatabase />
+                        </Route>
+                    </Switch>
+                </div>
+            </Content>
+
+        </Layout>
+    );
+}
+
+interface ISettingsProps {
+    onThemeChange(): void
+}
+
+const SettingsGeneral = (props: {onThemeChange(): void}) => {
+    const onThemeSelect = (value: string): void => {
+        cfg.setTheme(value);
+        props.onThemeChange();
+    }
+
+    return (
+        <div>
+            <h2>General</h2>
+
+            <h3>Theme</h3>
+            <p>Apply a theme for the application.</p>
+            <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onThemeSelect(e.target.value)} defaultValue={cfg.getTheme()}>
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="cyan">Cyan</option>
+            </select>
+        </div>
+    );
+}
+
+const SettingsDatabase = () => {
     const [dbPath, setDbPath] = React.useState<string>(cfg.getDatabasePath());
     
     const openDatabaseDir = () => {
@@ -48,28 +105,21 @@ const Settings = (props: ISettingsProps) => {
         db.restore(dbFile);
     }
 
-    const onThemeSelect = (value: string): void => {
-        cfg.setTheme(value);
-        props.onThemeChange();
-    }
-
     return (
-        <div className="content">
-            <h1>Settings</h1>
-
+        <div>
             <h2>Database</h2>
 
             <h3>Location</h3>
             <p>The location of your database file.</p>
             <p><label>{dbPath}</label></p>
-            <div className="row-of-items">
+            <section className="row space-fixed">
                 <Button name="Open" icon="folder_open" action={openDatabaseDir} />
                 <Button name="Change" icon="edit" action={changeDatabasePath} />
-            </div>
+            </section>
 
             <h3>Backups</h3>
             <p>The amount of backups before old ones are removed.</p>
-            <div className="row-of-items">
+            <section className="row space-fixed">
                 <Button name="Open" icon="folder_open" action={openBackupDir} />
                 <input
                     type="number"
@@ -78,27 +128,13 @@ const Settings = (props: ISettingsProps) => {
                     max="100"
                     onInput={(e: React.FormEvent<HTMLInputElement>) => changeBackupAmount(e)}
                 />
-            </div>
+            </section>
 
             <h3>Restore</h3>
             <p>Restore your database from a local file.</p>
-            <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />
-
-            <h2>Theme</h2>
-
-            <p>Apply a theme for the application.</p>
-            <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onThemeSelect(e.target.value)} defaultValue={cfg.getTheme()}>
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="cyan">Cyan</option>
-            </select>
+            <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />   
         </div>
     );
-}
-
-interface ISettingsProps {
-    onThemeChange(): void
 }
 
 export default Settings;
