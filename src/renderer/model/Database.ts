@@ -193,7 +193,7 @@ class Database {
 }
 
 abstract class Table<T extends Entity<EntityData, EntityExport>> {
-    public idCounter: number = 1;
+    private idCounter: number = 1;
     private items: T[] = [];
 
     protected abstract create(field: string|number): T;

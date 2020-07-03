@@ -27,6 +27,7 @@ const Review = () => {
     const [card, setCard] = React.useState<CardEntity>(cards[index]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
     const [total, setTotal] = React.useState<number>(cards.length);
+    const [enableShortcuts, setEnableShortcuts] = React.useState<boolean>(true);
     
     const [customStudy, setCustomStudy] = React.useState<boolean>(false);
 
@@ -47,6 +48,10 @@ const Review = () => {
     const showCard = () => {
         setShowAnswer(false);
         setCard(cards[index]);
+    }
+
+    const toggleShortcuts = () => {
+        setEnableShortcuts(enable => !enable);
     }
 
     const onDelete = () => {
@@ -89,14 +94,25 @@ const Review = () => {
                 card={card}
                 showBack={showAnswer}
                 onDelete={onDelete}
+                onToggleModal={toggleShortcuts}
             />
 
-            <div className="review-buttons space-fixed">
-                {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
-                {showAnswer && <Button icon="done" action={() => handleReview(true)} shortcut={KeyCodes.ArrowUp} />}
-                {showAnswer && <Button icon="close" action={() => handleReview(false)} shortcut={KeyCodes.ArrowDown} />}
-                <Button icon="double_arrow" action={skip} shortcut={KeyCodes.ArrowRight} />
-            </div>
+            {enableShortcuts &&
+                <div className="review-buttons space-fixed">
+                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
+                    {showAnswer && <Button icon="done" action={() => handleReview(true)} shortcut={KeyCodes.ArrowUp} />}
+                    {showAnswer && <Button icon="close" action={() => handleReview(false)} shortcut={KeyCodes.ArrowDown} />}
+                    <Button icon="double_arrow" action={skip} shortcut={KeyCodes.ArrowRight} />
+                </div>
+            }
+            {enableShortcuts ||
+                <div className="review-buttons space-fixed">
+                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
+                    {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
+                    {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
+                    <Button icon="double_arrow" action={skip} />
+                </div>
+            }
         </div>
     );
 }

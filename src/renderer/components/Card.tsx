@@ -14,10 +14,12 @@ const Card = (props: ICardProps) => {
 
     const toggleEditor = () => {
         setShowEditor(show => !show);
+        if (props.onToggleModal !== undefined) props.onToggleModal();
     }
 
     const toggleStats = () => {
         setShowStats(show => !show);
+        if (props.onToggleModal !== undefined) props.onToggleModal();
     }
 
     const onDelete = () => {
@@ -74,6 +76,7 @@ interface ICardProps {
     card: CardEntity
     showBack: boolean
     onDelete(): void
+    onToggleModal?(): void
     children?: React.ReactNode
 }
 
