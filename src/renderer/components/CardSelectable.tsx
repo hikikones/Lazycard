@@ -6,6 +6,8 @@ import Card from './Card';
 import Button from './Button';
 
 const CardSelectable = (props: ICardSelectableProps) => {
+    const [showCheckbox, setShowCheckbox] = React.useState<boolean>(false);
+
     const toggleSelect = () => {
         props.card.selected = !props.card.selected;
         if (props.card.selected) props.onSelect();
@@ -13,17 +15,21 @@ const CardSelectable = (props: ICardSelectableProps) => {
     }
 
     return (
-        <Card
-            card={props.card}
-            showBack={props.showBack}
-            onDelete={() => props.onDelete(props.card)}
-        >
-            <Button
-                icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
-                action={toggleSelect}
-                className="card-checkbox"
-            />
-        </Card>
+        <div onMouseEnter={() => setShowCheckbox(true)} onMouseLeave={() => setShowCheckbox(false)}>
+            <Card
+                card={props.card}
+                showBack={props.showBack}
+                onDelete={() => props.onDelete(props.card)}
+            >
+                {(props.card.selected || showCheckbox) &&
+                    <Button
+                        icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
+                        action={toggleSelect}
+                        className="card-checkbox"
+                    />
+                }
+            </Card>
+        </div>
     );
 }
 
