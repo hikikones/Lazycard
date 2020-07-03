@@ -172,6 +172,7 @@ input.topic-name {
 .layout-main {
     background-color: var(--background-color);
     overflow: auto;
+    overflow-y: overlay;
 }
 
 .content {
