@@ -52,6 +52,10 @@ class Config {
         this.theme = theme;
     }
 
+    public getStaticDir(): string {
+        return "."
+    }
+
     public save(): void {
         const config: IConfig = {
             database: this.getDatabasePath(),

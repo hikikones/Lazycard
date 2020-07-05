@@ -7,11 +7,9 @@ import Layout, { Content } from './Layout';
 import Nav from './Nav';
 import Routes from './Routes';
 
-// TODO: syntax highlighting
-
 const parseTheme = (): string => {
     const theme = cfg.getTheme();
-    return theme === "system" ? `${getSystemTheme()}-theme` : `${theme}-theme`;
+    return theme === "system" ? getSystemTheme() : theme;
 }
 
 const getSystemTheme = (): string => {
@@ -33,14 +31,13 @@ const App = () => {
 
     return (
         <MemoryRouter>
-            <div className={theme}>
-                <Layout sidebarWidth={48}>
-                    <Nav />
-                    <Content>
-                        <Routes onThemeChange={updateTheme} />
-                    </Content>
-                </Layout>
-            </div>
+            <link rel="stylesheet" href={`${cfg.getStaticDir()}/themes/${theme}.css`} />
+            <Layout sidebarWidth={48}>
+                <Nav />
+                <Content>
+                    <Routes onThemeChange={updateTheme} />
+                </Content>
+            </Layout>
         </MemoryRouter>
     );
 }

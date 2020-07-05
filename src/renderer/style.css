@@ -1,4 +1,4 @@
-@import '~katex/dist/katex.min.css';
+@import "~katex/dist/katex.min.css";
 @import "~material-icons/iconfont/material-icons.css";
 @import "~lato-font/css/lato-font.css";
 @import "~typeface-roboto-mono/index.css";
@@ -10,9 +10,7 @@
     --card-max-width: 400px;
     --content-max-width: 1920px;
     --content-padding: 1rem;
-}
 
-.light-theme {
     --primary-color: #333333;
     --primary-variant-color: #7b7b7d;
     --on-primary-color: white;
@@ -25,41 +23,10 @@
     --shadow-color: rgba(0, 0, 0, 0.15);
 }
 
-.dark-theme {
-    --primary-color: #333333;
-    --primary-variant-color: #7b7b7d;
-    --on-primary-color: white;
-    --secondary-color: #252526;
-    --secondary-variant-color: #515151;
-    --on-secondary-color: #f7f7f7;
-    --background-color: black; 
-    --surface-color: #1e1e1e;
-    --on-surface-color: #eeeeee;
-    --shadow-color: rgba(255, 255, 255, 0.15);
-}
-
-.cyan-theme {
-    --primary-color: #23a9a6;
-    --primary-variant-color: #b3e0e1;
-    --on-primary-color: white;
-    --secondary-color: #b3e0e1;
-    --secondary-variant-color: #e1f2f3;
-    --on-secondary-color: black;
-    --background-color: ghostwhite;
-    --surface-color: white;
-    --on-surface-color: black;
-    --shadow-color: rgba(0, 0, 0, 0.15);
-}
-
-
-
 body, html {
     font-family: var(--main-font-family);
-    margin: 0;
-}
-
-#app > div {
     color: var(--on-surface-color);
+    margin: 0;
 }
 
 nav {
