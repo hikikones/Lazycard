@@ -20,34 +20,40 @@ const shuffle = (arr: CardEntity[]): CardEntity[] => {
 
 const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
-    const id = Number(topicId);
+    const [id] = React.useState<number>(Number(topicId));
 
-    const [cards, setCards] = React.useState<CardEntity[]>(shuffle(db.cards.getDue(id)));
-    const [index, setIndex] = React.useState<number>(0);
-    const [card, setCard] = React.useState<CardEntity>(cards[index]);
+    const cards = React.useRef<CardEntity[]>(shuffle(db.cards.getDue(id)));
+    const index = React.useRef<number>(0);
+    const [card, setCard] = React.useState<CardEntity>(cards.current[index.current]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
-    const [total, setTotal] = React.useState<number>(cards.length);
+    const [total, setTotal] = React.useState<number>(cards.current.length);
     const [enableShortcuts, setEnableShortcuts] = React.useState<boolean>(true);
     
-    const [customStudy, setCustomStudy] = React.useState<boolean>(false);
-
-    React.useEffect(() => {
-        if (index > cards.length - 1) setIndex(0);
-        showCard();
-    }, [index, cards]);
+    const customStudy = React.useRef<boolean>(false);
 
     const handleReview = (success: boolean) => {
-        if (!customStudy) card.review(success);
-        setCards(oldCards => oldCards.filter(c => c.id !== card.id));
+        if (!customStudy.current) card.review(success);
+        removeCurrentCard();
+        showNextCard();
     }
 
     const skip = () => {
-        setIndex((i) => { return i === cards.length - 1 ? 0 : i + 1 });
+        showNextCard();
+    }
+
+    const showNextCard = () => {
+        index.current++;
+        if (index.current >= cards.current.length) index.current = 0;
+        showCard();
     }
 
     const showCard = () => {
         setShowAnswer(false);
-        setCard(cards[index]);
+        setCard(cards.current[index.current]);
+    }
+
+    const removeCurrentCard = () => {
+        cards.current.splice(index.current, 1);
     }
 
     const toggleShortcuts = () => {
@@ -55,26 +61,29 @@ const Review = () => {
     }
 
     const onDelete = () => {
+        removeCurrentCard();
         setTotal(t => t - 1);
-        setCards(oldCards => oldCards.filter(c => c.id !== card.id));
+        showNextCard();
     }
 
     const initCustomStudy = () => {
         const cardsToStudy = id ? db.cards.getByTopic(id) : [...db.cards.getAll()];
-        setCards(cardsToStudy);
-        setTotal(cardsToStudy.length);
-        setCustomStudy(true);
+        cards.current = shuffle(cardsToStudy);
+        index.current = 0;
+        customStudy.current = true;
+        setTotal(cards.current.length);
+        showCard();
     }
 
-    if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
-        return (
-            <div className="content">
-                <Empty icon="content_copy" message="No cards" />
-            </div>
-        );
-    }
+    if (cards.current.length === 0) {
+        if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
+            return (
+                <div className="content">
+                    <Empty icon="content_copy" message="No cards" />
+                </div>
+            );
+        }
 
-    if (card === undefined) {
         return (
             <div className="content">
                 <Empty icon="mood" message="No cards to review">
@@ -87,7 +96,7 @@ const Review = () => {
     return (
         <div className="content col col-center space-between full-height">
             <section>
-                <label>{total - cards.length} / {total}</label>
+                <label>{total - cards.current.length} / {total}</label>
             </section>
 
             <Card
