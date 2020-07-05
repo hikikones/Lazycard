@@ -3,8 +3,6 @@
 @import "~lato-font/css/lato-font.css";
 @import "~typeface-roboto-mono/index.css";
 
-/* TODO: Fix margin bleeding outside parent div for cards in grid */
-
 :root {
     --main-font-family: 'Lato';
     --input-font-family: 'Roboto Mono';
