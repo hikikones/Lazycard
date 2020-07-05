@@ -268,8 +268,7 @@ input.topic-name {
 }
 
 .modal-content {
-    position: absolute;
-    top: 15%;
+    max-width: 720px;
     margin-left: calc(48px - var(--content-padding));
     padding: 40px;
     overflow: auto;
@@ -304,6 +303,7 @@ a.sidebar-item:hover, a.sidebar-item.active {
 a.button {
     display: inline-block;
     text-decoration: none;
+    white-space: nowrap;
     padding: 4px 6px;
     color: var(--on-secondary-color);
 }

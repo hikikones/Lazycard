@@ -5,7 +5,7 @@ const Modal = (props: IModalProps) => {
         return null;
 
     return (
-        <div className="modal-container col col-center" onClick={props.onClickOutside}>
+        <div className="modal-container col col-center row-center" onClick={props.onClickOutside}>
             <div className="modal-content" onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
                 {props.children}
             </div>

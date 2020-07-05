@@ -7,6 +7,8 @@ import Layout, { Content } from './Layout';
 import Nav from './Nav';
 import Routes from './Routes';
 
+// TODO: syntax highlighting
+
 const parseTheme = (): string => {
     const theme = cfg.getTheme();
     return theme === "system" ? `${getSystemTheme()}-theme` : `${theme}-theme`;

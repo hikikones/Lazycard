@@ -50,8 +50,7 @@ class Database {
         fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
-    public import(): boolean {
-        // TODO: Add some options. Import into existing or new topic? Import duplicate cards?
+    public import(mergeTopic: boolean, allowDuplicateCards: boolean): boolean {
         const lazytopic = dialog.openFile('lazytopic', ['lazytopic']);
         
         if (lazytopic === undefined) return false;
@@ -59,11 +58,19 @@ class Database {
         const buffer = fs.readFileSync(lazytopic);
         const json: TopicExport = JSON.parse(buffer.toString());
 
-        const topic = this.topics.exists(json.name)
+        const topicExists = this.topics.exists(json.name);
+        const topic = (topicExists && mergeTopic)
             ? this.topics.getByName(json.name)
-            : this.topics.new(json.name);
+            : this.topics.new(json.name + " (import)");
+
         json.cards.forEach(c => {
-            if (!this.cards.exists(c.front)) {
+            if (allowDuplicateCards) {
+                const card = this.cards.new(topic.id);
+                card.front = c.front;
+                card.back = c.back;
+                srs.today(card);
+            }
+            else if (!this.cards.exists(c.front)) {
                 const card = this.cards.new(topic.id);
                 card.front = c.front;
                 card.back = c.back;
