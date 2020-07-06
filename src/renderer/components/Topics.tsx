@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Switch, Route, useRouteMatch, useParams, Redirect } from "react-router-dom";
+import { Switch, Route, Redirect, useRouteMatch, useParams, useHistory } from "react-router-dom";
 
 import db, { Topic as TopicEntity } from '../model/Database';
 
@@ -14,6 +14,7 @@ import Button from './Button';
 const Topics = () => {
     const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
     const match = useRouteMatch();
+    const history = useHistory();
 
     const [showImportOptions, setShowImportOptions] = React.useState<boolean>(false);
 
@@ -22,13 +23,16 @@ const Topics = () => {
     }
 
     const onImport = (mergeTopic: boolean, allowDuplicateCards: boolean) => {
-        const success = db.import(mergeTopic, allowDuplicateCards);
-        if (success) updateTopics();
+        const topic = db.import(mergeTopic, allowDuplicateCards);
+        if (topic === null) return;
+        updateTopics();
+        history.push(`${match.path}/${topic.id}`);
     }
 
     const onNewTopic = () => {
-        db.topics.new("New Topic");
+        const topic = db.topics.new("New Topic");
         updateTopics();
+        history.push(`${match.path}/${topic.id}`);
     }
 
     const updateTopics = () => {
@@ -74,11 +78,12 @@ const Topics = () => {
 
 const TopicContainer = (props: {onTopicChange(): void}) => {
     const { topicId } = useParams();
-    const [topic, setTopic] = React.useState<TopicEntity>(db.topics.get(Number(topicId)));
+    const id = Number(topicId);
+    const [topic, setTopic] = React.useState<TopicEntity>(db.topics.get(id));
 
     React.useEffect(() => {
-        setTopic(db.topics.get(Number(topicId)));
-    }, [topicId]);
+        setTopic(db.topics.get(id));
+    }, [id]);
 
     return <Topic topic={topic} onTopicChange={props.onTopicChange} />
 }

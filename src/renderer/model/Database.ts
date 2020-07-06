@@ -50,10 +50,10 @@ class Database {
         fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
-    public import(mergeTopic: boolean, allowDuplicateCards: boolean): boolean {
+    public import(mergeTopic: boolean, allowDuplicateCards: boolean): Topic {
         const lazytopic = dialog.openFile('lazytopic', ['lazytopic']);
         
-        if (lazytopic === undefined) return false;
+        if (lazytopic === undefined) return null;
 
         const buffer = fs.readFileSync(lazytopic);
         const json: TopicExport = JSON.parse(buffer.toString());
@@ -78,7 +78,7 @@ class Database {
             }
         });
 
-        return true;
+        return topic;
     }
 
     public restore(dbFile: string): void {
