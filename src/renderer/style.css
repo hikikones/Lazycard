@@ -6,6 +6,7 @@
 :root {
     --main-font-family: 'Lato';
     --input-font-family: 'Roboto Mono';
+    --code-font-family: 'Consolas';
     --card-min-width: 250px;
     --card-max-width: 400px;
     --content-max-width: 1920px;
@@ -80,6 +81,27 @@ input:focus, select:focus, option:focus, textarea:focus, a:focus {
 input::placeholder {
     color: var(--on-surface-color);
     opacity: 0.5;
+}
+
+pre {
+    background-color: var(--secondary-color);
+    padding: 1rem;
+}
+
+pre code {
+    color: var(--on-secondary-color);
+    background-color: transparent;
+    line-height: 1.5;
+    tab-size: 4;
+    padding: 0;
+}
+
+code {
+    color: var(--on-secondary-color);
+    background-color: var(--secondary-variant-color);
+    font-family: var(--code-font-family);
+    font-size: 0.8rem;
+    padding: 0.1rem 0.2rem;
 }
 
 label {
