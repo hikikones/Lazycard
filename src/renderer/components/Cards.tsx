@@ -11,6 +11,7 @@ import Modal from './Modal';
 import Empty from './Empty';
 
 // TODO: maybe add more specific events such as delete single card, bulk delete cards etc...?
+// TODO: should search results be sorted? currently it overrides the sorting from fuse.js.
 
 enum CardSort {
     Newest = "arrow_upward",

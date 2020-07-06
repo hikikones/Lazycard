@@ -7,6 +7,8 @@ import Layout, { Content } from './Layout';
 import Nav from './Nav';
 import Routes from './Routes';
 
+// TODO: create custom title bar so it can be properly styled
+
 const parseTheme = (): string => {
     const theme = cfg.getTheme();
     return theme === "system" ? getSystemTheme() : theme;

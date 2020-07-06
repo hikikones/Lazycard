@@ -3,11 +3,15 @@ import { NavLink as ReactRouterNavLink } from "react-router-dom";
 
 const Nav = () => {
     return (
-        <nav>
-            <NavLink to="/review/0" routeName="review" icon="drafts" />
-            <NavLink to="/cards" icon="layers" />
-            <NavLink to="/topics" icon="dashboard" />
-            <NavLink to="/settings" icon="settings" />
+        <nav className="col space-between">
+            <div>
+                <NavLink to="/review/0" icon="drafts" routeName="review" />
+                <NavLink to="/cards" icon="layers" />
+                <NavLink to="/topics" icon="dashboard" />
+            </div>
+            <div>
+                <NavLink to="/settings" icon="settings" />
+            </div>
         </nav>
     );
 }
