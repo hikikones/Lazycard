@@ -62,7 +62,7 @@ const Card = (props: ICardProps) => {
                         <tr>
                             <td>{props.card.attempts}</td>
                             <td>{props.card.successes}</td>
-                            <td>{props.card.retentionRate()}</td>
+                            <td>{props.card.retentionRate().toFixed(2)}</td>
                             <td>{props.card.dueDate.toLocaleDateString()}</td>
                         </tr>
                     </tbody>
