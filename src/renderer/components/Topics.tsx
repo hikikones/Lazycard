@@ -9,14 +9,13 @@ import Modal from './Modal';
 import Empty from './Empty';
 import Button from './Button';
 
-// TODO: update cards on import if currently in same topic
-
 const Topics = () => {
     const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
     const match = useRouteMatch();
     const history = useHistory();
 
     const [showImportOptions, setShowImportOptions] = React.useState<boolean>(false);
+    const topicId = React.useRef<number>();
 
     const toggleImportOptions = () => {
         setShowImportOptions(show => !show);
@@ -25,8 +24,17 @@ const Topics = () => {
     const onImport = (mergeTopic: boolean, allowDuplicateCards: boolean) => {
         const topic = db.import(mergeTopic, allowDuplicateCards);
         if (topic === null) return;
+        toggleImportOptions();
         updateTopics();
-        history.push(`${match.path}/${topic.id}`);
+        const locations = history.location.pathname.split("/");
+        const currentTopicId = Number(locations[locations.length - 1]);
+        const isCurrentlyOnSameTopic = currentTopicId === topic.id;
+        if (isCurrentlyOnSameTopic) {
+            topicId.current = currentTopicId;
+            history.push("/topics");
+        } else {
+            history.push(`${match.path}/${topic.id}`);
+        }
     }
 
     const onNewTopic = () => {
@@ -36,6 +44,7 @@ const Topics = () => {
     }
 
     const updateTopics = () => {
+        topicId.current = null;
         setTopics([...db.topics.getAll()]);
     }
 
@@ -62,7 +71,7 @@ const Topics = () => {
                         <Route exact path={match.path}>
                             {topics.length === 0
                                 ?   <Empty icon="content_paste" message="No topics" />
-                                :   <Redirect to={`${match.path}/${topics[0].id}`} />
+                                :   <Redirect to={`${match.path}/${topicId.current || topics[0].id}`} />
                             }
                         </Route>
                         <Route path={`${match.path}/:topicId`}>
@@ -93,7 +102,6 @@ const ImportOptions = (props: IImportOptionsProps) => {
     const [allowDuplicateCards, setAllowDuplicateCards] = React.useState<boolean>(false);
 
     const onImport = () => {
-        props.onClickOutside();
         props.onImport(mergeTopic, allowDuplicateCards);
     }
     
