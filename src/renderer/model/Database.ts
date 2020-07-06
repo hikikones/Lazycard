@@ -41,12 +41,17 @@ class Database {
     }
 
     public export(topicId: number): void {
-        const path = dialog.saveFile('lazytopic', ['lazytopic']);
+        const topic = this.topics.get(topicId);
+        const path = dialog.saveFile('lazytopic', ['lazytopic'], {
+            title: `Save topic ${topic.name} as`,
+            filename: topic.name
+        });
+
         if (path === undefined) return;
 
-        const topic = this.topics.get(topicId).export();
-        const cards = this.cards.getByTopic(topicId);
-        cards.forEach(c => topic.cards.push(c.export()));
+        const topicExport = topic.export();
+        const cards = this.cards.getByTopic(topic.id);
+        cards.forEach(c => topicExport.cards.push(c.export()));
         fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
@@ -133,10 +138,14 @@ class Database {
     }
 
     public exportToHTML(topicId: number): void {
-        const path = dialog.saveFile('html', ['html']);
+        const topic = this.topics.get(topicId);
+        const path = dialog.saveFile('html', ['html'], {
+            title: `Save topic ${topic.name} as`,
+            filename: topic.name
+        });
+
         if (path === undefined) return;
 
-        const topic = this.topics.get(topicId);
         const cards = this.cards.getByTopic(topicId);
         const html: string[] = [];
 
