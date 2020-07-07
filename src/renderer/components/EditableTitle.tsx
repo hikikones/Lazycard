@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-const EditableHeader = (props: IEditableHeaderProps) => {
+const EditableTitle = (props: IEditableTitleProps) => {
     const [edit, setEdit] = React.useState<boolean>(false);
 
     const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -20,15 +20,15 @@ const EditableHeader = (props: IEditableHeaderProps) => {
 
     if (!edit)
         return (
-            <h1 className="topic-name" onClick={() => setEdit(true)}>
+            <h1 className="topic-name text-center full-width" onClick={() => setEdit(true)}>
                 {props.title}
             </h1>
         );
 
     return (
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="full-width">
             <input
-                className="topic-name"
+                className="topic-name text-center full-width"
                 onBlur={onBlur}
                 defaultValue={props.title}
                 autoFocus={true}
@@ -38,9 +38,9 @@ const EditableHeader = (props: IEditableHeaderProps) => {
     );
 }
 
-interface IEditableHeaderProps {
+interface IEditableTitleProps {
     title: string
     onSubmit(value: string): void
 }
 
-export default EditableHeader;
+export default EditableTitle;

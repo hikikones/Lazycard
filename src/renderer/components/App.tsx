@@ -3,9 +3,9 @@ import { MemoryRouter } from 'react-router-dom';
 
 import cfg from '../model/Config';
 
-import Layout, { Content } from './Layout';
+import Header from './Header'
 import Nav from './Nav';
-import Routes from './Routes';
+import Main from './Main';
 
 // TODO: create custom title bar so it can be properly styled
 
@@ -34,12 +34,9 @@ const App = () => {
     return (
         <MemoryRouter>
             <link rel="stylesheet" href={`${cfg.getStaticDir()}/themes/${theme}.css`} />
-            <Layout sidebarWidth={48}>
-                <Nav />
-                <Content>
-                    <Routes onThemeChange={updateTheme} />
-                </Content>
-            </Layout>
+            <Header />
+            <Nav />
+            <Main onThemeChange={updateTheme} />
         </MemoryRouter>
     );
 }

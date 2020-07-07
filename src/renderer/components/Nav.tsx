@@ -1,34 +1,19 @@
 import * as React from 'react';
-import { NavLink as ReactRouterNavLink } from "react-router-dom";
+
+import ButtonNavLink from './ButtonNavLink';
 
 const Nav = () => {
     return (
-        <nav className="col space-between">
+        <nav className="col space-between full-height">
             <div>
-                <NavLink to="/review/0" icon="drafts" routeName="review" />
-                <NavLink to="/cards" icon="layers" />
-                <NavLink to="/topics" icon="dashboard" />
+                <ButtonNavLink to="/review/0" icon="drafts" routeName="review" className="navigation" />
+                <ButtonNavLink to="/cards" icon="layers" className="navigation" />
+                <ButtonNavLink to="/topics" icon="dashboard" className="navigation" />
             </div>
             <div>
-                <NavLink to="/settings" icon="settings" />
+                <ButtonNavLink to="/settings" icon="settings" className="navigation" />
             </div>
         </nav>
-    );
-}
-
-const NavLink = (props: {to: string, icon: string, routeName?: string}) => {
-    if (props.routeName !== undefined) {
-        return (
-            <ReactRouterNavLink to={props.to} className="nav" isActive={(match, location) => location.pathname.includes(props.routeName)}>
-                <i className="material-icons icon">{props.icon}</i>
-            </ReactRouterNavLink>
-        );
-    }
-
-    return (
-        <ReactRouterNavLink to={props.to} className="nav">
-            <i className="material-icons icon">{props.icon}</i>
-        </ReactRouterNavLink>
     );
 }
 

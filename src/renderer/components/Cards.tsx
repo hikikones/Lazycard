@@ -111,8 +111,6 @@ const Cards = (props: ICardsProps) => {
 
     return (
         <div className="col col-center full-width">
-            <h2>Cards</h2>
-
             <section>
                 <Input
                     className="search-input"
@@ -149,7 +147,7 @@ const Cards = (props: ICardsProps) => {
                 </Dropdown>
             </section>
 
-            <section className="cards row-center full-width">
+            <section className="cards row-center">
                 {sort(cards()).slice(0, showAmount).map(c =>
                     <CardSelectable
                         card={c}

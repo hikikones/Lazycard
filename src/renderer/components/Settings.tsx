@@ -6,37 +6,33 @@ import db from '../model/Database';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
 
-import Layout, { Sidebar, SidebarLink, Content } from './Layout';
 import Button from './Button';
+import ButtonNavLink from './ButtonNavLink';
 
 const Settings = (props: ISettingsProps) => {
     const match = useRouteMatch();
 
     return (
-        <Layout sidebarWidth={150}>
+        <>
+            <aside className="col">
+                <ButtonNavLink name="General" to={`${match.path}/general`} className="sidebar" />
+                <ButtonNavLink name="Database" to={`${match.path}/database`} className="sidebar" />
+            </aside>
 
-            <Sidebar>
-                <SidebarLink name="General" to={`${match.path}/general`} />
-                <SidebarLink name="Database" to={`${match.path}/database`} />
-            </Sidebar>
-
-            <Content>
-                <div className="content">
-                    <Switch>
-                        <Route exact path={match.path}>
-                            <Redirect to={`${match.path}/general`}/>
-                        </Route>
-                        <Route path={`${match.path}/general`}>
-                            <SettingsGeneral onThemeChange={props.onThemeChange} />
-                        </Route>
-                        <Route path={`${match.path}/database`}>
-                            <SettingsDatabase />
-                        </Route>
-                    </Switch>
-                </div>
-            </Content>
-
-        </Layout>
+            <main>
+                <Switch>
+                    <Route exact path={match.path}>
+                        <Redirect to={`${match.path}/general`}/>
+                    </Route>
+                    <Route path={`${match.path}/general`}>
+                        <SettingsGeneral onThemeChange={props.onThemeChange} />
+                    </Route>
+                    <Route path={`${match.path}/database`}>
+                        <SettingsDatabase />
+                    </Route>
+                </Switch>
+            </main>
+        </>
     );
 }
 
@@ -51,8 +47,8 @@ const SettingsGeneral = (props: {onThemeChange(): void}) => {
     }
 
     return (
-        <div>
-            <h2>General</h2>
+        <>
+            <h1>General</h1>
 
             <h3>Theme</h3>
             <p>Apply a theme for the application.</p>
@@ -61,7 +57,7 @@ const SettingsGeneral = (props: {onThemeChange(): void}) => {
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
             </select>
-        </div>
+        </>
     );
 }
 
@@ -105,8 +101,8 @@ const SettingsDatabase = () => {
     }
 
     return (
-        <div>
-            <h2>Database</h2>
+        <>
+            <h1>Database</h1>
 
             <h3>Location</h3>
             <p>The location of your database file.</p>
@@ -132,7 +128,7 @@ const SettingsDatabase = () => {
             <h3>Restore</h3>
             <p>Restore your database from a local file.</p>
             <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />   
-        </div>
+        </>
     );
 }
 

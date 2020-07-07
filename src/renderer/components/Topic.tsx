@@ -3,7 +3,7 @@ import * as React from 'react';
 import db from '../model/Database';
 import { Card as CardEntity, Topic as TopicEntity } from '../model/Database';
 
-import EditableHeader from './EditableHeader';
+import EditableTitle from './EditableTitle';
 import Cards from './Cards';
 import CardEditor from './CardEditor';
 import Button from './Button';
@@ -48,14 +48,16 @@ const Topic = (props: ITopicProps) => {
         );
     }
 
+    const hasCards = cards.length > 0;
+
     return (
-        <div className="col col-center full-height">
-            <EditableHeader title={props.topic.name} onSubmit={onNameChange} />
+        <div className={hasCards ? "col col-center" : "col col-center full-height"}>
+            <EditableTitle title={props.topic.name} onSubmit={onNameChange} />
 
             <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
-                {cards.length > 0 && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
-                {cards.length > 0 &&
+                {hasCards && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
+                {hasCards &&
                     <Dropdown name="Export" icon="save" showDownArrow={true}>
                         <DropdownItem name="JSON" icon="archive" action={() => db.export(props.topic.id)} />
                         <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(props.topic.id)} />
@@ -66,6 +68,7 @@ const Topic = (props: ITopicProps) => {
 
             {showCardEditor && <CardEditor topicId={props.topic.id} onSave={updateCards} onCancel={toggleCardEditor} />}
 
+            {hasCards && <h2>Cards</h2>}
             <Cards cards={cards} onCardChange={updateCards} />
         </div>
     );

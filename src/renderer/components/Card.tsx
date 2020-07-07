@@ -28,7 +28,7 @@ const Card = (props: ICardProps) => {
     }
 
     return (
-        <div>
+        <>
             <CardView front={props.card.front} back={props.card.back} showBack={props.showBack}>
                 <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false}>
                     <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
@@ -68,7 +68,7 @@ const Card = (props: ICardProps) => {
                     </tbody>
                 </table>
             </Modal>
-        </div>
+        </>
     );
 }
 

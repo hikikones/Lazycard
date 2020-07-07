@@ -3,11 +3,11 @@ import { Switch, Route, Redirect, useRouteMatch, useParams, useHistory } from "r
 
 import db, { Topic as TopicEntity } from '../model/Database';
 
-import Layout, { Sidebar, SidebarItem, SidebarLink, Content } from './Layout';
 import Topic from './Topic';
 import Modal from './Modal';
 import Empty from './Empty';
 import Button from './Button';
+import ButtonNavLink from './ButtonNavLink';
 
 const Topics = () => {
     const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
@@ -49,39 +49,35 @@ const Topics = () => {
     }
 
     return (
-        <Layout sidebarWidth={150}>
-
-            <Sidebar>
-                <SidebarItem name="Import" icon="save_alt" active={false} onClick={toggleImportOptions} />
-                <SidebarItem name="New topic" icon="add" active={false} onClick={onNewTopic} />
+        <>
+            <aside className="col">
+                <Button name="Import" icon="save_alt" action={toggleImportOptions} className="sidebar" />
+                <Button name="New topic" icon="add" action={onNewTopic} className="sidebar" />
                 <hr />
                 {topics.map(t =>
-                    <SidebarLink name={t.name} to={`${match.path}/${t.id}`} key={t.id} />
+                    <ButtonNavLink name={t.name} to={`${match.path}/${t.id}`} className="sidebar" key={t.id} />
                 )}
-            </Sidebar>
+            </aside>
 
-            <Content>
-                <div className="content">
-                    <ImportOptions
-                        show={showImportOptions}
-                        onClickOutside={toggleImportOptions}
-                        onImport={onImport}
-                    />
-                    <Switch>
-                        <Route exact path={match.path}>
-                            {topics.length === 0
-                                ?   <Empty icon="content_paste" message="No topics" />
-                                :   <Redirect to={`${match.path}/${topicId.current || topics[0].id}`} />
-                            }
-                        </Route>
-                        <Route path={`${match.path}/:topicId`}>
-                            <TopicContainer onTopicChange={updateTopics} />
-                        </Route>
-                    </Switch>
-                </div>
-            </Content>
-
-        </Layout>
+            <main>
+                <ImportOptions
+                    show={showImportOptions}
+                    onClickOutside={toggleImportOptions}
+                    onImport={onImport}
+                />
+                <Switch>
+                    <Route exact path={match.path}>
+                        {topics.length === 0
+                            ?   <Empty icon="content_paste" message="No topics" />
+                            :   <Redirect to={`${match.path}/${topicId.current || topics[0].id}`} />
+                        }
+                    </Route>
+                    <Route path={`${match.path}/:topicId`}>
+                        <TopicContainer onTopicChange={updateTopics} />
+                    </Route>
+                </Switch>
+            </main>
+        </>
     );
 }
 

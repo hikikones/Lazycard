@@ -78,23 +78,23 @@ const Review = () => {
     if (cards.current.length === 0) {
         if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
             return (
-                <div className="content">
+                <main>
                     <Empty icon="content_copy" message="No cards" />
-                </div>
+                </main>
             );
         }
 
         return (
-            <div className="content">
+            <main>
                 <Empty icon="mood" message="No cards to review">
                     <Button icon="redo" name="Custom study" action={initCustomStudy} />
                 </Empty>
-            </div>
+            </main>
         );
     }
 
     return (
-        <div className="content col col-center space-between full-height">
+        <main className="col col-center space-between">
             <section>
                 <label>{total - cards.current.length} / {total}</label>
             </section>
@@ -122,7 +122,7 @@ const Review = () => {
                     <Button icon="double_arrow" action={skip} />
                 </div>
             }
-        </div>
+        </main>
     );
 }
 

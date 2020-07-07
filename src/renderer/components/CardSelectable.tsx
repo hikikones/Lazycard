@@ -25,7 +25,7 @@ const CardSelectable = (props: ICardSelectableProps) => {
                     <Button
                         icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
                         action={toggleSelect}
-                        className="card-checkbox"
+                        className="button card-checkbox"
                     />
                 }
             </Card>

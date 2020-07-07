@@ -26,7 +26,7 @@ const Button = (props: IButtonProps) => {
 
     return (
         <a
-            className={props.className !== undefined ? `button ${props.className}` : "button"}
+            className={props.className !== undefined ? props.className : "button"}
             onClick={click}
             href="#"
         >
