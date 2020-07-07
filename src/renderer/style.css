@@ -199,6 +199,10 @@ pre code {
     padding: 0;
 }
 
+code, .katex-html {
+    white-space: pre-wrap;
+}
+
 code {
     color: var(--on-secondary-color);
     background-color: var(--secondary-variant-color);
