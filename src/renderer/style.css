@@ -70,8 +70,9 @@ main {
 aside {
     grid-area: sidebar;
     overflow: auto;
-    max-width: var(--sidebar-max-width);
     padding: 1rem 0;
+    min-width: 150px;
+    max-width: var(--sidebar-max-width);
     background-color: var(--secondary-color);
 }
 
@@ -96,7 +97,6 @@ aside {
 .titlebar-logo label {
     color: var(--on-primary-color);
     font-weight: 400;
-    letter-spacing: 1px;
     margin: 0;
 }
 

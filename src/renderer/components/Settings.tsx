@@ -15,8 +15,8 @@ const Settings = (props: ISettingsProps) => {
     return (
         <>
             <aside className="col">
-                <ButtonNavLink name="General" to={`${match.path}/general`} className="sidebar" />
-                <ButtonNavLink name="Database" to={`${match.path}/database`} className="sidebar" />
+                <ButtonNavLink name="General" icon="build" to={`${match.path}/general`} className="sidebar" />
+                <ButtonNavLink name="Database" icon="backup" to={`${match.path}/database`} className="sidebar" />
             </aside>
 
             <main>
