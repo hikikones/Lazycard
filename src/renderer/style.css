@@ -7,10 +7,14 @@
     --font-main: 'Lato';
     --font-input: 'Roboto Mono';
     --font-code: 'Consolas';
-    --card-min-width: 250px;
-    --card-max-width: 400px;
+    --titlebar-height: 32px;
+    --navigation-width: 48px;
     --main-max-width: 1920px;
     --main-padding: 1rem 2rem;
+    --sidebar-max-width: 250px;
+    --card-min-width: 250px;
+    --card-max-width: 400px;
+    --modal-max-width: 720px;
 
     --primary-color: #333333;
     --primary-variant-color: #7b7b7d;
@@ -37,14 +41,16 @@ body {
     grid-template-areas: 
         "header header header"
         "nav sidebar main";
-    grid-template-rows: 32px 1fr;
-    grid-template-columns: 48px auto 1fr;
+    grid-template-rows: var(--titlebar-height) 1fr;
+    grid-template-columns: var(--navigation-width) auto 1fr;
     height: 100vh;
 }
 
 header {
     grid-area: header;
     background-color: var(--primary-color);
+    -webkit-user-select: none;
+    -webkit-app-region: drag;
 }
 
 nav {
@@ -64,9 +70,52 @@ main {
 aside {
     grid-area: sidebar;
     overflow: auto;
-    max-width: 250px;
+    max-width: var(--sidebar-max-width);
     padding: 1rem 0;
     background-color: var(--secondary-color);
+}
+
+.titlebar-resize {
+    height: 5px;
+    -webkit-app-region: no-drag;
+}
+
+.titlebar-logo {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.titlebar-logo img {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    margin: calc((var(--titlebar-height) - 24px) / 2) 12px;
+}
+
+.titlebar-logo label {
+    color: var(--on-primary-color);
+    font-weight: 400;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.titlebar-buttons {
+    -webkit-app-region: no-drag;
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0.5;
+}
+
+a.titlebar:hover {
+    background-color: var(--primary-variant-color);
+}
+
+a.titlebar i.icon {
+    color: var(--on-primary-color);
+    font-size: 20px;
+    padding: calc((var(--titlebar-height) - 20px) / 2) 0.9rem;
 }
 
 a.navigation i.icon {
@@ -326,7 +375,7 @@ input.topic-name {
 }
 
 .modal-content {
-    max-width: 720px;
+    max-width: var(--modal-max-width);
     padding: 2rem;
     overflow: auto;
     background-color: var(--surface-color);
