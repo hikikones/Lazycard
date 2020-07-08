@@ -5,10 +5,10 @@
     --primary-variant-color: #7b7b7d;
     --on-primary-color: white;
     --secondary-color: #252526;
-    --secondary-variant-color: #515151;
-    --on-secondary-color: #f7f7f7;
-    --background-color: black; 
-    --surface-color: #1e1e1e;
-    --on-surface-color: #eeeeee;
-    --shadow-color: rgba(255, 255, 255, 0.15);
+    --secondary-variant-color: #464648;
+    --on-secondary-color: #c2c2c3;
+    --background-color: #1e1e1e;
+    --surface-color: #131313;
+    --on-surface-color: #d1d1d1;
+    --shadow-color: rgba(255, 255, 255, 0);
 }
