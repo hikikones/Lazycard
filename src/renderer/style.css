@@ -374,6 +374,7 @@ input.topic-name {
 .modal-content {
     max-width: var(--modal-max-width);
     padding: 2rem;
+    margin: 2rem;
     overflow: auto;
     background-color: var(--background-color);
 }

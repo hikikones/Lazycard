@@ -8,10 +8,10 @@ const Card = (props: ICardViewProps) => {
             return null;
 
         return (
-            <div>
+            <>
                 <hr />
                 <CardContent markdown={props.back} />
-            </div>
+            </>
         );
     }
 
