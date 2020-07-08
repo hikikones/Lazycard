@@ -368,14 +368,14 @@ input.topic-name {
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(24, 24, 24, 0.4);
+    background-color: rgba(0, 0, 0, 0.75);
 }
 
 .modal-content {
     max-width: var(--modal-max-width);
     padding: 2rem;
     overflow: auto;
-    background-color: var(--surface-color);
+    background-color: var(--background-color);
 }
 
 .text-center {
