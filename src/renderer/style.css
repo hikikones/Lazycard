@@ -1,375 +1,267 @@
-@import '~katex/dist/katex.min.css';
+@import "~katex/dist/katex.min.css";
 @import "~material-icons/iconfont/material-icons.css";
 @import "~lato-font/css/lato-font.css";
-
-/* TODO: Clean up or use a proper css framework */
+@import "~typeface-roboto-mono/index.css";
 
 :root {
-    --nav-width: 200px;
-    --card-width: 400px;
-    --text-color: black;
-    --nav-color: whitesmoke;
-    --main-color: white;
-    --card-color: none;
-    --btn-color: black;
-    --icon-color: grey;
-    --hover-element-color: whitesmoke;
-    --focus-element-color: whitesmoke;
-    --label-background-color: lightgrey;
-    --label-color: darkgrey;
-    --list-active-color: lightgrey;
-    --list-item-color: black;
-    --dropdown-menu-color: whitesmoke;
-    --search-color: white;
+    --font-main: 'Lato';
+    --font-input: 'Roboto Mono';
+    --font-code: 'Consolas';
+    --titlebar-height: 32px;
+    --navigation-width: 48px;
+    --main-max-width: 1920px;
+    --main-padding: 1rem 2rem;
+    --sidebar-max-width: 250px;
+    --card-min-width: 250px;
+    --card-max-width: 400px;
+    --modal-max-width: 720px;
+
+    --primary-color: #333333;
+    --primary-variant-color: #7b7b7d;
+    --on-primary-color: white;
+    --secondary-color: #f0f0f0;
+    --secondary-variant-color: #f6f6f6;
+    --on-secondary-color: #454545;
+    --background-color: ghostwhite;
+    --surface-color: white;
+    --on-surface-color: black;
+    --shadow-color: rgba(0, 0, 0, 0.15);
 }
 
 body {
     margin: 0;
-    font-family: Lato;
+    overflow: hidden;
+    font-family: var(--font-main);
+    color: var(--on-surface-color);
+    background-color: var(--background-color);
 }
 
-h1, h2, h3, h4, h5, h6, p, input::placeholder {
-    color: var(--text-color);
-}
-
-h1, h2, h3, h4, h5, h6 {
-    margin: 1rem 0;
-}
-
-#app > div {
+#app {
     display: grid;
-    grid-template-rows: 100vh;
-    grid-template-columns: var(--nav-width) auto;
-    grid-template-areas: "nav main";
+    grid-template-areas: 
+        "header header header"
+        "nav sidebar main";
+    grid-template-rows: var(--titlebar-height) 1fr;
+    grid-template-columns: var(--navigation-width) auto 1fr;
+    height: 100vh;
+}
+
+header {
+    grid-area: header;
+    background-color: var(--primary-color);
+    -webkit-user-select: none;
+    -webkit-app-region: drag;
 }
 
 nav {
     grid-area: nav;
-    padding: 1rem 0;
-    background-color: var(--nav-color);
-    overflow: auto;
-}
-
-nav a.nav {
-    position: relative;
-    padding-left: 1.6rem;
-}
-
-nav a.nav i.material-icons {
-    position: absolute;
-    left: 0.15rem;
+    overflow: hidden;
+    background-color: var(--primary-color);
 }
 
 main {
     grid-area: main;
-    background-color: var(--main-color);
     overflow: auto;
+    padding: var(--main-padding);
+    max-width: var(--main-max-width);
+    box-sizing: border-box;
 }
 
-main > div {
-    flex-basis: 90%;
+aside {
+    grid-area: sidebar;
+    overflow: auto;
+    padding: 1rem 0;
+    min-width: 150px;
+    max-width: var(--sidebar-max-width);
+    background-color: var(--secondary-color);
 }
 
-nav label {
-    margin-top: 1rem;
-    margin-left: 0.5rem;
-    margin-bottom: 0.5rem;
+.titlebar-resize {
+    height: 5px;
+    -webkit-app-region: no-drag;
+}
+
+.titlebar-logo {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.titlebar-logo img {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    margin: calc((var(--titlebar-height) - 24px) / 2) 12px;
+}
+
+.titlebar-logo label {
+    color: var(--on-primary-color);
+    font-weight: 400;
+    margin: 0;
+}
+
+.titlebar-buttons {
+    -webkit-app-region: no-drag;
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0.5;
+}
+
+a.titlebar:hover {
+    background-color: var(--primary-variant-color);
+}
+
+a.titlebar i.icon {
+    color: var(--on-primary-color);
+    font-size: 20px;
+    padding: calc((var(--titlebar-height) - 20px) / 2) 0.9rem;
+}
+
+a.navigation i.icon {
+    color: var(--primary-variant-color);
+    font-size: 28px;
+    padding: 10px;
+}
+
+a.navigation.active i.icon, a.navigation:hover i.icon {
+    color: var(--on-primary-color);
+}
+
+a.sidebar {
+    padding: 0.25rem 0.75rem;
+    color: var(--on-secondary-color);
+    text-decoration: none;
+}
+
+a.sidebar:hover, a.sidebar.active {
+    background-color: var(--secondary-variant-color);
 }
 
 section {
-    margin: 1rem 0;
-}
-
-input {
-    border: 1px solid lightgrey;
-    border-radius: 2px;
-    padding: 0.25rem;
-    line-height: 1.18rem;
-}
-
-input:focus {
-    outline: none;
-    border: 1px solid darkgrey;
-}
-
-a.nav:focus {
-    outline: none;
-    background-color: var(--focus-element-color);
-}
-
-a.btn:focus {
-    outline: none;
-    background-color: var(--focus-element-color);
-}
-
-textarea {
-    width: 250px;
-    border-radius: 2px;
-    border-color: lightgrey;
-    margin-bottom: 0.5rem;
-    padding: 0.25rem;
-    font-size: 0.85rem;
-    font-family: Lato;
-    resize: vertical;
-}
-
-textarea:focus {
-    outline: none;
-    border: 1px solid darkgrey;
-}
-
-label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-weight: bold;
-    font-size: 0.9rem;
-    color: darkgrey;
-}
-
-table {
-    margin: 0 auto;
-    width: 100%;
-    border-spacing: 0;
-    border: 1px solid whitesmoke;
-}
-
-table thead {
-    background-color: whitesmoke;
-}
-
-thead th, tbody td {
-    padding: 0.5rem;
-    border: 1px solid whitesmoke;
-}
-
-h1.topic-name:hover {
-    background-color: var(--hover-element-color);
-}
-
-input.topic-name {
-    margin-top: 1rem;
-    padding: 0;
-    font-size: 2em;
-    font-weight: bold;
-    font-family: Lato;
-    border: none;
-    overflow: hidden;
-    width: 100%;
-    background-color: whitesmoke;
-}
-
-input.topic-name:focus {
-    outline: none;
+    margin: 0.5rem 0;
 }
 
 img {
     display: block;
     margin: 0 auto;
     max-width: 100%;
-    height: auto;
+}
+
+table {
+    margin: 0 auto;
+    width: 100%;
+    border-spacing: 0;
+    border: 1px solid var(--secondary-color);
+}
+
+table thead {
+    background-color: var(--secondary-color);
+}
+
+thead th, tbody td {
+    padding: 0.5rem;
+    border: 1px solid var(--secondary-color);
+}
+
+input, select, textarea {
+    border: 1px solid var(--secondary-color);
+    color: var(--on-surface-color);
+    background-color: var(--surface-color);
+    font-family: var(--font-input);
+    padding: 0.25rem;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary-color);
+}
+
+input:focus, select:focus, option:focus, textarea:focus, a:focus {
+    outline: none;
+}
+
+input::placeholder {
+    color: var(--on-surface-color);
+    opacity: 0.5;
+}
+
+pre {
+    background-color: var(--secondary-color);
+    padding: 1rem;
+}
+
+pre code {
+    color: var(--on-secondary-color);
+    background-color: transparent;
+    line-height: 1.5;
+    tab-size: 4;
+    padding: 0;
+}
+
+code, .katex-html {
+    white-space: pre-wrap;
+}
+
+code {
+    color: var(--on-secondary-color);
+    background-color: var(--secondary-color);
+    font-family: var(--font-code);
+    font-size: 0.8rem;
+    padding: 0.1rem 0.2rem;
+}
+
+label {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin: 5px 0;
+    opacity: 0.5;
 }
 
 hr { 
     border: 0;
     height: 1px;
-    background-image: -webkit-linear-gradient(left,whitesmoke, lightgrey, whitesmoke);
-}
-
-select, option {
-    padding: 0.1rem 0.15rem;
-    font-family: Lato;
-}
-
-select:focus, option:focus, optgroup:focus {
-    outline: none;
-}
-
-a.nav {
-    display: block;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.9rem;
-    text-decoration: none;
-    color: var(--list-item-color);
-}
-
-a.nav:hover, a.active {
-    background-color: var(--list-active-color);
-}
-
-a.nav i.material-icons {
-    font-size: 1rem;
-    padding: 0 0.15rem;
-}
-
-a.nav span, a.btn span {
-    background-color: var(--label-background-color);
-    color: var(--label-color);
-    border-radius: 50%;
-    padding: 0.1rem 0.25rem;
-    margin-left: 0.1rem;
+    background-image: -webkit-linear-gradient(left, var(--surface-color), var(--on-surface-color), var(--surface-color));
+    opacity: 0.25;
+    margin: 1rem 0.5rem;
 }
 
 .cards {
     display: grid;
     grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fill, var(--card-width));
+    grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
+    width: 100%;
 }
 
 .card {
-    position: relative;
     padding: 1rem;
     border-radius: 2px;
-    box-sizing: border-box;
-    width: var(--card-width);
-    background-color: var(--card-color);
-    overflow-wrap: break-word;
-}
-
-.cards .card {
-    height: 100%;
-}
-
-.shadow {
-    box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15);
-}
-
-.card-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-}
-
-.card-btn .btn {
-    margin: 0;
-}
-
-.card-checkbox-container {
     position: relative;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    min-width: var(--card-min-width);
+    max-width: var(--card-max-width);
+    background-color: var(--surface-color);
 }
 
-.card-checkbox-container .btn {
+.card a {
+    text-decoration: underline;
+    color: var(--on-surface-color);
+}
+
+.card-checkbox {
     position: absolute;
-    z-index: 1;
-}
-
-.card-menu {
-    position: absolute;
-    white-space: nowrap;
-    background-color: white;
-    right: 0;
-    z-index: 1;
-}
-
-.card-editor {
-    margin-right: 1.4rem;
-}
-
-.search-container {
-    display: inline-block;
-    border: 1px solid lightgrey;
-    border-radius: 1rem;
-}
-
-.search-container input.search {
-    padding: 0 0.5rem;
-    font-family: Lato;
-    border: none;
-    background-color: var(--search-color);
-    color: var(--btn-color)
-}
-
-.search-container input.search:focus {
-    outline: none;
-}
-
-.search-container .search-icon {
-    margin-left: 0.4rem;
-    pointer-events: none;
-}
-
-.search-container .clear-icon {
-    margin-right: 0.4rem;
-    cursor: pointer;
-}
-
-.search-container i.material-icons {
-    font-size: 1.1rem;
-    line-height: 1.4rem;
-}
-
-.review {
-    height: 100vh;
-}
-
-.review-progress {
-    color: grey;
-    text-align: center;
-}
-
-section.review-progress label {
-    margin-bottom: 1rem;
-}
-
-.review-card .card {
-    margin-bottom: 10vh;
-}
-
-.review .btn {
-    border-radius: 50%;
-}
-
-.review .btn i.material-icons {
-    font-size: 2rem;
-}
-
-.review .card .card-btn .btn, .review .modal .card-editor .btn  {
-    border-radius: 0;
-}
-
-.review .card .card-btn .btn i.material-icons, .review .modal .card-editor .btn i.material-icons {
-    font-size: 1.4rem;
-}
-
-a.btn {
-    display: inline-block;
-    padding: 0.2rem 0.4rem;
-    text-decoration: none;
-    color: var(--btn-color);
-}
-
-a.btn:hover {
-    background-color: var(--hover-element-color);
-}
-
-.material-icons {
-    font-size: 1.4rem;
-    vertical-align: sub;
-    color: var(--icon-color );
-}
-
-section a.btn {
-    margin-right: 10px;
-}
-
-section a.btn:last-child {
-    margin-right: 0;
-}
-
-.modal {
-    position: fixed;
-    z-index: 99;
-    left: 0;
     top: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4);
+    left: 0;
 }
 
-.modal > div {
-    background-color: white;
-    margin-top: 100px;
-    padding: 40px;
-    overflow: auto;
+.card-textarea {
+    width: var(--card-min-width);
+    border-radius: 2px;
+    resize: vertical;
+}
+
+.review-buttons a.button i.icon {
+    font-size: 36px;
 }
 
 .dropdown {
@@ -377,27 +269,131 @@ section a.btn:last-child {
     position: relative;
 }
 
-.dropdown .btn {
-    margin-right: 0;
-}
-
 .dropdown-menu {
     position: absolute;
-    white-space: nowrap;
-    background-color: var(--dropdown-menu-color);
+    background-color: var(--surface-color);
     right: 0;
     z-index: 2;
+}
+
+.dropdown.card-dropdown {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+a:hover {
+    cursor: pointer;
+}
+
+a::selection, i::selection {
+    user-select: none;
+}
+
+a.button {
+    display: inline-block;
+    white-space: nowrap;
+    text-decoration: none;
+    padding: 4px 6px;
+    color: var(--on-secondary-color);
+}
+
+a.button:hover, a.button:focus {
+    background-color: var(--secondary-color);
+}
+
+a.button:active {
+    background-color: var(--secondary-variant-color);
+}
+
+a.button i.icon {
+    font-size: 24px;
+}
+
+i.icon {
+    vertical-align: bottom;
+}
+
+h1.topic-name {
+    padding: 0.25rem;
+    box-sizing: border-box;
+}
+
+h1.topic-name:hover {
+    background-color: var(--secondary-color);
+}
+
+input.topic-name {
+    border: none;
+    font-family: var(--font-main);
+    font-size: 2em;
+    font-weight: bold;
+    margin: 0.67em 0;
+    box-sizing: border-box;
+    background-color: var(--secondary-color);
+}
+
+.input-container {
+    display: flex;
+    border: 1px solid var(--secondary-color);
+    background-color: var(--surface-color);
+    border-radius: 1rem;
+    padding: 0 0.25rem;
+}
+
+.input-container input {
+    border: none;
+}
+
+.input-container i.icon {
+    color: var(--on-secondary-color);
+}
+
+.input-container .clear-icon {
+    cursor: pointer;
+}
+
+.empty-state {
+    opacity: 0.2;
+}
+
+.empty-state i.icon {
+    font-size: 4rem;
+}
+
+.modal-container {
+    position: fixed;
+    z-index: 99;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+.modal-content {
+    max-width: var(--modal-max-width);
+    padding: 2rem;
+    margin: 2rem;
+    overflow: auto;
+    background-color: var(--background-color);
+}
+
+.text-center {
+    text-align: center;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.full-height {
+    height: 100%;
 }
 
 .row {
     display: flex;
     flex-direction: row;
-    /* flex-wrap: wrap; */
-}
-
-.row-center {
-    justify-content: center;
-    align-items: baseline;
 }
 
 .col {
@@ -405,12 +401,33 @@ section a.btn:last-child {
     flex-direction: column;
 }
 
+.row-center {
+    justify-content: center;
+}
+
 .col-center {
     align-items: center;
 }
 
+.wrap {
+    flex-wrap: wrap;
+}
+
 .space-between {
     justify-content: space-between;
+}
+
+.space-fixed > * {
+    margin-right: 12px;
+    margin-bottom: 12px;
+}
+
+.space-fixed > *:last-child {
+    margin-right: 0;
+}
+
+.shadow {
+    box-shadow: 0 0.25rem 1rem var(--shadow-color);
 }
 
 ::-webkit-scrollbar {
@@ -419,6 +436,10 @@ section a.btn:last-child {
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: darkgrey;
+    background-color: var(--primary-variant-color);
     border-radius: 1rem;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-color);
 }

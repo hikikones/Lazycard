@@ -32,7 +32,7 @@ class Config {
         this.dbPath = newPath;
     }
 
-    public getBackupPath(): string {
+    public getBackupDir(): string {
         return this.backupPath;
     }
 
@@ -50,6 +50,10 @@ class Config {
 
     public setTheme(theme: string): void {
         this.theme = theme;
+    }
+
+    public getStaticDir(): string {
+        return "."
     }
 
     public save(): void {
@@ -81,7 +85,7 @@ class Config {
         return {
             database: path.join(this.getUserDataPath(), "database.lazycard"),
             backupAmount: 20,
-            theme: "system"
+            theme: "light"
         }
     }
 

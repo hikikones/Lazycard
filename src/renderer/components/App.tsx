@@ -1,44 +1,42 @@
 import * as React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 
-import db, { Topic } from '../model/Database';
 import cfg from '../model/Config';
 
+import Header from './Header'
 import Nav from './Nav';
 import Main from './Main';
 
-export default class App extends React.Component<IProps, IState> {
-    public constructor(props: IProps) {
-        super(props);
-
-        this.state = {
-            topics: db.topics.getAll(),
-            theme: `./themes/${cfg.getTheme()}.css`
-        }
-    }
-
-    private updateTopics = (): void => {
-        this.setState( { topics: db.topics.getAll() })
-    }
-
-    private updateTheme = (): void => {
-        this.setState({ theme: `./themes/${cfg.getTheme()}.css` });
-    }
-
-    public render() {
-        return (
-            <div>
-                <link rel="stylesheet" href={this.state.theme} />
-                <Nav topics={this.state.topics} onTopicChange={this.updateTopics} />
-                <Main onTopicChange={this.updateTopics} onThemeChange={this.updateTheme} />
-            </div>
-        );
-    }
+const parseTheme = (): string => {
+    const theme = cfg.getTheme();
+    return theme === "system" ? getSystemTheme() : theme;
 }
 
-interface IProps {
+const getSystemTheme = (): string => {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
 }
 
-interface IState {
-    topics: readonly Topic[]
-    theme: string
+const App = () => {
+    const [theme, setTheme] = React.useState<string>(parseTheme());
+    
+    const updateTheme = () => {
+        setTheme(parseTheme());
+    }
+
+    React.useEffect(() => {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            updateTheme();
+        });
+    }, []);
+
+    return (
+        <MemoryRouter>
+            <link rel="stylesheet" href={`${cfg.getStaticDir()}/themes/${theme}.css`} />
+            <Header />
+            <Nav />
+            <Main onThemeChange={updateTheme} />
+        </MemoryRouter>
+    );
 }
+
+export default App;

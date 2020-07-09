@@ -3,150 +3,125 @@ import * as React from 'react';
 import db from '../model/Database';
 import { Card as CardEntity } from '../model/Database';
 
-import Card from './Card';
+import CardView from './CardView';
 import Button from './Button';
 
-export default class CardEditor extends React.Component<Props, IState> {
-    private readonly front = React.createRef<HTMLTextAreaElement>();
-    private readonly back = React.createRef<HTMLTextAreaElement>();
+const CardEditor = (props: ICardEditorProps) => {
+    const [front, setFront] = React.useState<string>(isNewCard(props) ? "" : props.card.front);
+    const [back, setBack] = React.useState<string>(isNewCard(props) ? "" : props.card.back);
 
-    public constructor(props: Props) {
-        super(props);
+    const frontInput = React.useRef<HTMLTextAreaElement>();
+    const backInput = React.useRef<HTMLTextAreaElement>();
 
-        const propsType = this.props;
-
-        if (this.isCardNew(propsType)) {
-            this.state = {
-                front: "",
-                back: ""
-            }
-        } else {
-            this.state = {
-                front: propsType.card.front,
-                back: propsType.card.back
-            }
-        }
+    const onFrontChange = () => {
+        setFront(frontInput.current.value);
     }
 
-    private isCardNew = (prop: ICardNew | ICardEdit): prop is ICardNew => {
-        return (prop as ICardNew).topicId !== undefined;
+    const onBackChange = () => {
+        setBack(backInput.current.value);
     }
 
-    private save = () => {
-        if (this.isEmpty()) return;
+    const save = () => {
+        if (isEmpty()) return;
 
-        let card: CardEntity;
-        const propsType = this.props;
+        const card = isNewCard(props) ? db.cards.new(props.topicId) : props.card;
+        card.front = frontInput.current.value;
+        card.back = backInput.current.value;
         
-        if (this.isCardNew(propsType)) {
-            card = db.cards.new(propsType.topicId);
-        } else {
-            card = propsType.card;
-        }
-
-        card.front = this.front.current.value;
-        card.back = this.back.current.value;
-        this.clear();
-        this.front.current.focus();
-        this.props.onSave();
+        clear();
+        frontInput.current.focus();
+        props.onSave();
     }
 
-    private cancel = () => {
-        this.clear();
-        this.props.onCancel();
+    const cancel = () => {
+        props.onCancel();
     }
 
-    private onInputFront = () => {
-        this.setState({ front: this.front.current.value });
+    const clear = () => {
+        frontInput.current.value = "";
+        backInput.current.value = "";
+        onFrontChange();
+        onBackChange();
     }
 
-    private onInputBack = () => {
-        this.setState({ back: this.back.current.value });
+    const isEmpty = (): boolean => {
+        return frontInput.current.value === "" || backInput.current.value === "";
     }
 
-    private onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>, front: boolean) => {
+    const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>, front: boolean) => {
         for (let i = 0 ; i < e.clipboardData.items.length; i++) {
-	        const item = e.clipboardData.items[i];
-	        if (item.type.indexOf("image") !== -1) {
-                e.preventDefault();
-                const reader = new FileReader();
-                reader.readAsDataURL(item.getAsFile());
-                e.persist();
-                reader.onloadend = () => {
-                    const base64 = reader.result;
-                    const target = e.target as HTMLTextAreaElement;
-                    target.value += `![](${base64})`;
-                    if (front) this.onInputFront();
-                    else this.onInputBack();
-                }
-	        }
-	    }
+            const item = e.clipboardData.items[i];
+
+            if (item.type.indexOf("image") === -1)
+                continue;
+
+            e.preventDefault();
+            const reader = new FileReader();
+            reader.readAsDataURL(item.getAsFile());
+            e.persist();
+
+            reader.onloadend = () => {
+                const base64 = reader.result;
+                const target = e.target as HTMLTextAreaElement;
+                target.value += `![](${base64})`;
+                if (front) onFrontChange();
+                else onBackChange();
+            }
+        }
     }
 
-    private clear = () => {
-        this.front.current.value = "";
-        this.back.current.value = "";
-        this.onInputFront();
-        this.onInputBack();
-    }
-
-    private isEmpty = (): boolean => {
-        return this.front.current.value === "" || this.back.current.value === "";
-    }
-
-    public render() {
-        return (
-            <section className="row">
-                <div className="card-editor col">
-                    <label>Front</label>
-                    <textarea
-                        ref={this.front}
-                        defaultValue={this.state.front}
-                        rows={4}
-                        onInput={this.onInputFront}
-                        onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, true)}
-                    />
-
-                    <label>Back</label>
-                    <textarea
-                        ref={this.back}
-                        defaultValue={this.state.back}
-                        rows={4}
-                        onInput={this.onInputBack}
-                        onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => this.onPaste(e, false)}
-                    />
-
-                    <div className="row space-between">
-                        <Button name="Save" icon="done" action={this.save} />
-                        <Button name="Cancel" icon="close" action={this.cancel} />
-                    </div>
-                </div>
-                
-                <div className="col">
-                    <label>Preview</label>
-                    <Card front={this.state.front} back={this.state.back} />
-                </div>
+    return (
+        <section className="row space-fixed">
+            <section className="col">
+                <label>Front</label>
+                <textarea
+                    ref={frontInput}
+                    className="card-textarea"
+                    defaultValue={front}
+                    rows={5}
+                    onChange={onFrontChange}
+                    onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
+                />
+                <label>Back</label>
+                <textarea
+                    ref={backInput}
+                    className="card-textarea"
+                    defaultValue={back}
+                    rows={5}
+                    onChange={onBackChange}
+                    onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, false)}
+                />
+                <section className="row space-between">
+                    <Button name="Save" icon="done" action={save} />
+                    <Button name="Cancel" icon="close" action={cancel} />
+                </section>
             </section>
-        );
-    }
+
+            <section className="col">
+                <label>Preview</label>
+                <CardView front={front} back={back} showBack={true} />
+            </section>
+        </section>
+    );
 }
 
-interface IProps {
+interface IPropsCommon {
     onSave(): void
     onCancel(): void
 }
 
-interface ICardNew extends IProps {
+interface ICardNew extends IPropsCommon {
     topicId: number
 }
 
-interface ICardEdit extends IProps {
+interface ICardEdit extends IPropsCommon {
     card: CardEntity
 }
 
-type Props = ICardNew | ICardEdit;
+type ICardEditorProps = ICardNew | ICardEdit;
 
-interface IState {
-    front: string
-    back: string
+const isNewCard = (prop: ICardEditorProps): prop is ICardNew => {
+    return (prop as ICardNew).topicId !== undefined;
 }
+
+export default CardEditor;

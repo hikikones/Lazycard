@@ -1,131 +1,82 @@
 import * as React from 'react';
-import { RouteComponentProps } from 'react-router-dom';
 
 import db from '../model/Database';
-import { Card } from '../model/Database';
+import { Card as CardEntity, Topic as TopicEntity } from '../model/Database';
 
+import EditableTitle from './EditableTitle';
 import Cards from './Cards';
 import CardEditor from './CardEditor';
 import Button from './Button';
+import ButtonLink from './ButtonLink';
 import Dropdown, { DropdownItem } from './Dropdown';
+import Empty from './Empty';
 
-export default class Topic extends React.Component<IProps, IState> {
-    private readonly topic = db.topics.get(parseInt(this.props.match.params.id));
-    private readonly nameInput = React.createRef<HTMLInputElement>();
+const Topic = (props: ITopicProps) => {
+    const [cards, setCards] = React.useState<CardEntity[]>(db.cards.getByTopic(props.topic.id));
+    const [showCardEditor, setShowCardEditor] = React.useState<boolean>(false);
+    const [isDeleted, setIsDeleted] = React.useState<boolean>(false);
 
-    public constructor(props: IProps) {
-        super(props);
-        this.state = {
-            name: this.topic.name,
-            edit: false,
-            showCardEditor: false,
-            cards: db.cards.getByTopic(this.topic.id),
-            deleted: false
-        }
+    React.useEffect(() => {
+        setCards(db.cards.getByTopic(props.topic.id));
+        setIsDeleted(false);
+    }, [props.topic]);
+
+    const toggleCardEditor = () => {
+        setShowCardEditor(show => !show);
     }
 
-    private enableEdit = () => {
-        this.setState({ edit: true });
+    const onNameChange = (newName: string) => {
+        if (newName === "" || newName === props.topic.name) return;
+        props.topic.name = newName;
+        props.onTopicChange();
     }
 
-    private submitEdit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const target = form.children[0] as HTMLInputElement;
-        this.validateNameChange(target.value);
-        this.setState({ edit: false });
+    const onDelete = () => {
+        db.topics.delete(props.topic.id);
+        cards.forEach(c => db.cards.delete(c.id));
+        props.onTopicChange();
+        setIsDeleted(true);
     }
 
-    private onBlurEdit = (e: React.FormEvent<HTMLInputElement>) => {
-        e.preventDefault();
-        const target = e.target as HTMLInputElement;
-        this.validateNameChange(target.value);
-        this.setState({ edit: false });
+    const updateCards = () => {
+        setCards(db.cards.getByTopic(props.topic.id));
     }
 
-    private validateNameChange = (newName: string): void => {
-        if (newName === "" || db.topics.exists(newName.trim())) return;
-
-        this.topic.name = newName;
-        this.setState({ name: newName });
-        this.props.onTopicChange();
-    }
-
-    private updateCards = (): void => {
-        this.setState({ cards: db.cards.getByTopic(this.topic.id) });
-    }
-
-    private toggleCardEditor = (): void => {
-        this.setState({ showCardEditor: !this.state.showCardEditor });
-    }
-
-    private delete = () => {
-        this.setState({ deleted: true });
-        db.topics.delete(this.topic.id);
-        this.props.onTopicChange();
-        this.state.cards.forEach(c => db.cards.delete(c.id));
-    }
-
-    public render() {
-        if (this.state.deleted) {
-            return (
-                <div>
-                    <h3>Topic has been deleted.</h3>
-                </div>
-            );
-        }
-
+    if (isDeleted) {
         return (
-            <div>
-                {!this.state.edit
-                    ?   <h1 className="topic-name" onClick={this.enableEdit}>{this.state.name}</h1>
-                    :   <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => this.submitEdit(e)}>
-                            <input
-                                ref={this.nameInput}
-                                className="topic-name"
-                                onBlur={(e: React.FormEvent<HTMLInputElement>) => this.onBlurEdit(e)}
-                                defaultValue={this.state.name}
-                                autoFocus={true}
-                                type="text"
-                            />
-                        </form>
-                }
-
-                <section>
-                    {this.state.showCardEditor ? null : <Button name="Add new card" icon="add" action={this.toggleCardEditor} />}
-                    <Button name="Review" icon="drafts" to={`/review/${this.topic.id}`} />
-                    <Dropdown name="Export" icon="save" showDownArrow={true}>
-                        <DropdownItem name="JSON" icon="archive" action={() => db.export(this.topic.id)} />
-                        <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(this.topic.id)} />
-                    </Dropdown>
-                    <Button name="Delete" icon="delete" action={this.delete} />
-                </section>
-
-                {this.state.showCardEditor
-                    ?   <div>
-                            <CardEditor
-                                topicId={this.topic.id}
-                                onSave={this.updateCards}
-                                onCancel={this.toggleCardEditor}
-                            />
-                        </div>
-                    :   null
-                }
-
-                <Cards cards={this.state.cards} onCardChange={this.updateCards} />
-            </div>
+            <Empty icon="delete_forever" message="Topic has been deleted" />
         );
     }
+
+    const hasCards = cards.length > 0;
+
+    return (
+        <div className={hasCards ? "col col-center" : "col col-center full-height"}>
+            <EditableTitle title={props.topic.name} onSubmit={onNameChange} />
+
+            <section className="row row-center col-center wrap space-fixed">
+                {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
+                {hasCards && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
+                {hasCards &&
+                    <Dropdown name="Export" icon="save" showDownArrow={true}>
+                        <DropdownItem name="JSON" icon="archive" action={() => db.export(props.topic.id)} />
+                        <DropdownItem name="HTML" icon="file_copy" action={() => db.exportToHTML(props.topic.id)} />
+                    </Dropdown>
+                }
+                <Button name="Delete" icon="delete" action={onDelete} />
+            </section>
+
+            {showCardEditor && <CardEditor topicId={props.topic.id} onSave={updateCards} onCancel={toggleCardEditor} />}
+
+            {hasCards && <h2>Cards</h2>}
+            <Cards cards={cards} onCardChange={updateCards} />
+        </div>
+    );
 }
 
-interface IProps extends RouteComponentProps<{ id: string }> {
+interface ITopicProps {
+    topic: TopicEntity
     onTopicChange(): void
 }
 
-interface IState {
-    name: string
-    edit: boolean
-    cards: readonly Card[]
-    showCardEditor: boolean
-    deleted: boolean
-}
+export default Topic;

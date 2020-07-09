@@ -5,11 +5,12 @@ import cfg from './Config';
 import dialog from '../controller/Dialog';
 import srs from '../controller/SRS';
 import demo from './demo';
-import md from '../controller/Markdown';
+import html from './html';
 
 class Database {
     public readonly cards: Cards = new Cards();
     public readonly topics: Topics = new Topics();
+    private version: string;
 
     public constructor() {
         this.parse(this.read());
@@ -29,44 +30,60 @@ class Database {
 
     private backup(data: string): void {
         const files: string[] = [];
-        try { fs.readdirSync(cfg.getBackupPath()).forEach(file => { files.push(file); }); }
+        try { fs.readdirSync(cfg.getBackupDir()).forEach(file => { files.push(file); }); }
         catch (err) { return; }
         files.sort().reverse();
         if (files.length >= cfg.getBackupAmount()) {
-            try { fs.unlinkSync(path.join(cfg.getBackupPath(), files.pop())); }
+            try { fs.unlinkSync(path.join(cfg.getBackupDir(), files.pop())); }
             catch (err) {}
         }
-        fs.writeFileSync(path.join(cfg.getBackupPath(), `${Date.now()}.lazycard`), data);
+        fs.writeFileSync(path.join(cfg.getBackupDir(), `${Date.now()}.lazycard`), data);
     }
 
     public export(topicId: number): void {
-        const path = dialog.saveFile('lazytopic', ['lazytopic']);
+        const topic = this.topics.get(topicId);
+        const path = dialog.saveFile('lazytopic', ['lazytopic'], {
+            title: `Save topic ${topic.name} as`,
+            filename: topic.name
+        });
+
         if (path === undefined) return;
 
-        const topic = this.topics.get(topicId).export();
-        const cards = this.cards.getByTopic(topicId);
-        cards.forEach(c => topic.cards.push(c.export()));
+        const topicExport = topic.export();
+        const cards = this.cards.getByTopic(topic.id);
+        cards.forEach(c => topicExport.cards.push(c.export()));
         fs.writeFileSync(path, JSON.stringify(topic, null, 2));
     }
 
-    public import(): void {
+    public import(mergeTopic: boolean, allowDuplicateCards: boolean): Topic {
         const lazytopic = dialog.openFile('lazytopic', ['lazytopic']);
-        if (lazytopic === undefined) return;
+        
+        if (lazytopic === undefined) return null;
 
         const buffer = fs.readFileSync(lazytopic);
         const json: TopicExport = JSON.parse(buffer.toString());
 
-        const topic = this.topics.exists(json.name)
+        const topicExists = this.topics.exists(json.name);
+        const topic = (topicExists && mergeTopic)
             ? this.topics.getByName(json.name)
-            : this.topics.new(json.name);
+            : this.topics.new(json.name + " (import)");
+
         json.cards.forEach(c => {
-            if (!this.cards.exists(c.front)) {
+            if (allowDuplicateCards) {
+                const card = this.cards.new(topic.id);
+                card.front = c.front;
+                card.back = c.back;
+                srs.today(card);
+            }
+            else if (!this.cards.exists(c.front)) {
                 const card = this.cards.new(topic.id);
                 card.front = c.front;
                 card.back = c.back;
                 srs.today(card);
             }
         });
+
+        return topic;
     }
 
     public restore(dbFile: string): void {
@@ -86,6 +103,7 @@ class Database {
     }
 
     private parse(data: IDatabase): void {
+        this.version = data.version;
         data.cards.forEach(c => {
             const card: Card = new Card(c.topicId);
             card.id = c.id;
@@ -97,7 +115,6 @@ class Database {
             card.successes = c.successes;
             this.cards.add(card);
         });
-
         data.topics.forEach(t => {
             const topic: Topic = new Topic(t.name);
             topic.id = t.id;
@@ -106,81 +123,36 @@ class Database {
     }
 
     private toJSON(data?: IDatabase): string {
+        if (data !== undefined)
+            return JSON.stringify({
+                version: data.version,
+                cards: data.cards,
+                topics: data.topics
+            }, null, 2);
+
         return JSON.stringify({
-            cards: data === undefined ? this.cards.getAll().map(c => c.serialize()) : data.cards,
-            topics: data === undefined ? this.topics.getAll().map(t => t.serialize()) : data.topics
+            version: this.version,
+            cards: this.cards.getAll().map(c => c.serialize()),
+            topics: this.topics.getAll().map(t => t.serialize())
         }, null, 2);
     }
 
     public exportToHTML(topicId: number): void {
-        const path = dialog.saveFile('html', ['html']);
+        const topic = this.topics.get(topicId);
+        const path = dialog.saveFile('html', ['html'], {
+            title: `Save topic ${topic.name} as`,
+            filename: topic.name
+        });
+
         if (path === undefined) return;
 
-        const topic = this.topics.get(topicId);
         const cards = this.cards.getByTopic(topicId);
-        const html: string[] = [];
-
-        html.push('<!DOCTYPE html>');
-        html.push('<html lang="en">');
-        html.push('<head>');
-        html.push('<meta charset="UTF-8">');
-        html.push('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
-        html.push('<meta http-equiv="X-UA-Compatible" content="ie=edge">');
-        html.push(`<title>Lazycard - ${topic.name}</title>`);
-        html.push('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css">');
-        html.push('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js"></script>');
-        html.push('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/themes/prism.min.css">');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/prism.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-python.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-java.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-javascript.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-typescript.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-csharp.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-css.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-c.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-cpp.min.js"></script>');
-        html.push('<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-swift.min.js"></script>');
-        html.push('<link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">');
-        html.push('<script>');
-        html.push(`function save() { var data = { "name": "${topic.name}", "cards": [`);
-        cards.forEach(c => { html.push(`{ "front": \`${c.front.replace(/\\/g,"\\\\").replace(/`/g,"\`")}\`, "back": \`${c.back.replace(/\\/g,"\\\\").replace(/`/g,"\\`")}\` },`) });
-        html.push(`]};`);
-        html.push(`var json = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));`);
-        html.push(`var link = document.createElement("a");`);
-        html.push(`link.setAttribute("href", json);`);
-        html.push(`link.setAttribute("download", "${topic.name}.lazytopic");`);
-        html.push(`link.click();`);
-        html.push(`}`);
-        html.push('</script>');
-        html.push('<style>');
-        html.push('body {margin: 2rem auto; max-width: 1360px}');
-        html.push('h1.topic {text-align: center}');
-        html.push('button {margin: 1rem 0}');
-        html.push('.cards {display:grid; grid-gap: 1rem; grid-template-columns: repeat(auto-fill, 400px); justify-content: center}');
-        html.push('.card {padding: 1rem; box-shadow: 0 0.25rem 1rem rgba(9, 9, 10, 0.15)}');
-        html.push('hr {width: 100%; border: none; border-top: 1px solid lightgray; margin: 0; margin-bottom: 1rem}');
-        html.push('img {display: block; margin: 0 auto; max-width: 100%; height: auto}');
-        html.push('table {width: 100%; border-spacing: 0; border: 1px solid whitesmoke}');
-        html.push('table thead {background-color: whitesmoke}');
-        html.push('thead th, tbody td {padding: 0.25rem; border: 1px solid whitesmoke}');
-        html.push('ul, ol {margin-top: 0}');
-        html.push('</style>');
-        html.push('</head>');
-        html.push('<body>');
-        html.push(`<h1 class="topic">${topic.name}</h1>`);
-        html.push(`<button class="btn btn-primary p-centered" onClick="save();">Save</button>`);
-        html.push('<div class="cards">');
-        cards.forEach(c => { html.push(`<div class="card">${md.parse(c.front)}<hr/>${md.parse(c.back)}</div>`) });
-        html.push('</div>');
-        html.push('</body>');
-        html.push('</html>');
-
-        fs.writeFileSync(path, html.join(''));
+        fs.writeFileSync(path, html(topic, cards));
     }
 }
 
 abstract class Table<T extends Entity<EntityData, EntityExport>> {
-    public idCounter: number = 1;
+    private idCounter: number = 1;
     private items: T[] = [];
 
     protected abstract create(field: string|number): T;
@@ -252,10 +224,10 @@ class Cards extends Table<Card> {
         return false;
     }
 
-    public getDue(topicId?: number): Card[] {
+    public getDue(topicId: number): Card[] {
         const now = new Date(Date.now());
 
-        if (topicId === undefined) {
+        if (topicId === 0) {
             return this.getAll().filter((card: Card) => card.dueDate <= now);
         }
 
@@ -325,7 +297,7 @@ export class Card extends Entity<CardData, CardExport> {
             id: this.id,
             front: this.front,
             back: this.back,
-            dueDate: this.dueDate.toLocaleDateString(),
+            dueDate: this.dueDate.toISOString(),
             dueDays: this.dueDays,
             attempts: this.attempts,
             successes: this.successes,
@@ -356,6 +328,7 @@ export class Topic extends Entity<TopicData, TopicExport> {
 }
 
 export interface IDatabase {
+    version: string
     cards: CardData[]
     topics: TopicData[]
 }

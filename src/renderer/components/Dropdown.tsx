@@ -1,64 +1,87 @@
 import * as React from 'react';
 
-export default class Dropdown extends React.Component<IProps, IState> {
-    public constructor(props: IProps) {
-        super(props);
-        this.state = {
-            open: false
-        }
+const Dropdown = (props: IDropdownProps) => {
+    const [showMenu, setShowMenu] = React.useState<boolean>(false);
+
+    const open = () => {
+        setShowMenu(true);
     }
 
-    public componentWillUnmount() {
-        window.removeEventListener("click", this.close)
+    const close = () => {
+        setShowMenu(false);
     }
 
-    private open = (e: React.MouseEvent<HTMLAnchorElement>): void => {
-        if (this.state.open) {
-            this.close();
-            return;
-        }
-
-        e.stopPropagation();
-        window.addEventListener("click", this.close)
-        this.setState({ open: true });
-    }
-
-    private close = () => {
-        window.removeEventListener("click", this.close)
-        this.setState({ open: false });
-    }
-
-    public render() {
-        return (
-            <div className={this.props.className || "dropdown"}>
-                <a href="#" className="btn" onClick={(e: React.MouseEvent<HTMLAnchorElement>) => this.open(e)}>
-                    <i className="material-icons">{this.props.icon}</i>
-                    {this.props.name}
-                    {this.props.number === undefined ? null : <span>{this.props.number}</span>}
-                    {this.props.showDownArrow ? <i className="material-icons">keyboard_arrow_down</i> : null}
-                </a>
-                {this.state.open ? <div className="dropdown-menu shadow">{this.props.children}</div> : null}
-            </div>
-        );
-    }
-}
-
-interface IProps {
-    name: string
-    icon: string
-    showDownArrow: boolean
-    number?: number
-    className?: string
-}
-
-interface IState {
-    open: boolean
-}
-
-export const DropdownItem = (props: { name: string, icon: string, action(): void }): JSX.Element => {
     return (
-        <a href="#" className="nav" onClick={props.action}>
-            <i className="material-icons">{props.icon}</i> {props.name}
+        <div className={props.className !== undefined ? `dropdown ${props.className}` : "dropdown"}>
+            <a className="button" onClick={open} href="#">
+                <i
+                    className="material-icons icon"
+                    style={props.color === undefined ? null : { color: props.color }}
+                >
+                    {props.icon}
+                </i>
+                {` ${props.name}`}
+                {props.showDownArrow
+                    ?   <i
+                            className="material-icons icon"
+                            style={props.color === undefined ? null : { color: props.color }}
+                        >
+                            keyboard_arrow_down
+                        </i>
+                    :   null
+                }
+            </a>
+            {showMenu
+                ?   <DropdownMenu onNextClick={close}>
+                        {props.children}
+                    </DropdownMenu>
+                :   null
+            }
+        </div>
+    );
+}
+
+const DropdownMenu = (props: IDropdownMenuProps) => {
+    React.useEffect(() => {
+        window.addEventListener("click", props.onNextClick)
+        return () => {
+            window.removeEventListener("click", props.onNextClick)
+        }
+    });
+
+    return (
+        <div className="dropdown-menu col shadow">
+            {props.children}
+        </div>
+    );
+}
+
+export const DropdownItem = (props: IDropdownItemProps) => {
+    return (
+        <a className="button" onClick={props.action} href="#">
+            <i className="material-icons icon">{props.icon}</i> {props.name}
         </a>
     );
 }
+
+interface IDropdownProps {
+    name: string
+    icon: string
+    showDownArrow: boolean
+    children: React.ReactNode
+    className?: string
+    color?: string
+}
+
+interface IDropdownMenuProps {
+    onNextClick(): void
+    children: React.ReactNode
+}
+
+interface IDropdownItemProps {
+    name: string
+    icon: string
+    action(): void
+}
+
+export default Dropdown;

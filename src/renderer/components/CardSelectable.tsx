@@ -5,10 +5,10 @@ import { Card as CardEntity } from '../model/Database';
 import Card from './Card';
 import Button from './Button';
 
-const CardSelectable = (props: ICard): JSX.Element => {
+const CardSelectable = (props: ICardSelectableProps) => {
     const [showCheckbox, setShowCheckbox] = React.useState<boolean>(false);
 
-    const toggleSelect = (): void => {
+    const toggleSelect = () => {
         props.card.selected = !props.card.selected;
         if (props.card.selected) props.onSelect();
         else props.onDeselect();
@@ -16,26 +16,24 @@ const CardSelectable = (props: ICard): JSX.Element => {
 
     return (
         <div onMouseEnter={() => setShowCheckbox(true)} onMouseLeave={() => setShowCheckbox(false)}>
-            {props.card.selected || showCheckbox
-                ?   <div className="card-checkbox-container">
-                        <Button
-                            name=""
-                            icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
-                            action={toggleSelect}
-                        />
-                    </div>
-                :   null
-            }
             <Card
                 card={props.card}
                 showBack={props.showBack}
                 onDelete={() => props.onDelete(props.card)}
-            />
+            >
+                {(props.card.selected || showCheckbox) &&
+                    <Button
+                        icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
+                        action={toggleSelect}
+                        className="button card-checkbox"
+                    />
+                }
+            </Card>
         </div>
     );
 }
 
-interface ICard {
+interface ICardSelectableProps {
     card: CardEntity
     showBack: boolean
     onDelete(card: CardEntity): void

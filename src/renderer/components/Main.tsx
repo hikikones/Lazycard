@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Switch, Route } from "react-router-dom";
+import { Switch, Route, Redirect } from "react-router-dom";
 
 import db from '../model/Database';
 import { Card } from '../model/Database';
@@ -7,47 +7,47 @@ import { Card } from '../model/Database';
 import Review from './Review';
 import Cards from './Cards';
 import Settings from './Settings';
-import Topic from './Topic';
+import Topics from './Topics';
 
-export default class Main extends React.Component<IProps, IState> {
-    public constructor(props: IProps) {
-        super(props);
-        this.state = {
-            cards: db.cards.getAll()
-        }
-    }
-
-    private updateCards = () => {
-        this.setState({ cards: db.cards.getAll() })
-    }
-
-    public render() {
-        return (
-            <main className="row row-center">
-                <Switch>
-                    <Route exact path={["/", "/review/:topicId"]} render={(props) => (
-                        <Review {...props} key={props.match.params.topicId} />
-                    )} />
-                    <Route path="/cards/">
-                        <Cards cards={this.state.cards} onCardChange={this.updateCards} />
-                    </Route>
-                    <Route path="/settings">
-                        <Settings onTopicChange={this.props.onTopicChange} onThemeChange={this.props.onThemeChange} />
-                    </Route>
-                    <Route path="/topics/:id" render={(props) => (
-                        <Topic {...props} onTopicChange={this.props.onTopicChange} key={props.match.params.id} />
-                    )} />
-                </Switch>
-            </main>
-        );
-    }
+const Main = (props: IMainProps) => {
+    return (
+        <Switch>
+            <Route exact path={"/"}>
+                <Redirect to="/review/0" />
+            </Route>
+            <Route path={"/review/:topicId"}>
+                <Review />
+            </Route>
+            <Route path="/cards">
+                <CardsContainer />
+            </Route>
+            <Route path="/settings">
+                <Settings onThemeChange={props.onThemeChange} />
+            </Route>
+            <Route path="/topics">
+                <Topics />
+            </Route>
+        </Switch>
+    );
 }
 
-interface IProps {
-    onTopicChange(): void
+const CardsContainer = () => {
+    const [cards, setCards] = React.useState<Card[]>([...db.cards.getAll()]);
+
+    const updateCards = () => {
+        setCards([...db.cards.getAll()]);
+    }
+
+    return (
+        <main>
+            <h1 className="text-center">Cards</h1>
+            <Cards cards={cards} onCardChange={updateCards} />
+        </main>
+    );
+}
+
+interface IMainProps {
     onThemeChange(): void
 }
 
-interface IState {
-    cards: readonly Card[]
-}
+export default Main;

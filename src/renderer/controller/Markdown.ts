@@ -1,4 +1,4 @@
-import * as MarkdownIt from 'markdown-it';
+import MarkdownIt from 'markdown-it';
 
 const katex = require('@iktakahiro/markdown-it-katex');
 const prism = require('markdown-it-prism');

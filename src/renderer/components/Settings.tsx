@@ -1,36 +1,88 @@
 import { shell } from 'electron';
 import * as React from 'react';
+import { Switch, Route, useRouteMatch, Redirect } from "react-router-dom";
 
 import db from '../model/Database';
 import cfg from '../model/Config';
 import dialog from '../controller/Dialog';
 
 import Button from './Button';
+import ButtonNavLink from './ButtonNavLink';
 
-export default class Settings extends React.Component<IProps, IState> {
-    public constructor(props: IProps) {
-        super(props);
-        this.state = {
-            dbPath: cfg.getDatabasePath(),
-            useSystem: false
-        }
+const Settings = (props: ISettingsProps) => {
+    const match = useRouteMatch();
+
+    return (
+        <>
+            <aside className="col">
+                <ButtonNavLink name="General" icon="build" to={`${match.path}/general`} className="sidebar" />
+                <ButtonNavLink name="Database" icon="backup" to={`${match.path}/database`} className="sidebar" />
+            </aside>
+
+            <main>
+                <Switch>
+                    <Route exact path={match.path}>
+                        <Redirect to={`${match.path}/general`}/>
+                    </Route>
+                    <Route path={`${match.path}/general`}>
+                        <SettingsGeneral onThemeChange={props.onThemeChange} />
+                    </Route>
+                    <Route path={`${match.path}/database`}>
+                        <SettingsDatabase />
+                    </Route>
+                </Switch>
+            </main>
+        </>
+    );
+}
+
+interface ISettingsProps {
+    onThemeChange(): void
+}
+
+const SettingsGeneral = (props: {onThemeChange(): void}) => {
+    const onThemeSelect = (value: string): void => {
+        cfg.setTheme(value);
+        props.onThemeChange();
     }
 
-    private changeDatabasePath = (): void => {
+    return (
+        <>
+            <h1>General</h1>
+
+            <h3>Theme</h3>
+            <p>Apply a theme for the application.</p>
+            <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onThemeSelect(e.target.value)} defaultValue={cfg.getTheme()}>
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </>
+    );
+}
+
+const SettingsDatabase = () => {
+    const [dbPath, setDbPath] = React.useState<string>(cfg.getDatabasePath());
+    
+    const openDatabaseDir = () => {
+        shell.openPath(cfg.getDatabaseDir());
+    }
+
+    const changeDatabasePath = () => {
         const newPath = dialog.saveFile('lazycard', ['lazycard']);
         if (newPath === undefined) {
             return;
         }
 
         cfg.setDatabasePath(newPath);
-        this.setState({ dbPath: newPath });
+        setDbPath(newPath);
     }
 
-    private openDatabaseDir = (): void => {
-        shell.openItem(cfg.getDatabaseDir());
+    const openBackupDir = () => {
+        shell.openPath(cfg.getBackupDir());
     }
 
-    private changeBackupAmount = (e: React.FormEvent<HTMLInputElement>) => {
+    const changeBackupAmount = (e: React.FormEvent<HTMLInputElement>) => {
         const target = e.target as HTMLInputElement;
         let amount = Number(target.value);
         if (amount > 100) amount = 100;
@@ -39,67 +91,45 @@ export default class Settings extends React.Component<IProps, IState> {
         cfg.setBackupAmount(amount);
     }
 
-    private openBackupDir = (): void => {
-        shell.openItem(cfg.getBackupPath());
-    }
-
-    private restoreDatabase = () => {
+    const restoreDatabase = () => {
         const dbFile = dialog.openFile('lazycard', ['lazycard']);
         if (dbFile === undefined) {
             return;
         }
 
         db.restore(dbFile);
-        this.props.onTopicChange();
     }
 
-    private onThemeChange = (e: React.ChangeEvent<HTMLSelectElement>): void => {
-        const theme = e.target.value;
-        cfg.setTheme(theme);
-        this.props.onThemeChange();
-    }
+    return (
+        <>
+            <h1>Database</h1>
 
-    public render() {
-        return (
-            <div>
-                <h1>Settings</h1>
+            <h3>Location</h3>
+            <p>The location of your database file.</p>
+            <p><label>{dbPath}</label></p>
+            <section className="row space-fixed">
+                <Button name="Open" icon="folder_open" action={openDatabaseDir} />
+                <Button name="Change" icon="edit" action={changeDatabasePath} />
+            </section>
 
-                <h2>Database</h2>
+            <h3>Backups</h3>
+            <p>The amount of backups before old ones are removed.</p>
+            <section className="row space-fixed">
+                <Button name="Open" icon="folder_open" action={openBackupDir} />
+                <input
+                    type="number"
+                    defaultValue={cfg.getBackupAmount()}
+                    min="1"
+                    max="100"
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => changeBackupAmount(e)}
+                />
+            </section>
 
-                <h3>Path</h3>
-                <p>The location of your database file.</p>
-                <label>{this.state.dbPath}</label>
-                <Button name="Open" icon="folder_open" action={this.openDatabaseDir} />
-                <Button name="Change" icon="edit" action={this.changeDatabasePath} />
-
-                <h3>Backups</h3>
-                <p>The amount of backups before new ones starts replacing old ones.</p>
-                <Button name="Open" icon="folder_open" action={this.openBackupDir} />
-                <input type="number" defaultValue={cfg.getBackupAmount()} min="1" max="100" onInput={(e: React.FormEvent<HTMLInputElement>) => this.changeBackupAmount(e)} />
-
-                <h3>Restore</h3>
-                <p>Restore your database from a local file.</p>
-                <Button name="Restore" icon="settings_backup_restore" action={this.restoreDatabase} />
-
-                <h2>Theme</h2>
-                
-                <p>Apply a theme for the application.</p>
-                <select onChange={(e: React.ChangeEvent<HTMLSelectElement>) => this.onThemeChange(e)} defaultValue={cfg.getTheme()}>
-                    <option value="system">System</option>
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                </select>
-            </div>
-        );
-    }
+            <h3>Restore</h3>
+            <p>Restore your database from a local file.</p>
+            <Button name="Restore" icon="settings_backup_restore" action={restoreDatabase} />   
+        </>
+    );
 }
 
-interface IProps {
-    onTopicChange(): void
-    onThemeChange(): void
-}
-
-interface IState {
-    dbPath: string
-    useSystem: boolean
-}
+export default Settings;

@@ -1,13 +1,15 @@
 import { remote } from "electron";
 
 class Dialog {
-    public saveFile(name: string, extensions: string[]): string {
+    public saveFile(name: string, extensions: string[], options?: {title?: string, filename?: string}): string | undefined {
         return remote.dialog.showSaveDialogSync(remote.getCurrentWindow(), {
+            title: options?.title,
+            defaultPath: options?.filename,
             filters: [{ name: name, extensions: extensions }]
         })
     }
 
-    public openFile(name: string, extensions: string[]): string {
+    public openFile(name: string, extensions: string[]): string | undefined {
         const paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
             filters: [{ name: name, extensions: extensions }],
             properties: ['openFile']
@@ -20,7 +22,7 @@ class Dialog {
         return paths[0];
     }
 
-    public openDirectory(): string {
+    public openDirectory(): string | undefined {
         const paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
             properties: ['openDirectory', 'createDirectory']
         });

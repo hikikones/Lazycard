@@ -2,8 +2,7 @@ import { Card } from '../model/Database';
 
 class SRS {
     public schedule(card: Card, success: boolean): void {
-        let newDueDays = success ? card.dueDays * 2 : card.dueDays / 2;
-        if (newDueDays < 1) newDueDays = 1;
+        const newDueDays = this.fib(card.dueDays, success);
         card.dueDays = newDueDays;
         card.dueDate.setDate(new Date(Date.now()).getDate() + newDueDays);
     }
@@ -17,6 +16,18 @@ class SRS {
     public today(card: Card): void {
         card.dueDays = 0;
         card.dueDate = new Date(Date.now());
+    }
+
+    private fib(dueDays: number, success: boolean): number {
+        let prev = 0;
+        let curr = 1;
+        while (curr <= dueDays) {
+            const temp = curr;
+            curr = prev + curr;
+            prev = temp;
+        }
+        const newDueDays = success ? curr : curr - prev;
+        return newDueDays;
     }
 }
 

@@ -1,28 +1,22 @@
 import * as React from 'react';
 
-export default class Modal extends React.Component<IProps> {
-    public constructor(props: IProps) {
-        super(props);
-    }
+const Modal = (props: IModalProps) => {
+    if (!props.show)
+        return null;
 
-    private onClickOutside = () => {
-        this.props.onClickOutside();
-    }
-
-    public render() {
-        if (!this.props.show) return null;
-
-        return (
-            <div className="modal col col-center" onClick={this.onClickOutside}>
-                <div onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
-                    {this.props.children}
-                </div>
+    return (
+        <div className="modal-container col col-center row-center" onClick={props.onClickOutside}>
+            <div className="modal-content" onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
+                {props.children}
             </div>
-        );
-    }
+        </div>
+    );
 }
 
-interface IProps {
+interface IModalProps {
     show: boolean
     onClickOutside(): void
+    children: React.ReactNode
 }
+
+export default Modal;

@@ -6,210 +6,191 @@ import search from '../controller/Search';
 import CardSelectable from './CardSelectable';
 import Button from './Button';
 import Dropdown, { DropdownItem } from './Dropdown';
+import Input from './Input';
 import Modal from './Modal';
+import Empty from './Empty';
+
+// TODO: maybe add more specific events such as delete single card, bulk delete cards etc...?
+// TODO: should search results be sorted? currently it overrides the sorting from fuse.js.
 
 enum CardSort {
-    Newest,
-    Oldest,
-    RetentionRateAsc,
-    RetentionRateDesc
+    Newest = "arrow_upward",
+    Oldest = "arrow_downward",
+    RetentionRateAsc = "trending_up",
+    RetentionRateDesc = "trending_down"
 }
 
-export default class Cards extends React.Component<IProps, IState> {
-    private readonly searchInput = React.createRef<HTMLInputElement>();
-    private readonly topics = React.createRef<HTMLSelectElement>();
-    private cards: Card[];
-
-    public constructor(props: IProps) {
-        super(props);
-        this.state = {
-            showBack: false,
-            selected: this.props.cards.filter(c => c.selected).length,
-            showModal: false,
-            query: "",
-            sort: CardSort.Newest,
-            amount: 40
-        }
-    }
-
-    private toggleAnswer = (): void => {
-        this.setState({ showBack: !this.state.showBack });
-    }
-
-    private select = (): void => {
-        this.setState({ selected: this.state.selected + 1 });
-        this.props.onCardChange();
-    }
-
-    private deselect = (): void => {
-        this.setState({ selected: this.state.selected - 1 });
-        this.props.onCardChange();
-    }
-
-    private toggleSelectAll = (): void => {
-        if (this.isAllSelected()) {
-            this.cards.forEach(c => c.selected = false);
-        } else {
-            this.cards.forEach(c => c.selected = true);
-        }
-        this.setState({ selected: this.props.cards.filter(c => c.selected).length });
-        this.props.onCardChange();
-    }
-
-    private isAllSelected = (): boolean => {
-        return this.state.selected === this.props.cards.length;
-    }
-
-    private delete = (card: Card): void => {
-        if (card.selected) this.deselect();
-        else this.props.onCardChange();
-    }
-
-    private onSearch = (): void => {
-        this.setState({ query: this.searchInput.current.value });
-    }
-
-    private clearSearch = (): void => {
-        this.searchInput.current.value = "";
-        this.setState({ query: "" });
-    }
-
-    private toggleModal = (): void => {
-        this.setState({ showModal: !this.state.showModal });
-    }
-
-    private move = (): void => {
-        const selectedCards = this.props.cards.filter(c => c.selected);
-        if (selectedCards.length === 0) return;
-        selectedCards.forEach(c => {
-            c.topicId = Number(this.topics.current.value);
-            c.selected = false;
-        });
-        this.setState({ selected: 0 });
-        this.props.onCardChange();
-        this.toggleModal();
-    }
-
-    private setSort(sortType: CardSort): void {
-        this.setState({ sort: sortType });
-    }
-
-    private sort = (): void => {
-        switch (this.state.sort) {
-            case CardSort.Newest:
-                this.cards.sort((a, b) => b.id - a.id); break;
-            case CardSort.Oldest:
-                this.cards.sort((a, b) => a.id - b.id); break;
-            case CardSort.RetentionRateDesc:
-                this.cards.sort((a, b) => b.retentionRate() - a.retentionRate()); break;
-            case CardSort.RetentionRateAsc:
-                this.cards.sort((a, b) => a.retentionRate() - b.retentionRate()); break;
-            default:
-                this.cards.sort((a, b) => b.id - a.id); break;
-        }
-    }
-
-    private loadMore = () => {
-        this.setState({ amount: this.state.amount + 40 });
-    }
-
-    private loadAll = () => {
-        this.setState({ amount: this.cards.length });
-    }
-
-    public render() {
-        if (this.props.cards.length === 0) return null;
-
-        this.cards = [...this.props.cards];
-        if (this.state.query !== "") this.cards = search.query(this.state.query, this.cards);
-        this.sort();
-
+const Cards = (props: ICardsProps) => {
+    
+    if (props.cards.length === 0) {
         return (
-            <div>
-                <h2>Cards</h2>
-
-                <section>
-                    <div className="search-container">
-                        <i className="search-icon material-icons">search</i>
-                        <input
-                            ref={this.searchInput}
-                            className="search"
-                            placeholder="Search..."
-                            type="text"
-                            onInput={this.onSearch}
-                        />
-                        <i onClick={this.clearSearch} className="clear-icon material-icons">close</i>
-                    </div>
-                </section>
-
-                <section>
-                    <Button
-                        name="Show answer"
-                        icon={this.state.showBack ? "check_box" : "check_box_outline_blank"}
-                        action={this.toggleAnswer}
-                    />
-                    <Button
-                        name="Select all"
-                        icon={this.isAllSelected() ? "check_box" : "check_box_outline_blank"}
-                        action={this.toggleSelectAll}
-                    />
-                    <Dropdown name="Sort" icon="sort" showDownArrow={true}>
-                        <DropdownItem name="Newest" icon="arrow_upward" action={() => this.setSort(CardSort.Newest)} />
-                        <DropdownItem name="Oldest" icon="arrow_downward" action={() => this.setSort(CardSort.Oldest)} />
-                        <DropdownItem name="Retention Rate" icon="trending_down" action={() => this.setSort(CardSort.RetentionRateDesc)} />
-                        <DropdownItem name="Retention Rate" icon="trending_up" action={() => this.setSort(CardSort.RetentionRateAsc)} />
-                    </Dropdown>
-                    <Dropdown name="Bulk" icon="assignment" number={this.state.selected} showDownArrow={true}>
-                        <DropdownItem name="Move" icon="arrow_forward" action={this.toggleModal} />
-                    </Dropdown>
-                </section>
-
-                <section className="cards">
-                    {this.cards.slice(0, this.state.amount).map(c =>
-                        <CardSelectable
-                            key={c.id}
-                            card={c}
-                            showBack={this.state.showBack}
-                            onDelete={this.delete}
-                            onSelect={this.select}
-                            onDeselect={this.deselect}
-                        />
-                    )}
-                </section>
-
-                {this.state.amount < this.cards.length
-                    ?   <section className="row row-center">
-                            <Button name="Load More" icon="cached" action={this.loadMore} />
-                            <Button name="Load all" icon="done_all" action={this.loadAll} />
-                        </section>
-                    :   null
-                }
-
-                <Modal show={this.state.showModal} onClickOutside={this.toggleModal}>
-                    <h2>Move</h2>
-                    <p>Move selected cards to another topic.</p>
-                    <label>Topics</label>
-                    <select ref={this.topics}>
-                        {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                    <Button name="Move" icon="done" action={this.move} />
-                    <Button name="Cancel" icon="close" action={this.toggleModal} />
-                </Modal>
-            </div>
+            <Empty icon="content_copy" message="No cards" />
         );
     }
+
+    const [showBack, setShowBack] = React.useState<boolean>(false);
+    const [showAmount, setShowAmount] = React.useState<number>(20);
+    const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
+    const [searchResults, setSearchResults] = React.useState<Card[]>(null);
+    const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.Newest);
+
+    const [showBulkMove, setShowBulkMove] = React.useState<boolean>(false);
+    const [bulkMoveTopicId, setBulkMoveTopicId] = React.useState<number>(db.topics.getAll()[0].id);
+
+    const cards = (): Card[] => {
+        return searchResults || props.cards;
+    }
+
+    const onSelect = () => {
+        setSelected(s => s + 1);
+    }
+
+    const onDeselect = () => {
+        setSelected(s => s - 1);
+    }
+
+    const onDelete = (card: Card) => {
+        if (card.selected) onDeselect();
+        updateCards();
+    }
+
+    const toggleSelectAll = () => {
+        cards().forEach(c => c.selected = !isAllSelected());
+        setSelected(props.cards.filter(c => c.selected).length);
+    }
+
+    const isAllSelected = (): boolean => {
+        return selected === props.cards.length;
+    }
+
+    const onSearch = (query: string) => {
+        if (query === "") onClearSearch();
+        else setSearchResults(search.query(query, props.cards));
+    }
+
+    const onClearSearch = () => {
+        setSearchResults(null);
+    }
+
+    const sort = (cards: Card[]): Card[] => {
+        switch (sortBy) {
+            case CardSort.Newest:
+                return cards.sort((a, b) => b.id - a.id);
+            case CardSort.Oldest:
+                return cards.sort((a, b) => a.id - b.id);
+            case CardSort.RetentionRateDesc:
+                return cards.sort((a, b) => b.retentionRate() - a.retentionRate());
+            case CardSort.RetentionRateAsc:
+                return cards.sort((a, b) => a.retentionRate() - b.retentionRate());
+            default:
+                return cards;
+        }
+    }
+
+    const bulkMove = () => {
+        const cards = props.cards.filter(c => c.selected);
+        cards.forEach(c => c.topicId = bulkMoveTopicId);
+        setShowBulkMove(false);
+        updateCards();
+    }
+
+    const bulkDelete = () => {
+        const cards = props.cards.filter(c => c.selected);
+        if (cards.length === 0) return;
+        cards.forEach(c => db.cards.delete(c.id));
+        updateCards();
+    }
+
+    const updateCards = () => {
+        props.onCardChange();
+    }
+
+    React.useEffect(() => {
+        setSelected(props.cards.filter(c => c.selected).length);
+    }, [props.cards]);
+
+    return (
+        <div className="col col-center full-width">
+            <section>
+                <Input
+                    className="search-input"
+                    placeholder="Search..."
+                    onChange={onSearch}
+                    onClear={onClearSearch}
+                    icon="search"
+                />
+            </section>
+
+            <section className="row row-center col-center wrap space-fixed">
+                <Button
+                    name="Show answer"
+                    icon={showBack ? "check_box" : "check_box_outline_blank"}
+                    action={() => setShowBack(show => !show)}
+                />
+
+                <Button
+                    name="Select all"
+                    icon={isAllSelected() ? "check_box" : "check_box_outline_blank"}
+                    action={toggleSelectAll}
+                />
+
+                <Dropdown name="Sort" icon={sortBy} showDownArrow={true}>
+                    <DropdownItem name="Newest" icon="arrow_upward" action={() => setSortBy(CardSort.Newest)} />
+                    <DropdownItem name="Oldest" icon="arrow_downward" action={() => setSortBy(CardSort.Oldest)} />
+                    <DropdownItem name="Retention Rate" icon="trending_down" action={() => setSortBy(CardSort.RetentionRateDesc)} />
+                    <DropdownItem name="Retention Rate" icon="trending_up" action={() => setSortBy(CardSort.RetentionRateAsc)} />
+                </Dropdown>
+
+                <Dropdown name={`Bulk (${selected})`} icon="assignment" showDownArrow={true}>
+                    <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
+                    <DropdownItem name="Delete" icon="delete" action={bulkDelete} />
+                </Dropdown>
+            </section>
+
+            <section className="cards row-center">
+                {sort(cards()).slice(0, showAmount).map(c =>
+                    <CardSelectable
+                        card={c}
+                        showBack={showBack}
+                        onDelete={onDelete}
+                        onSelect={onSelect}
+                        onDeselect={onDeselect}
+                        key={c.id}
+                    />
+                )}
+            </section>
+
+            {showAmount < cards().length
+                ?   <section className="row space-fixed">
+                        <Button name="Load more" icon="cached" action={() => setShowAmount(amount => amount + 20)} />
+                        <Button name="Load all" icon="done_all" action={() => setShowAmount(props.cards.length)} />
+                    </section>
+                :   null
+            }
+
+            <Modal show={showBulkMove} onClickOutside={() => setShowBulkMove(false)}>
+                <h2>Move</h2>
+                <p>Move selected cards to another topic.</p>
+                <section>
+                    <section className="col">
+                        <label>Topics</label>
+                        <select defaultValue={bulkMoveTopicId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBulkMoveTopicId(Number(e.target.value))}>
+                            {db.topics.getAll().map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                    </section>
+                    <section className="row space-between">
+                        <Button name="Move" icon="done" action={bulkMove} />
+                        <Button name="Cancel" icon="close" action={() => setShowBulkMove(false)} />
+                    </section>
+                </section>
+            </Modal>
+        </div>
+    );
 }
 
-interface IProps {
-    cards: readonly Card[]
+interface ICardsProps {
+    cards: Card[]
     onCardChange(): void
 }
 
-interface IState {
-    showBack: boolean
-    selected: number
-    showModal: boolean
-    query: string
-    sort: CardSort
-    amount: number
-}
+export default Cards;

@@ -1,160 +1,129 @@
 import * as React from 'react';
-import { RouteComponentProps } from 'react-router-dom';
+import { useParams } from "react-router-dom";
 
-import db from '../model/Database';
-import { Card as CardEntity, Topic } from '../model/Database';
+import db, { Card as CardEntity } from '../model/Database';
+import KeyCodes from '../controller/KeyCodes';
 
 import Card from './Card';
 import Button from './Button';
+import Empty from './Empty';
 
-export default class Review extends React.Component<IProps, IState> {
-    private readonly topic: Topic | undefined;
-    private cards: CardEntity[];
-    private total: number;
-    private customStudy: boolean = false;
+const shuffle = (arr: CardEntity[]): CardEntity[] => {
+    for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
+        const newIndex = Math.floor(Math.random() * (currentIndex + 1));
+        const temp = arr[currentIndex];
+        arr[currentIndex] = arr[newIndex];
+        arr[newIndex] = temp;
+    }
+    return arr;
+}
 
-    private unlockBtn = React.createRef<Button>();
-    private yesBtn = React.createRef<Button>();
-    private noBtn = React.createRef<Button>();
-    private skipBtn = React.createRef<Button>();
+const Review = () => {
+    const { topicId } = useParams<{topicId: string}>();
+    const [id] = React.useState<number>(Number(topicId));
 
-    public constructor(props: IProps) {
-        super(props);
+    const cards = React.useRef<CardEntity[]>(shuffle(db.cards.getDue(id)));
+    const index = React.useRef<number>(0);
+    const [card, setCard] = React.useState<CardEntity>(cards.current[index.current]);
+    const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
+    const [total, setTotal] = React.useState<number>(cards.current.length);
+    const [enableShortcuts, setEnableShortcuts] = React.useState<boolean>(true);
+    
+    const customStudy = React.useRef<boolean>(false);
 
-        const topicId = Number(this.props.match.params.topicId);
-        this.topic = Number.isNaN(topicId) ? undefined : db.topics.get(topicId);
-
-        this.init();
-
-        this.state = {
-            currentCard: this.cards.pop(),
-            showAnswer: false
-        };
-
-        this.initKeyboardShortcuts();
+    const handleReview = (success: boolean) => {
+        if (!customStudy.current) card.review(success);
+        removeCurrentCard();
+        showNextCard();
     }
 
-    private init = (): void => {
-        this.cards = this.fetchCards();
-        this.total = this.cards.length;
-        this.shuffle();
+    const skip = () => {
+        showNextCard();
     }
 
-    private fetchCards = (): CardEntity[] => {
-        if (this.customStudy) {
-            return this.topic === undefined
-                ?   [...db.cards.getAll()]
-                :   db.cards.getByTopic(this.topic.id);
-        }
-        return this.topic === undefined ? db.cards.getDue() : db.cards.getDue(this.topic.id);
+    const showNextCard = () => {
+        index.current++;
+        if (index.current >= cards.current.length) index.current = 0;
+        showCard();
     }
 
-    private showAnswer = (): void => {
-        this.setState({ showAnswer: true });
+    const showCard = () => {
+        setShowAnswer(false);
+        setCard(cards.current[index.current]);
     }
 
-    private showNextCard = (): void => {
-        this.setState({ showAnswer: false, currentCard: this.cards.pop() });
+    const removeCurrentCard = () => {
+        cards.current.splice(index.current, 1);
     }
 
-    private skipCard = (): void => {
-        this.cards.unshift(this.state.currentCard);
-        this.showNextCard();
+    const toggleShortcuts = () => {
+        setEnableShortcuts(enable => !enable);
     }
 
-    private handleReview = (success: boolean): void => {
-        if (!this.customStudy) {
-            this.state.currentCard.review(success);
-        }
-        this.showNextCard();
+    const onDelete = () => {
+        removeCurrentCard();
+        setTotal(t => t - 1);
+        showNextCard();
     }
 
-    private noCardsLeft = (): boolean => {
-        return this.state.currentCard === undefined;
+    const initCustomStudy = () => {
+        const cardsToStudy = id ? db.cards.getByTopic(id) : [...db.cards.getAll()];
+        cards.current = shuffle(cardsToStudy);
+        index.current = 0;
+        customStudy.current = true;
+        setTotal(cards.current.length);
+        showCard();
     }
 
-    private shuffle = (): void => {
-        for (let currentIndex = this.cards.length - 1; currentIndex > 0; currentIndex--) {
-            const newIndex = Math.floor(Math.random() * (currentIndex + 1));
-            const temp = this.cards[currentIndex];
-            this.cards[currentIndex] = this.cards[newIndex];
-            this.cards[newIndex] = temp;
-        }
-    }
-
-    private initCustomStudy = (): void => {
-        this.customStudy = true;
-        this.init();
-        this.showNextCard();
-    }
-
-    private initKeyboardShortcuts = (): void => {
-        document.onkeydown = (e: KeyboardEvent) => {
-            // TODO: remove global event when leaving page
-            switch (e.keyCode) {
-                case 32: // Space
-                    if (this.unlockBtn.current) this.unlockBtn.current.click();
-                    break;
-                case 38: // ArrowUp
-                    if (this.yesBtn.current) this.yesBtn.current.click();
-                    break;
-                case 39: // ArrowRight
-                    if (this.skipBtn.current) this.skipBtn.current.click();
-                    break;
-                case 40: // ArrowDown
-                    if (this.noBtn.current) this.noBtn.current.click();
-                    break;
-            }
-        };
-    }
-
-    private onDelete = (): void => {
-        this.total--;
-        this.showNextCard();
-    }
-
-    public render() {
-        if (this.noCardsLeft()) {
+    if (cards.current.length === 0) {
+        if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
             return (
-                <div>
-                    <h2>Good job!</h2>
-                    <p>There are no more remaining cards to be reviewed.</p>
-                    <p>Do a custom study for reviewing as many cards as you like without affecting the scheduler.</p>
-                    <Button name="Custom study" icon="redo" action={this.initCustomStudy} />
-                </div>
+                <main>
+                    <Empty icon="content_copy" message="No cards" />
+                </main>
             );
         }
 
         return (
-            <div className="col col-center review space-between">
-                <section className="review-progress">
-                    {this.topic === undefined ? null : <label>{this.topic.name}</label>}
-                    <span>{this.total - this.cards.length} / {this.total}</span>
-                </section>
-
-                <section className="col col-center review-card">
-                    <Card
-                        card={this.state.currentCard}
-                        showBack={this.state.showAnswer}
-                        onDelete={this.onDelete}
-                    />
-                    {this.state.showAnswer ? null : <Button ref={this.unlockBtn} name="" icon="lock_open" action={this.showAnswer} />}
-                </section>
-
-                <section>
-                    {this.state.showAnswer ? <Button ref={this.yesBtn} name="" icon="done" action={() => this.handleReview(true)} /> : null}
-                    {this.state.showAnswer ? <Button ref={this.noBtn} name="" icon="close" action={() => this.handleReview(false)} /> : null}
-                    <Button ref={this.skipBtn} name="" icon="double_arrow" action={this.skipCard} />
-                </section>
-            </div>
+            <main>
+                <Empty icon="mood" message="No cards to review">
+                    <Button icon="redo" name="Custom study" action={initCustomStudy} />
+                </Empty>
+            </main>
         );
     }
+
+    return (
+        <main className="col col-center space-between">
+            <section>
+                <label>{total - cards.current.length} / {total}</label>
+            </section>
+
+            <Card
+                card={card}
+                showBack={showAnswer}
+                onDelete={onDelete}
+                onToggleModal={toggleShortcuts}
+            />
+
+            {enableShortcuts &&
+                <div className="review-buttons space-fixed">
+                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
+                    {showAnswer && <Button icon="done" action={() => handleReview(true)} shortcut={KeyCodes.ArrowUp} />}
+                    {showAnswer && <Button icon="close" action={() => handleReview(false)} shortcut={KeyCodes.ArrowDown} />}
+                    <Button icon="double_arrow" action={skip} shortcut={KeyCodes.ArrowRight} />
+                </div>
+            }
+            {enableShortcuts ||
+                <div className="review-buttons space-fixed">
+                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
+                    {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
+                    {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
+                    <Button icon="double_arrow" action={skip} />
+                </div>
+            }
+        </main>
+    );
 }
 
-interface IProps extends RouteComponentProps<{ topicId?: string }> {
-}
-
-interface IState {
-    currentCard: CardEntity
-    showAnswer: boolean
-}
+export default Review;

@@ -1,44 +1,53 @@
 import * as React from 'react';
-import { Link } from 'react-router-dom';
 
-export default class Button extends React.Component<Props> {
-    public constructor(props: Props) {
-        super(props);
+const Button = (props: IButtonProps) => {
+    const click = () => {
+        props.action();
     }
 
-    public click = () => {
-        if ((this.props as IButton).action) {
-            (this.props as IButton).action();
-        }
+    const name = (): string => {
+        if (props.name === undefined) return null;
+        return ` ${props.name}`;
     }
 
-    public render() {
-        if ((this.props as IButton).action) {
-            return (
-                <a href="#" className="btn" onClick={(this.props as IButton).action}>
-                    <i className="material-icons">{this.props.icon}</i> {this.props.name}
-                </a>
-            );
-        }
-
-        return (
-            <Link className="btn" to={(this.props as ILink).to}>
-                <i className="material-icons">{this.props.icon}</i> {this.props.name}
-            </Link>
-        );
+    const onKeyDown = (e: KeyboardEvent) => {
+        if (e.keyCode === props.shortcut)
+            click();
     }
+
+    if (props.shortcut !== undefined) {
+        React.useEffect(() => {
+            window.addEventListener("keydown", onKeyDown);
+            return () => {
+                window.removeEventListener("keydown", onKeyDown);
+            }
+        }, [props.shortcut]);
+    }
+
+    return (
+        <a
+            className={props.className !== undefined ? props.className : "button"}
+            onClick={click}
+            href="#"
+        >
+            <i
+                className="material-icons icon"
+                style={props.color === undefined ? null : { color: props.color }}
+            >
+                {props.icon}
+            </i>
+            {name()}
+        </a>
+    );
 }
 
-interface IButton {
+interface IButtonProps {
     icon: string
-    name: string
     action(): void
+    name?: string
+    color?: string
+    shortcut?: number
+    className?: string
 }
 
-interface ILink {
-    icon: string
-    name: string
-    to: string
-}
-
-type Props = IButton | ILink;
+export default Button;

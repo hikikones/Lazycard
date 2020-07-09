@@ -1,18 +1,14 @@
 @import "../../node_modules/prismjs/themes/prism-tomorrow.css";
 
 :root {
-    --text-color: white;
-    --nav-color: #373737;
-    --main-color: #303030;
-    --card-color: #515151;
-    --btn-color: white;
-    --icon-color: lightgrey;
-    --hover-element-color: grey;
-    --focus-element-color: grey;
-    --label-background-color: #515151;
-    --label-color: white;
-    --list-active-color: grey;
-    --list-item-color: white;
-    --dropdown-menu-color: darkgrey;
-    --search-color: #303030;
+    --primary-color: #333333;
+    --primary-variant-color: #7b7b7d;
+    --on-primary-color: white;
+    --secondary-color: #252526;
+    --secondary-variant-color: #464648;
+    --on-secondary-color: #c2c2c3;
+    --background-color: #1e1e1e;
+    --surface-color: #131313;
+    --on-surface-color: #d1d1d1;
+    --shadow-color: rgba(255, 255, 255, 0);
 }
