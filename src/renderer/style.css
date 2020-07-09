@@ -132,10 +132,15 @@ a.sidebar {
     padding: 0.25rem 0.75rem;
     color: var(--on-secondary-color);
     text-decoration: none;
+    font-size: 0.9rem;
 }
 
 a.sidebar:hover, a.sidebar.active {
     background-color: var(--secondary-variant-color);
+}
+
+a.sidebar i.icon {
+    font-size: 18px;
 }
 
 section {
