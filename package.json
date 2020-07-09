@@ -8,8 +8,7 @@
     "prod": "webpack --mode production",
     "start": "npm run dev && electron .",
     "pack": "npm run prod && electron-builder --dir",
-    "dist": "npm run prod && electron-builder -p never",
-    "test-with-xml-reporter": "mocha --require ts-node/register --reporter mocha-junit-reporter test/**/*.test.ts"
+    "dist": "npm run prod && electron-builder -p never"
   },
   "keywords": [
     "flashcard",
@@ -20,6 +19,7 @@
   "build": {
     "appId": "com.electron.lazycard",
     "productName": "Lazycard",
+    "artifactName": "${productName}-v${version}.${ext}",
     "icon": "icon.png",
     "files": [
       "./build/**/*"
