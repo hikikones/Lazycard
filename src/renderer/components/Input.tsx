@@ -10,7 +10,7 @@ const Input = (props: IInputProps) => {
 
     return (
         <div className="input-container col-center">
-            {props.icon && <i className="material-icons icon">{props.icon}</i>}
+            {props.icon && <i className="material-icons search-icon icon">{props.icon}</i>}
             <input
                 ref={input}
                 className={props.className || null}

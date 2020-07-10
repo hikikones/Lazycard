@@ -368,22 +368,30 @@ input.topic-name {
 }
 
 .input-container {
-    display: flex;
-    border: 1px solid var(--input-border-color);
-    background-color: var(--surface-color);
-    border-radius: 1rem;
-    padding: 0 0.25rem;
+    position: relative;
+    display: inline-block;
 }
 
 .input-container input {
-    border: none;
+    border-radius: 1rem;
+    padding: .2rem 2rem;
 }
 
 .input-container i.icon {
     color: var(--button-text-color);
+    font-size: 18px;
+    padding: .2rem .4rem;
+}
+
+.input-container .search-icon {
+    user-select: none;
+    position: absolute;
+    left: 0;
 }
 
 .input-container .clear-icon {
+    position: absolute;
+    right: 0;
     cursor: pointer;
 }
 
