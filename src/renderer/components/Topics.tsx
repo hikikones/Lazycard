@@ -9,8 +9,12 @@ import Empty from './Empty';
 import Button from './Button';
 import ButtonNavLink from './ButtonNavLink';
 
+const sort = (topics: TopicEntity[]): TopicEntity[] => {
+    return topics.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
+}
+
 const Topics = () => {
-    const [topics, setTopics] = React.useState<TopicEntity[]>([...db.topics.getAll()]);
+    const [topics, setTopics] = React.useState<TopicEntity[]>(sort([...db.topics.getAll()]));
     const match = useRouteMatch();
     const history = useHistory();
 
@@ -45,18 +49,22 @@ const Topics = () => {
 
     const updateTopics = () => {
         topicId.current = null;
-        setTopics([...db.topics.getAll()]);
+        setTopics(sort([...db.topics.getAll()]));
     }
 
     return (
         <>
             <aside className="col">
-                <Button name="Import" icon="save_alt" action={toggleImportOptions} className="sidebar" />
-                <Button name="New topic" icon="add" action={onNewTopic} className="sidebar" />
-                <hr />
-                {topics.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1).map(t =>
-                    <ButtonNavLink name={t.name} to={`${match.path}/${t.id}`} className="sidebar" key={t.id} />
-                )}
+                <div className="col">
+                    <Button name="Import" icon="save_alt" action={toggleImportOptions} className="sidebar" />
+                    <Button name="New topic" icon="add" action={onNewTopic} className="sidebar" />
+                    <hr />
+                </div>
+                <div className="col topics-sidebar">
+                    {topics.map(t =>
+                        <ButtonNavLink name={t.name} to={`${match.path}/${t.id}`} className="sidebar" key={t.id} />
+                    )}
+                </div>
             </aside>
 
             <main>

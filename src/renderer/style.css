@@ -95,8 +95,8 @@ main {
 
 aside {
     grid-area: sidebar;
-    overflow: auto;
-    padding: 1rem 0;
+    overflow: hidden;
+    padding-top: 1rem;
     min-width: 150px;
     max-width: var(--sidebar-max-width);
     background-color: var(--sidebar-color);
@@ -159,6 +159,7 @@ a.sidebar {
     color: var(--sidebar-text-color);
     text-decoration: none;
     font-size: 0.9rem;
+    overflow-wrap: break-word;
 }
 
 a.sidebar:hover, a.sidebar.active {
@@ -167,6 +168,14 @@ a.sidebar:hover, a.sidebar.active {
 
 a.sidebar i.icon {
     font-size: 18px;
+}
+
+.topics-sidebar {
+    overflow: hidden;
+}
+
+.topics-sidebar:hover {
+    overflow: auto;
 }
 
 section {
@@ -353,12 +362,13 @@ a.button i.icon {
 }
 
 i.icon {
-    vertical-align: bottom;
+    vertical-align: sub;
 }
 
 h1.topic-name {
     padding: 0.25rem;
     box-sizing: border-box;
+    overflow-wrap: break-word;
 }
 
 h1.topic-name:hover {
