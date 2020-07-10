@@ -60,7 +60,7 @@ const demo = (): IDatabase => {
             {
                 id: 6,
                 front: "Use **keyboard shortcuts** for quicker reviewing.",
-                back: "When reviewing, hit `space` for showing answer, `ArrowUp` for successful recall, `ArrowDown` for unsuccessful, and `ArrowRight` for skipping a card.",
+                back: "When reviewing, hit `Space` for showing answer, `ArrowUp` for successful recall, `ArrowDown` for unsuccessful, and `ArrowRight` for skipping a card.",
                 dueDate: now,
                 dueDays: 0,
                 attempts: 0,
@@ -70,7 +70,17 @@ const demo = (): IDatabase => {
             {
                 id: 7,
                 front: "Retain more information with **spaced repetition**.",
-                back: "For each card you recall correctly, the amount of days until next review are _doubled_. If not, the days are _halved_, with a minimum of _one_ day.",
+                back: "For each card you recall correctly, the amount of days until next review are _increased_. If not, the days are _decreased_, with a minimum of _one_ day.",
+                dueDate: now,
+                dueDays: 0,
+                attempts: 0,
+                successes: 0,
+                topicId: 1
+            },
+            {
+                id: 8,
+                front: "Open [__links__](https://en.wikipedia.org/wiki/Spaced_repetition) in a new window.",
+                back: "But what will it open though.",
                 dueDate: now,
                 dueDays: 0,
                 attempts: 0,
