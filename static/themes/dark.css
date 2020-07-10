@@ -1,14 +1,40 @@
 @import "../../node_modules/prismjs/themes/prism-tomorrow.css";
 
 :root {
-    --primary-color: #333333;
-    --primary-variant-color: #7b7b7d;
-    --on-primary-color: white;
-    --secondary-color: #252526;
-    --secondary-variant-color: #303031;
-    --on-secondary-color: #c2c2c3;
+    --titlebar-color: #3c3c3c;
+    --titlebar-highlight-color: #303031;
+    --titlebar-text-color: #c2c2c3;
+
+    --navigation-color: #333333;
+    --navigation-highlight-color: white;
+    --navigation-text-color: #7b7b7d;
+
+    --sidebar-color: #252526;
+    --sidebar-highlight-color: #303031;
+    --sidebar-text-color: #c2c2c3;
+
     --background-color: #1e1e1e;
+    --background-text-color: #d1d1d1;
+    
     --surface-color: #262626;
-    --on-surface-color: #d1d1d1;
+    --surface-text-color: #d1d1d1;
     --shadow-color: rgba(255, 255, 255, 0);
+
+    --button-color: none;
+    --button-highlight-color: #303031;
+    --button-active-color: #444445;
+    --button-text-color: #c2c2c3;
+
+    --input-border-color: #2b2b2c;
+    --input-focus-color: #444445;
+
+    --scrollbar-color: #303031;
+    --scrollbar-highlight-color: #444445;
+
+    --code-block-color: #2d2d2d;
+    --code-block-text-color: #d1d1d1;
+    --code-inline-color: #2d2d2d;
+    --code-inline-text-color: #d1d1d1;
+    --table-color: #303031;
+    --link-color: #d1d1d1;
 }

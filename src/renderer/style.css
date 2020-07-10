@@ -16,23 +16,49 @@
     --card-max-width: 400px;
     --modal-max-width: 720px;
 
-    --primary-color: slategrey;
-    --primary-variant-color: #b7bfc7;
-    --on-primary-color: white;
-    --secondary-color: #d4dee3;
-    --secondary-variant-color: #b7d2d3;
-    --on-secondary-color: #474747;
+    --titlebar-color: white;
+    --titlebar-highlight-color: #e6e6e6;
+    --titlebar-text-color: black;
+
+    --navigation-color: #333333;
+    --navigation-highlight-color: white;
+    --navigation-text-color: #7b7b7d;
+
+    --sidebar-color: whitesmoke;
+    --sidebar-highlight-color: #e6e6e6;
+    --sidebar-text-color: #333333;
+
     --background-color: ghostwhite;
+    --background-text-color: black;
+    
     --surface-color: white;
-    --on-surface-color: black;
+    --surface-text-color: black;
     --shadow-color: rgba(0, 0, 0, 0.15);
+
+    --button-color: none;
+    --button-highlight-color: #e6e6e6;
+    --button-active-color: #f1f1f1;
+    --button-text-color: #181818;
+
+    --input-border-color: #adadad;
+    --input-focus-color: #848484;
+
+    --scrollbar-color: #adadad;
+    --scrollbar-highlight-color: #848484;
+
+    --code-block-color: #f5f2f0;
+    --code-block-text-color: black;
+    --code-inline-color: #f5f2f0;
+    --code-inline-text-color: black;
+    --table-color: #dcdcdc;
+    --link-color: black;
 }
 
 body {
     margin: 0;
     overflow: hidden;
     font-family: var(--font-main);
-    color: var(--on-surface-color);
+    color: var(--background-text-color);
     background-color: var(--background-color);
 }
 
@@ -49,14 +75,14 @@ body {
 header {
     grid-area: header;
     position: relative;
-    background-color: var(--background-color);
+    background-color: var(--titlebar-color);
     -webkit-app-region: drag;
 }
 
 nav {
     grid-area: nav;
     overflow: hidden;
-    background-color: var(--primary-color);
+    background-color: var(--navigation-color);
 }
 
 main {
@@ -73,7 +99,7 @@ aside {
     padding: 1rem 0;
     min-width: 150px;
     max-width: var(--sidebar-max-width);
-    background-color: var(--secondary-color);
+    background-color: var(--sidebar-color);
 }
 
 .titlebar-resize {
@@ -94,7 +120,7 @@ aside {
 }
 
 .titlebar-logo label {
-    color: var(--on-surface-color);
+    color: var(--titlebar-text-color);
     font-size: 0.8rem;
     font-weight: normal;
     margin: 0;
@@ -109,34 +135,34 @@ aside {
 }
 
 a.titlebar:hover {
-    background-color: var(--secondary-variant-color);
+    background-color: var(--titlebar-highlight-color);
 }
 
 a.titlebar i.icon {
-    color: var(--on-secondary-color);
+    color: var(--titlebar-text-color);
     font-size: 20px;
     padding: calc((var(--titlebar-height) - 20px) / 2) 0.9rem;
 }
 
 a.navigation i.icon {
-    color: var(--primary-variant-color);
+    color: var(--navigation-text-color);
     font-size: 28px;
     padding: 10px;
 }
 
 a.navigation.active i.icon, a.navigation:hover i.icon {
-    color: var(--on-primary-color);
+    color: var(--navigation-highlight-color);
 }
 
 a.sidebar {
     padding: 0.25rem 0.75rem;
-    color: var(--on-secondary-color);
+    color: var(--sidebar-text-color);
     text-decoration: none;
     font-size: 0.9rem;
 }
 
 a.sidebar:hover, a.sidebar.active {
-    background-color: var(--secondary-variant-color);
+    background-color: var(--sidebar-highlight-color);
 }
 
 a.sidebar i.icon {
@@ -157,28 +183,29 @@ table {
     margin: 0 auto;
     width: 100%;
     border-spacing: 0;
-    border: 1px solid var(--secondary-variant-color);
+    border: 1px solid var(--table-color);
+    background-color: var(--surface-color);
 }
 
 table thead {
-    background-color: var(--secondary-variant-color);
+    background-color: var(--table-color);
 }
 
 thead th, tbody td {
     padding: 0.5rem;
-    border: 1px solid var(--secondary-variant-color);
+    border: 1px solid var(--table-color);
 }
 
 input, select, textarea {
-    border: 1px solid var(--secondary-color);
-    color: var(--on-surface-color);
+    border: 1px solid var(--input-border-color);
+    color: var(--surface-text-color);
     background-color: var(--surface-color);
     font-family: var(--font-input);
     padding: 0.25rem;
 }
 
 input:focus, select:focus, textarea:focus {
-    border-color: var(--primary-color);
+    border-color: var(--input-focus-color);
 }
 
 input:focus, select:focus, option:focus, textarea:focus, a:focus {
@@ -186,17 +213,17 @@ input:focus, select:focus, option:focus, textarea:focus, a:focus {
 }
 
 input::placeholder {
-    color: var(--on-surface-color);
+    color: var(--surface-text-color);
     opacity: 0.5;
 }
 
 pre {
-    background-color: var(--secondary-variant-color);
+    background-color: var(--code-block-color);
     padding: 1rem;
 }
 
 pre code {
-    color: var(--on-secondary-color);
+    color: var(--code-block-text-color);
     background-color: transparent;
     line-height: 1.5;
     tab-size: 4;
@@ -208,8 +235,8 @@ code, .katex-html {
 }
 
 code {
-    color: var(--on-secondary-color);
-    background-color: var(--secondary-variant-color);
+    color: var(--code-inline-text-color);
+    background-color: var(--code-inline-color);
     font-family: var(--font-code);
     font-size: 0.8rem;
     padding: 0.1rem 0.2rem;
@@ -225,7 +252,7 @@ label {
 hr { 
     border: 0;
     height: 1px;
-    background-image: -webkit-linear-gradient(left, var(--surface-color), var(--on-surface-color), var(--surface-color));
+    background-image: -webkit-linear-gradient(left, var(--surface-color), var(--surface-text-color), var(--surface-color));
     opacity: 0.25;
     margin: 1rem 0.5rem;
 }
@@ -245,12 +272,13 @@ hr {
     overflow-wrap: break-word;
     min-width: var(--card-min-width);
     max-width: var(--card-max-width);
+    color: var(--surface-text-color);
     background-color: var(--surface-color);
 }
 
 .card a {
     text-decoration: underline;
-    color: var(--on-surface-color);
+    color: var(--link-color);
 }
 
 .card-checkbox {
@@ -300,15 +328,16 @@ a.button {
     white-space: nowrap;
     text-decoration: none;
     padding: 4px 6px;
-    color: var(--on-secondary-color);
+    color: var(--button-text-color);
+    background-color: var(--button-color);
 }
 
 a.button:hover, a.button:focus {
-    background-color: var(--secondary-variant-color);
+    background-color: var(--button-highlight-color);
 }
 
 a.button:active {
-    background-color: var(--secondary-color);
+    background-color: var(--button-active-color);
 }
 
 a.button i.icon {
@@ -325,7 +354,7 @@ h1.topic-name {
 }
 
 h1.topic-name:hover {
-    background-color: var(--secondary-variant-color);
+    background-color: var(--button-highlight-color);
 }
 
 input.topic-name {
@@ -335,12 +364,12 @@ input.topic-name {
     font-weight: bold;
     margin: 0.67em 0;
     box-sizing: border-box;
-    background-color: var(--secondary-variant-color);
+    background-color: var(--button-highlight-color);
 }
 
 .input-container {
     display: flex;
-    border: 1px solid var(--secondary-color);
+    border: 1px solid var(--input-border-color);
     background-color: var(--surface-color);
     border-radius: 1rem;
     padding: 0 0.25rem;
@@ -351,7 +380,7 @@ input.topic-name {
 }
 
 .input-container i.icon {
-    color: var(--on-secondary-color);
+    color: var(--button-text-color);
 }
 
 .input-container .clear-icon {
@@ -441,10 +470,10 @@ input.topic-name {
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: var(--primary-color);
+    background-color: var(--scrollbar-color);
     border-radius: 1rem;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--primary-variant-color);
+    background-color: var(--scrollbar-highlight-color);
 }
