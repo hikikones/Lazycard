@@ -54,7 +54,7 @@ const Topics = () => {
                 <Button name="Import" icon="save_alt" action={toggleImportOptions} className="sidebar" />
                 <Button name="New topic" icon="add" action={onNewTopic} className="sidebar" />
                 <hr />
-                {topics.map(t =>
+                {topics.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1).map(t =>
                     <ButtonNavLink name={t.name} to={`${match.path}/${t.id}`} className="sidebar" key={t.id} />
                 )}
             </aside>
