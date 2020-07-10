@@ -19,7 +19,7 @@ const demo = (): IDatabase => {
             },
             {
                 id: 2,
-                front: "Write mathematics with **KaTeX**.",
+                front: "Write mathematics with $\\KaTeX$.",
                 back: "$$ \\int_a^b x^2 \\ \\mathrm dx $$",
                 dueDate: now,
                 dueDays: 0,
