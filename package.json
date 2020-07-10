@@ -4,11 +4,11 @@
   "description": "A simple flashcard application where cards are formatted with Markdown.",
   "main": "./build/main.js",
   "scripts": {
-    "dev": "webpack --mode development",
-    "prod": "webpack --mode production",
-    "start": "npm run dev && electron .",
-    "pack": "npm run prod && electron-builder --dir",
-    "dist": "npm run prod && electron-builder -p never"
+    "development": "webpack --mode development",
+    "production": "webpack --mode production",
+    "start": "npm run development && electron .",
+    "package": "npm run production && electron-builder --dir",
+    "publish": "npm run production && electron-builder -p never"
   },
   "keywords": [
     "flashcard",

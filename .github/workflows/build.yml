@@ -48,7 +48,7 @@ jobs:
       - name: Install NPM Packages
         run: npm install
       - name: Build Electron App
-        run: npm run dist
+        run: npm run publish
       - name: Download Release URL and Tag Files
         uses: actions/download-artifact@v2
         with:
@@ -86,7 +86,7 @@ jobs:
       - name: Install NPM Packages
         run: npm install
       - name: Build Electron App
-        run: npm run dist
+        run: npm run publish
       - name: Download Release URL and Tag Files
         uses: actions/download-artifact@v2
         with:
@@ -124,7 +124,7 @@ jobs:
       - name: Install NPM Packages
         run: npm install
       - name: Build Electron App
-        run: npm run dist
+        run: npm run publish
       - name: Download Release URL and Tag Files
         uses: actions/download-artifact@v2
         with:
