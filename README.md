@@ -40,9 +40,9 @@ The following commands are used for development and building:
 | `npm run publish` | Generates a distributable application in the `dist` folder. |
 
 
-## :santa: Publishing
+## :bulb: Publishing
 
-This repository uses [Github Actions](https://github.com/features/actions) for the build pipeline in order to create a distributable installation file for Windows, macOS and Ubuntu. The configuration file is found in `.github/workflows/build.yml`. The build is triggered whenever a [semantic](https://semver.org/) release tag of the form `v*.*.*` is created. That is, say you have pushed the latest commit to `master` branch that completes version `v1.0.0` of your application, then the following two commands will trigger the build:
+This repository uses [Github Actions](https://github.com/features/actions) for the build pipeline in order to create a distributable installation file for Windows, macOS and Ubuntu. The configuration file is found in `.github/workflows/build.yml`. The build is triggered whenever a [semantic](https://semver.org/) release tag of the form `v*.*.*` is created. The version also needs to be reflected in the `package.json` file. That is, say you have pushed the latest commit to the `master` branch that completes version `v1.0.0` of your application, and the version is reflected in `package.json`, then the following two commands will trigger the build:
 
 ```
 git tag v1.0.0
