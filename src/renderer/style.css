@@ -309,6 +309,14 @@ hr {
     z-index: 2;
 }
 
+.dropdown-menu a.button {
+    font-size: 0.9rem;
+}
+
+.dropdown-menu a.button i.icon {
+    font-size: 18px;
+}
+
 .dropdown.card-dropdown {
     position: absolute;
     top: 0;

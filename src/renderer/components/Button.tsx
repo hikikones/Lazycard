@@ -5,11 +5,6 @@ const Button = (props: IButtonProps) => {
         props.action();
     }
 
-    const name = (): string => {
-        if (props.name === undefined) return null;
-        return ` ${props.name}`;
-    }
-
     const onKeyDown = (e: KeyboardEvent) => {
         if (e.keyCode === props.shortcut)
             click();
@@ -26,7 +21,7 @@ const Button = (props: IButtonProps) => {
 
     return (
         <a
-            className={props.className !== undefined ? props.className : "button"}
+            className={props.className === undefined ? "button" : props.className}
             onClick={click}
             href="#"
         >
@@ -36,7 +31,7 @@ const Button = (props: IButtonProps) => {
             >
                 {props.icon}
             </i>
-            {name()}
+            {props.name === undefined ? null : ` ${props.name}`}
         </a>
     );
 }
