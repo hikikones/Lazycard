@@ -11,13 +11,13 @@ import Modal from './Modal';
 import Empty from './Empty';
 
 // TODO: maybe add more specific events such as delete single card, bulk delete cards etc...?
-// TODO: should search results be sorted? currently it overrides the sorting from fuse.js.
 
 enum CardSort {
     Newest = "arrow_upward",
     Oldest = "arrow_downward",
     RetentionRateAsc = "trending_up",
-    RetentionRateDesc = "trending_down"
+    RetentionRateDesc = "trending_down",
+    NoSort = "sort"
 }
 
 const Cards = (props: ICardsProps) => {
@@ -32,7 +32,7 @@ const Cards = (props: ICardsProps) => {
     const [showAmount, setShowAmount] = React.useState<number>(20);
     const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
     const [searchResults, setSearchResults] = React.useState<Card[]>(null);
-    const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.Newest);
+    const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.NoSort);
 
     const [showBulkMove, setShowBulkMove] = React.useState<boolean>(false);
     const [bulkMoveTopicId, setBulkMoveTopicId] = React.useState<number>(db.topics.getAll()[0].id);
@@ -64,8 +64,13 @@ const Cards = (props: ICardsProps) => {
     }
 
     const onSearch = (query: string) => {
-        if (query === "") onClearSearch();
-        else setSearchResults(search.query(query, props.cards));
+        if (query === "") {
+            onClearSearch();
+            return;
+        }
+
+        setSearchResults(search.query(query, props.cards));
+        setSortBy(CardSort.NoSort);
     }
 
     const onClearSearch = () => {
