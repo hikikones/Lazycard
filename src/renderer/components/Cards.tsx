@@ -32,7 +32,8 @@ const Cards = (props: ICardsProps) => {
     const [showAmount, setShowAmount] = React.useState<number>(20);
     const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
     const [searchResults, setSearchResults] = React.useState<Card[]>(null);
-    const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.NoSort);
+    const [sortBy, setSortBy] = React.useState<CardSort>(CardSort.Newest);
+    const sortByTemp = React.useRef<CardSort>(null);
 
     const [showBulkMove, setShowBulkMove] = React.useState<boolean>(false);
     const [bulkMoveTopicId, setBulkMoveTopicId] = React.useState<number>(db.topics.getAll()[0].id);
@@ -69,12 +70,15 @@ const Cards = (props: ICardsProps) => {
             return;
         }
 
+        if (sortByTemp.current === null) sortByTemp.current = sortBy;
         setSearchResults(search.query(query, props.cards));
         setSortBy(CardSort.NoSort);
     }
 
     const onClearSearch = () => {
         setSearchResults(null);
+        setSortBy(sortByTemp.current);
+        sortByTemp.current = null;
     }
 
     const sort = (cards: Card[]): Card[] => {
