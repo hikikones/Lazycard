@@ -52,7 +52,7 @@ class Database {
         const topicExport = topic.export();
         const cards = this.cards.getByTopic(topic.id);
         cards.forEach(c => topicExport.cards.push(c.export()));
-        fs.writeFileSync(path, JSON.stringify(topic, null, 2));
+        fs.writeFileSync(path, JSON.stringify(topicExport, null, 2));
     }
 
     public import(mergeTopic: boolean, allowDuplicateCards: boolean): Topic {
