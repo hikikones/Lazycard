@@ -77,7 +77,7 @@ const Cards = (props: ICardsProps) => {
 
     const onClearSearch = () => {
         setSearchResults(null);
-        setSortBy(sortByTemp.current);
+        setSortBy(sortByTemp.current || sortBy);
         sortByTemp.current = null;
     }
 
