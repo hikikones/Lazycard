@@ -9,11 +9,11 @@
     --font-code: 'Consolas';
     --titlebar-height: 32px;
     --navigation-width: 48px;
-    --main-max-width: 1920px;
     --main-padding: 1rem 2rem;
     --sidebar-max-width: 250px;
     --card-min-width: 250px;
     --card-max-width: 400px;
+    --cards-max-width: 1280px;
     --modal-max-width: 720px;
 
     --titlebar-color: white;
@@ -89,7 +89,6 @@ main {
     grid-area: main;
     overflow: auto;
     padding: var(--main-padding);
-    max-width: var(--main-max-width);
     box-sizing: border-box;
 }
 
@@ -271,6 +270,7 @@ hr {
     grid-gap: 1rem;
     grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
     width: 100%;
+    max-width: var(--cards-max-width);
 }
 
 .card {
