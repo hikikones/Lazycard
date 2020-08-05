@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useParams } from "react-router-dom";
 
-import db, { Card as CardEntity } from '../model/Database';
+import db, { Card as CardEntity, Topic as TopicEntity } from '../model/Database';
 import KeyCodes from '../controller/KeyCodes';
 
 import Card from './Card';
@@ -30,6 +30,8 @@ const Review = () => {
     const [enableShortcuts, setEnableShortcuts] = React.useState<boolean>(true);
     
     const customStudy = React.useRef<boolean>(false);
+
+    const [topics] = React.useState<Record<number, TopicEntity>>(db.topics.getAllAsRecord());
 
     const handleReview = (success: boolean) => {
         if (!customStudy.current) card.review(success);
@@ -104,7 +106,11 @@ const Review = () => {
                 showBack={showAnswer}
                 onDelete={onDelete}
                 onToggleModal={toggleShortcuts}
-            />
+            >
+                <label className="card-topic-name">
+                    {topics[card.topicId].name}
+                </label>
+            </Card>
 
             {enableShortcuts &&
                 <div className="review-buttons space-fixed">

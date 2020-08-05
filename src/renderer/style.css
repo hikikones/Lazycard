@@ -290,6 +290,20 @@ hr {
     color: var(--link-color);
 }
 
+.card-topic-name {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    padding: 0.1rem 0.5rem;
+    font-weight: 400;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(var(--card-min-width) - 20px);
+}
+
 .card-checkbox {
     position: absolute;
     top: 0;

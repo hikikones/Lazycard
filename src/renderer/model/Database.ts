@@ -174,6 +174,15 @@ abstract class Table<T extends Entity<EntityData, EntityExport>> {
         return this.items;
     }
 
+    public getAllAsRecord(): Record<number, T> {
+        const record: Record<number, T> = {};
+        for (let i = 0; i < this.size(); i++) {
+            const item = this.items[i];
+            record[item.id] = item;
+        }
+        return record;
+    }
+
     public add(item: T): void {
         if (item.id === undefined) {
             throw new Error(`Missing id on item ${item} to be added.`);
