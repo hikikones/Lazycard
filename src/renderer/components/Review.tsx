@@ -107,9 +107,9 @@ const Review = () => {
                 onDelete={onDelete}
                 onToggleModal={toggleShortcuts}
             >
-                <label className="card-topic-name">
+                {/* <label className="card-topic-name">
                     {topics[card.topicId].name}
-                </label>
+                </label> */}
             </Card>
 
             {enableShortcuts &&
