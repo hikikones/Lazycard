@@ -8,21 +8,11 @@ import Card from './Card';
 import Button from './Button';
 import Empty from './Empty';
 
-const shuffle = (arr: CardEntity[]): CardEntity[] => {
-    for (let currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
-        const newIndex = Math.floor(Math.random() * (currentIndex + 1));
-        const temp = arr[currentIndex];
-        arr[currentIndex] = arr[newIndex];
-        arr[newIndex] = temp;
-    }
-    return arr;
-}
-
 const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
     const [id] = React.useState<number>(Number(topicId));
 
-    const cards = React.useRef<CardEntity[]>(shuffle(db.cards.getDue(id)));
+    const cards = React.useRef<CardEntity[]>(db.cards.getDue(id));
     const index = React.useRef<number>(0);
     const [card, setCard] = React.useState<CardEntity>(cards.current[index.current]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
@@ -70,7 +60,7 @@ const Review = () => {
 
     const initCustomStudy = () => {
         const cardsToStudy = id ? db.cards.getByTopic(id) : [...db.cards.getAll()];
-        cards.current = shuffle(cardsToStudy);
+        cards.current = cardsToStudy;
         index.current = 0;
         customStudy.current = true;
         setTotal(cards.current.length);
@@ -81,7 +71,7 @@ const Review = () => {
         if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
             return (
                 <main>
-                    <Empty icon="content_copy" message="No cards" />
+                    <Empty icon="content_copy" message="Add Steps" />
                 </main>
             );
         }
@@ -103,7 +93,6 @@ const Review = () => {
 
             <Card
                 card={card}
-                showBack={showAnswer}
                 onDelete={onDelete}
                 onToggleModal={toggleShortcuts}
             >
@@ -114,18 +103,16 @@ const Review = () => {
 
             {enableShortcuts &&
                 <div className="review-buttons space-fixed">
-                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
                     {showAnswer && <Button icon="done" action={() => handleReview(true)} shortcut={KeyCodes.ArrowUp} />}
                     {showAnswer && <Button icon="close" action={() => handleReview(false)} shortcut={KeyCodes.ArrowDown} />}
-                    <Button icon="double_arrow" action={skip} shortcut={KeyCodes.ArrowRight} />
+                    <Button icon="done" action={skip} shortcut={KeyCodes.ArrowRight} />
                 </div>
             }
             {enableShortcuts ||
                 <div className="review-buttons space-fixed">
-                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
                     {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
                     {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
-                    <Button icon="double_arrow" action={skip} />
+                    <Button icon="done" action={skip} />
                 </div>
             }
         </main>

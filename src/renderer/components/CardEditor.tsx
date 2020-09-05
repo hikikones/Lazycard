@@ -8,17 +8,11 @@ import Button from './Button';
 
 const CardEditor = (props: ICardEditorProps) => {
     const [front, setFront] = React.useState<string>(isNewCard(props) ? "" : props.card.front);
-    const [back, setBack] = React.useState<string>(isNewCard(props) ? "" : props.card.back);
 
     const frontInput = React.useRef<HTMLTextAreaElement>();
-    const backInput = React.useRef<HTMLTextAreaElement>();
 
     const onFrontChange = () => {
         setFront(frontInput.current.value);
-    }
-
-    const onBackChange = () => {
-        setBack(backInput.current.value);
     }
 
     const save = () => {
@@ -26,7 +20,6 @@ const CardEditor = (props: ICardEditorProps) => {
 
         const card = isNewCard(props) ? db.cards.new(props.topicId) : props.card;
         card.front = frontInput.current.value;
-        card.back = backInput.current.value;
         
         clear();
         frontInput.current.focus();
@@ -39,13 +32,11 @@ const CardEditor = (props: ICardEditorProps) => {
 
     const clear = () => {
         frontInput.current.value = "";
-        backInput.current.value = "";
         onFrontChange();
-        onBackChange();
     }
 
     const isEmpty = (): boolean => {
-        return frontInput.current.value === "" || backInput.current.value === "";
+        return frontInput.current.value === "";
     }
 
     const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>, front: boolean) => {
@@ -65,7 +56,6 @@ const CardEditor = (props: ICardEditorProps) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.value += `![](${base64})`;
                 if (front) onFrontChange();
-                else onBackChange();
             }
         }
     }
@@ -82,15 +72,6 @@ const CardEditor = (props: ICardEditorProps) => {
                     onChange={onFrontChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
                 />
-                <label>Back</label>
-                <textarea
-                    ref={backInput}
-                    className="card-textarea"
-                    defaultValue={back}
-                    rows={5}
-                    onChange={onBackChange}
-                    onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, false)}
-                />
                 <section className="row space-between">
                     <Button name="Save" icon="done" action={save} />
                     <Button name="Cancel" icon="close" action={cancel} />
@@ -99,7 +80,7 @@ const CardEditor = (props: ICardEditorProps) => {
 
             <section className="col">
                 <label>Preview</label>
-                <CardView front={front} back={back} showBack={true} />
+                <CardView front={front} />
             </section>
         </section>
     );
