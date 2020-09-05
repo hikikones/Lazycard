@@ -7,6 +7,7 @@ import CardView from './CardView';
 import Dropdown, { DropdownItem } from './Dropdown';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
+import TimerSimple from './TimerSimple';
 
 const Card = (props: ICardProps) => {
     const [showEditor, setShowEditor] = React.useState<boolean>(false);
@@ -21,6 +22,11 @@ const Card = (props: ICardProps) => {
         props.onDelete();
     }
 
+    const startTimer = () => {
+        setShowStats(show => !show);
+        if (props.onToggleModal !== undefined) props.onToggleModal();
+    }
+
     return (
         <>
             <CardView front={props.card.front}>
@@ -28,7 +34,7 @@ const Card = (props: ICardProps) => {
                     <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
                     <DropdownItem name="Delete" icon="delete" action={onDelete} />
                 </Dropdown>
-
+                <TimerSimple timerEnabled={false} seconds={10} minutes={1}></TimerSimple>
                 {props.children || null}
             </CardView>
 
