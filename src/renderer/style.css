@@ -1,3 +1,4 @@
+/**/
 @import "~katex/dist/katex.min.css";
 @import "~material-icons/iconfont/material-icons.css";
 @import "~lato-font/css/lato-font.css";
@@ -28,7 +29,7 @@
     --sidebar-highlight-color: #e6e6e6;
     --sidebar-text-color: #333333;
 
-    --background-color: ghostwhite;
+    --background-color: #98CDC6;
     --background-text-color: black;
     
     --surface-color: white;
