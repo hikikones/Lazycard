@@ -15,7 +15,7 @@ const TimerSimple = (props: ITimerSimple) => {
     function showCompleteMsg(enabled: boolean){
         setShowMessage(true);
         return (
-            <div>Time's Up!</div>
+            <div>Done!</div>
         )
     }
 
