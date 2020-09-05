@@ -131,11 +131,11 @@ const Cards = (props: ICardsProps) => {
             </section>
 
             <section className="row row-center col-center wrap space-fixed">
-                <Button
+                {/*<Button
                     name="Show answer"
                     icon={showBack ? "check_box" : "check_box_outline_blank"}
                     action={() => setShowBack(show => !show)}
-                />
+                />*/}
 
                 <Button
                     name="Select all"
@@ -143,12 +143,12 @@ const Cards = (props: ICardsProps) => {
                     action={toggleSelectAll}
                 />
 
-                <Dropdown name="Sort" icon={sortBy} showDownArrow={true}>
+                {/*<Dropdown name="Sort" icon={sortBy} showDownArrow={true}>
                     <DropdownItem name="Newest" icon="arrow_upward" action={() => setSortBy(CardSort.Newest)} />
                     <DropdownItem name="Oldest" icon="arrow_downward" action={() => setSortBy(CardSort.Oldest)} />
                     <DropdownItem name="Retention Rate" icon="trending_down" action={() => setSortBy(CardSort.RetentionRateDesc)} />
                     <DropdownItem name="Retention Rate" icon="trending_up" action={() => setSortBy(CardSort.RetentionRateAsc)} />
-                </Dropdown>
+    </Dropdown>*/}
 
                 <Dropdown name={`Bulk (${selected})`} icon="assignment" showDownArrow={true}>
                     <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
