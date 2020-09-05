@@ -7,6 +7,7 @@ import CardView from './CardView';
 import Dropdown, { DropdownItem } from './Dropdown';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
+import Button from './Button';
 
 const Card = (props: ICardProps) => {
     const [showEditor, setShowEditor] = React.useState<boolean>(false);
@@ -24,10 +25,9 @@ const Card = (props: ICardProps) => {
     return (
         <>
             <CardView front={props.card.front}>
-                <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false}>
-                    <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
-                    <DropdownItem name="Delete" icon="delete" action={onDelete} />
-                </Dropdown>
+                 <Button name="Audio" icon="volume_up" action={null} />
+                    <Button name="Edit" icon="edit" action={toggleEditor} />
+                    <Button name="Delete" icon="delete" action={onDelete} />
 
                 {props.children || null}
             </CardView>
