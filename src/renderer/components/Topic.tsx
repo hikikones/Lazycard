@@ -55,14 +55,14 @@ const Topic = (props: ITopicProps) => {
             <EditableTitle title={props.topic.name} onSubmit={onNameChange} />
 
             <section className="row row-center col-center wrap space-fixed">
-                {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
-                {hasCards && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
+                {showCardEditor || <Button name="Add Step" icon="add" action={toggleCardEditor} />}
+                {hasCards && <ButtonLink name="Start Task" icon="drafts" to={`/review/${props.topic.id}`} />}
                 <Button name="Delete" icon="delete" action={onDelete} />
             </section>
 
             {showCardEditor && <CardEditor topicId={props.topic.id} onSave={updateCards} onCancel={toggleCardEditor} />}
 
-            {hasCards && <h2>Cards</h2>}
+            {hasCards && <h2>Steps</h2>}
             <Cards cards={cards} onCardChange={updateCards} />
         </div>
     );

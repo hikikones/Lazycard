@@ -71,7 +71,7 @@ const Review = () => {
         if ((id && db.cards.getByTopic(id).length === 0) || db.cards.size() === 0) {
             return (
                 <main>
-                    <Empty icon="content_copy" message="No cards" />
+                    <Empty icon="content_copy" message="Add Steps" />
                 </main>
             );
         }

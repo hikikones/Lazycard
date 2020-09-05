@@ -58,7 +58,7 @@ const Topics = () => {
         <>
             <aside className="col">
                 <div className="col">
-                    <Button name="New topic" icon="add" action={onNewTopic} className="sidebar" />
+                    <Button name="Add Task" icon="add" action={onNewTopic} className="sidebar" />
                     <hr />
                 </div>
                 <div className="col topics-sidebar">

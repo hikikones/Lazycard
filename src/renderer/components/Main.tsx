@@ -43,7 +43,7 @@ const CardsContainer = () => {
 
     return (
         <main>
-            {cards.length > 0 && <h1 className="text-center">Cards</h1>}
+            {cards.length > 0 && <h1 className="text-center">Steps</h1>}
             <Cards cards={cards} onCardChange={updateCards} />
         </main>
     );
