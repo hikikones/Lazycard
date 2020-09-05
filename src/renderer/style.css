@@ -266,10 +266,6 @@ hr {
 }
 
 .cards {
-    display: grid;
-    grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
-    width: 100%;
     max-width: var(--cards-max-width);
 }
 

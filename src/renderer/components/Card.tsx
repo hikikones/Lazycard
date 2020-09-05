@@ -8,6 +8,8 @@ import Dropdown, { DropdownItem } from './Dropdown';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
 import Button from './Button';
+import SimpleTTS = require("simpletts");
+
 
 const Card = (props: ICardProps) => {
     const [showEditor, setShowEditor] = React.useState<boolean>(false);
@@ -22,10 +24,28 @@ const Card = (props: ICardProps) => {
         props.onDelete();
     }
 
+    const playAudio = () =>
+    {
+        const tts = new SimpleTTS();
+ 
+        tts.getVoices().then((voices: Array<Voice>) => {
+        
+            return tts.read({
+                "text": props.card.front,
+                "voice": voices[0]
+            });
+        
+        }).then((options: Options) => {
+            console.log(options);
+        }).catch((err: Error) => {
+            console.log(err);
+        });
+    }
+
     return (
         <>
             <CardView front={props.card.front}>
-                 <Button name="Audio" icon="volume_up" action={null} />
+                 <Button name="Audio" icon="volume_up" action={playAudio} />
                     <Button name="Edit" icon="edit" action={toggleEditor} />
                     <Button name="Delete" icon="delete" action={onDelete} />
 
@@ -49,5 +69,18 @@ interface ICardProps {
     onToggleModal?(): void
     children?: React.ReactNode
 }
+
+interface Voice {
+    name: string;
+    gender: "female" | "male";
+}
+ 
+interface Options {
+    text: string;
+    volume?: number;
+    speed?: number;
+    voice?: Voice | string;
+}
+
 
 export default Card;
