@@ -18,7 +18,6 @@ const CardSelectable = (props: ICardSelectableProps) => {
         <div onMouseEnter={() => setShowCheckbox(true)} onMouseLeave={() => setShowCheckbox(false)}>
             <Card
                 card={props.card}
-                showBack={props.showBack}
                 onDelete={() => props.onDelete(props.card)}
             >
                 {(props.card.selected || showCheckbox) &&
@@ -35,7 +34,6 @@ const CardSelectable = (props: ICardSelectableProps) => {
 
 interface ICardSelectableProps {
     card: CardEntity
-    showBack: boolean
     onDelete(card: CardEntity): void
     onSelect(): void
     onDeselect(): void

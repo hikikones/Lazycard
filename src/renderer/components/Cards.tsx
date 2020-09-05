@@ -28,7 +28,6 @@ const Cards = (props: ICardsProps) => {
         );
     }
 
-    const [showBack, setShowBack] = React.useState<boolean>(false);
     const [showAmount, setShowAmount] = React.useState<number>(20);
     const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
     const [searchResults, setSearchResults] = React.useState<Card[]>(null);
@@ -132,12 +131,6 @@ const Cards = (props: ICardsProps) => {
 
             <section className="row row-center col-center wrap space-fixed">
                 <Button
-                    name="Show answer"
-                    icon={showBack ? "check_box" : "check_box_outline_blank"}
-                    action={() => setShowBack(show => !show)}
-                />
-
-                <Button
                     name="Select all"
                     icon={isAllSelected() ? "check_box" : "check_box_outline_blank"}
                     action={toggleSelectAll}
@@ -160,7 +153,6 @@ const Cards = (props: ICardsProps) => {
                 {sort(cards()).slice(0, showAmount).map(c =>
                     <CardSelectable
                         card={c}
-                        showBack={showBack}
                         onDelete={onDelete}
                         onSelect={onSelect}
                         onDeselect={onDeselect}
