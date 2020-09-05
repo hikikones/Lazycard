@@ -60,7 +60,7 @@ const TimerSimple = (props: ITimerSimple) => {
                 {showMinutes()}:
                 {showSeconds()} 
                 <span>
-                    {showMessage ? " Time's Up!": ""}
+                    {showMessage ? " Done!": ""}
                 </span>
             </div>
             <div className="row">
