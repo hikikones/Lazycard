@@ -93,7 +93,6 @@ const Review = () => {
 
             <Card
                 card={card}
-                showBack={showAnswer}
                 onDelete={onDelete}
                 onToggleModal={toggleShortcuts}
             >

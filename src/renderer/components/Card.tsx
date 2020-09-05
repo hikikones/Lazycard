@@ -23,7 +23,7 @@ const Card = (props: ICardProps) => {
 
     return (
         <>
-            <CardView front={props.card.front} back={props.card.back} showBack={props.showBack}>
+            <CardView front={props.card.front}>
                 <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false}>
                     <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
                     <DropdownItem name="Delete" icon="delete" action={onDelete} />
@@ -45,7 +45,6 @@ const Card = (props: ICardProps) => {
 
 interface ICardProps {
     card: CardEntity
-    showBack: boolean
     onDelete(): void
     onToggleModal?(): void
     children?: React.ReactNode
