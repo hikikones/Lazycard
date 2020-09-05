@@ -9,7 +9,7 @@ import Modal from './Modal';
 import CardEditor from './CardEditor';
 import Button from './Button';
 import SimpleTTS = require("simpletts");
-
+import TimerSimple from './TimerSimple';
 
 const Card = (props: ICardProps) => {
     const [showEditor, setShowEditor] = React.useState<boolean>(false);
@@ -40,6 +40,9 @@ const Card = (props: ICardProps) => {
         }).catch((err: Error) => {
             console.log(err);
         });
+    const startTimer = () => {
+        setShowStats(show => !show);
+        if (props.onToggleModal !== undefined) props.onToggleModal();
     }
 
     return (
@@ -49,6 +52,11 @@ const Card = (props: ICardProps) => {
                     <Button name="Edit" icon="edit" action={toggleEditor} />
                     <Button name="Delete" icon="delete" action={onDelete} />
 
+                <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false}>
+                    <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
+                    <DropdownItem name="Delete" icon="delete" action={onDelete} />
+                </Dropdown>
+                <TimerSimple timerEnabled={false} seconds={10} minutes={1}></TimerSimple>
                 {props.children || null}
             </CardView>
 
