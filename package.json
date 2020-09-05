@@ -62,7 +62,6 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.2.0",
-    "simpletts": "^2.4.0",
     "typeface-roboto-mono": "0.0.75"
   }
 }
