@@ -32,7 +32,7 @@ const Card = (props: ICardProps) => {
     tts.getVoices().then((voices: Array<Voice>) => {
  
     return tts.read({
-        "text": props.cards.front,
+        "text": props.card.front,
         "voice": voices[0]
     });
  

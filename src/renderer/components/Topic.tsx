@@ -56,7 +56,7 @@ const Topic = (props: ITopicProps) => {
 
             <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add Step" icon="add" action={toggleCardEditor} />}
-                {hasCards && <ButtonLink name="Start Task" icon="drafts" to={`/review/${props.topic.id}`} />}
+                {hasCards && <ButtonLink name="Start Task" icon="flag" to={`/review/${props.topic.id}`} />}
                 <Button name="Delete" icon="delete" action={onDelete} />
             </section>
 
