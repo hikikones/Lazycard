@@ -3,11 +3,13 @@ import { Switch, Route, Redirect, useRouteMatch, useParams, useHistory } from "r
 
 import db, { Topic as TopicEntity } from '../model/Database';
 
+
 import Topic from './Topic';
 import Modal from './Modal';
 import Empty from './Empty';
 import Button from './Button';
 import ButtonNavLink from './ButtonNavLink';
+import Input from './Input';
 
 const sort = (topics: TopicEntity[]): TopicEntity[] => {
     return topics.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase() ? 1 : -1);
@@ -56,15 +58,27 @@ const Topics = () => {
         <>
             <aside className="col">
                 <div className="col">
-                    <Button name="Import" icon="save_alt" action={toggleImportOptions} className="sidebar" />
                     <Button name="New topic" icon="add" action={onNewTopic} className="sidebar" />
                     <hr />
                 </div>
                 <div className="col topics-sidebar">
+
+                <section>
+                <Input
+                    className="search-input"
+                    placeholder="Search..."
+                    onChange={null}
+                    onClear={null}
+                    icon="search"
+                />
+                </section>
+
                     {topics.map(t =>
                         <ButtonNavLink name={t.name} to={`${match.path}/${t.id}`} className="sidebar" key={t.id} />
                     )}
                 </div>
+
+
             </aside>
 
             <main>
