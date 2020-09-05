@@ -160,7 +160,6 @@ const Cards = (props: ICardsProps) => {
                 {sort(cards()).slice(0, showAmount).map(c =>
                     <CardSelectable
                         card={c}
-                        showBack={showBack}
                         onDelete={onDelete}
                         onSelect={onSelect}
                         onDeselect={onDeselect}
