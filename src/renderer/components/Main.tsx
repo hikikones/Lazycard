@@ -8,6 +8,7 @@ import Review from './Review';
 import Cards from './Cards';
 import Settings from './Settings';
 import Topics from './Topics';
+import Input from './Input';
 
 const Main = (props: IMainProps) => {
     return (
@@ -28,6 +29,8 @@ const Main = (props: IMainProps) => {
                 <Topics />
             </Route>
         </Switch>
+
+        
     );
 }
 
