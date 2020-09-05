@@ -7,6 +7,8 @@ import CardView from './CardView';
 import Dropdown, { DropdownItem } from './Dropdown';
 import Modal from './Modal';
 import CardEditor from './CardEditor';
+import Button from './Button';
+import SimpleTTS = require("simpletts");
 import TimerSimple from './TimerSimple';
 
 const Card = (props: ICardProps) => {
@@ -22,6 +24,22 @@ const Card = (props: ICardProps) => {
         props.onDelete();
     }
 
+    const playAudio = () =>
+    {
+        const tts = new SimpleTTS();
+ 
+        tts.getVoices().then((voices: Array<Voice>) => {
+        
+            return tts.read({
+                "text": props.card.front,
+                "voice": voices[0]
+            });
+        
+        }).then((options: Options) => {
+            console.log(options);
+        }).catch((err: Error) => {
+            console.log(err);
+        });
     const startTimer = () => {
         setShowStats(show => !show);
         if (props.onToggleModal !== undefined) props.onToggleModal();
@@ -30,6 +48,10 @@ const Card = (props: ICardProps) => {
     return (
         <>
             <CardView front={props.card.front}>
+                 <Button name="Audio" icon="volume_up" action={playAudio} />
+                    <Button name="Edit" icon="edit" action={toggleEditor} />
+                    <Button name="Delete" icon="delete" action={onDelete} />
+
                 <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false}>
                     <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
                     <DropdownItem name="Delete" icon="delete" action={onDelete} />
@@ -55,5 +77,18 @@ interface ICardProps {
     onToggleModal?(): void
     children?: React.ReactNode
 }
+
+interface Voice {
+    name: string;
+    gender: "female" | "male";
+}
+ 
+interface Options {
+    text: string;
+    volume?: number;
+    speed?: number;
+    voice?: Voice | string;
+}
+
 
 export default Card;

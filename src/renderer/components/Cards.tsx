@@ -120,15 +120,6 @@ const Cards = (props: ICardsProps) => {
 
     return (
         <div className="col col-center full-width">
-            <section>
-                <Input
-                    className="search-input"
-                    placeholder="Search..."
-                    onChange={onSearch}
-                    onClear={onClearSearch}
-                    icon="search"
-                />
-            </section>
 
             <section className="row row-center col-center wrap space-fixed">
                 {/*<Button
@@ -150,10 +141,9 @@ const Cards = (props: ICardsProps) => {
                     <DropdownItem name="Retention Rate" icon="trending_up" action={() => setSortBy(CardSort.RetentionRateAsc)} />
     </Dropdown>*/}
 
-                <Dropdown name={`Bulk (${selected})`} icon="assignment" showDownArrow={true}>
-                    <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
-                    <DropdownItem name="Delete" icon="delete" action={bulkDelete} />
-                </Dropdown>
+            
+                    <Button name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
+            
             </section>
 
             <section className="cards row-center">

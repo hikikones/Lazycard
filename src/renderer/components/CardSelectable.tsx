@@ -4,9 +4,10 @@ import { Card as CardEntity } from '../model/Database';
 
 import Card from './Card';
 import Button from './Button';
+import { truncate } from 'fs';
 
 const CardSelectable = (props: ICardSelectableProps) => {
-    const [showCheckbox, setShowCheckbox] = React.useState<boolean>(false);
+    const [showCheckbox, setShowCheckbox] = React.useState<boolean>(true);
 
     const toggleSelect = () => {
         props.card.selected = !props.card.selected;
@@ -15,7 +16,7 @@ const CardSelectable = (props: ICardSelectableProps) => {
     }
 
     return (
-        <div onMouseEnter={() => setShowCheckbox(true)} onMouseLeave={() => setShowCheckbox(false)}>
+        <div onMouseEnter={() => setShowCheckbox(true)} onMouseLeave={() => setShowCheckbox(true)}>
             <Card
                 card={props.card}
                 onDelete={() => props.onDelete(props.card)}
