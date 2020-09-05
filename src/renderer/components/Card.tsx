@@ -22,11 +22,6 @@ const Card = (props: ICardProps) => {
         props.onDelete();
     }
 
-    const startTimer = () => {
-        setShowStats(show => !show);
-        if (props.onToggleModal !== undefined) props.onToggleModal();
-    }
-
     return (
         <>
             <CardView front={props.card.front}>
