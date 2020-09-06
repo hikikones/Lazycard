@@ -5,7 +5,7 @@ const Empty = (props: IEmptyProps) => {
         <div className="col col-center row-center full-height">
             <section className="col col-center empty-state text-center">
                 <i className="material-icons icon">{props.icon}</i>
-                <h3>{props.message}</h3>
+                <h1>{props.message}</h1>
             </section>
             {props.children &&
                 <section>

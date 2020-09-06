@@ -74,14 +74,10 @@ const CardEditor = (props: ICardEditorProps) => {
                 />
                 <section className="row space-between">
                     <Button name="Save" icon="done" action={save} />
-                    <Button name="Cancel" icon="close" action={cancel} />
+                    <Button name="Done" icon="close" action={cancel} />
                 </section>
             </section>
 
-            <section className="col">
-                <label>Preview</label>
-                <CardView front={front} />
-            </section>
         </section>
     );
 }

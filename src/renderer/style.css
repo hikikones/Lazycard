@@ -12,7 +12,7 @@
     --navigation-width: 48px;
     --main-padding: 1rem 2rem;
     --sidebar-max-width: 250px;
-    --card-min-width: 250px;
+    --card-min-width: 550px;
     --card-max-width: 400px;
     --cards-max-width: 1280px;
     --modal-max-width: 720px;
@@ -29,7 +29,7 @@
     --sidebar-highlight-color: #e6e6e6;
     --sidebar-text-color: #333333;
 
-    --background-color: #98CDC6;
+    --background-color: #f6d7dc;
     --background-text-color: black;
     
     --surface-color: white;
@@ -73,6 +73,13 @@ body {
     height: 100vh;
 }
 
+p
+{
+    text-align: center; 
+    font-size: 40px; 
+    padding-top: 40px;
+}
+
 header {
     grid-area: header;
     position: relative;
@@ -97,7 +104,7 @@ aside {
     grid-area: sidebar;
     overflow: hidden;
     padding-top: 1rem;
-    min-width: 150px;
+    min-width: 200px;
     max-width: var(--sidebar-max-width);
     background-color: white;
 }
@@ -155,13 +162,14 @@ a.navigation.active i.icon, a.navigation:hover i.icon {
 }
 
 a.sidebar {
-    padding: 0.25rem 0.75rem;
+    padding: 1rem 1rem;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    font-size: 1.2rem;
     overflow-wrap: break-word;
     font-family: Gill Sans, sans-serif;
     font-weight: bolder;
+    font-size: 20px;
+    text-align: center;
 }
 
 a.sidebar:hover, a.sidebar.active {
@@ -269,16 +277,12 @@ hr {
 }
 
 .cards {
-    display: grid;
-    grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
-    width: 100%;
     max-width: var(--cards-max-width);
 }
 
 .card {
     padding: 1rem;
-    border-radius: 2px;
+    border-radius: 5px;
     position: relative;
     box-sizing: border-box;
     overflow-wrap: break-word;
@@ -304,7 +308,7 @@ hr {
     right: 0;
     padding: 0.1rem 0.5rem;
     font-weight: 400;
-    font-size: 0.7rem;
+    font-size: 14px;
     white-space: nowrap;
     text-align: right;
     overflow: hidden;
@@ -314,8 +318,8 @@ hr {
 
 .card-checkbox {
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 60px;
+    left: calc(var(--card-min-width) - 80px);
 }
 
 .card-textarea {
@@ -326,6 +330,13 @@ hr {
 
 .review-buttons a.button i.icon {
     font-size: 36px;
+}
+
+.top-corner
+{
+    position: absolute; 
+    top: 0; 
+    left: 0; 
 }
 
 .dropdown {
@@ -341,7 +352,7 @@ hr {
 }
 
 .dropdown-menu a.button {
-    font-size: 0.9rem;
+    font-size: 10px;
 }
 
 .dropdown-menu a.button i.icon {
@@ -366,9 +377,10 @@ a.button {
     display: inline-block;
     white-space: nowrap;
     text-decoration: none;
-    padding: 4px 6px;
+    padding: 20px 20px;
     color: var(--button-text-color);
     background-color: var(--button-color);
+    font-size: 30px; 
 }
 
 a.button:hover, a.button:focus {
@@ -380,7 +392,7 @@ a.button:active {
 }
 
 a.button i.icon {
-    font-size: 24px;
+    font-size: 35px;
 }
 
 i.icon {
@@ -402,7 +414,7 @@ h1.topic-name:hover {
 input.topic-name {
     border: none;
     font-family: var(--font-main);
-    font-size: 2em;
+    font-size: 10px;
     font-weight: bold;
     margin: 0.67em 0;
     box-sizing: border-box;
@@ -438,11 +450,16 @@ input.topic-name {
 }
 
 .empty-state {
-    opacity: 0.2;
+    opacity: 1;
 }
 
 .empty-state i.icon {
-    font-size: 4rem;
+    font-size: 100px;
+}
+
+h1
+{
+    font-size: 50px;
 }
 
 .modal-container {
@@ -526,4 +543,22 @@ input.topic-name {
 
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-highlight-color);
+}
+
+.card-padding
+{
+    padding-top: 25px;
+}
+
+.landingbutton
+{
+    display: inline-block;
+    white-space: nowrap;
+    text-decoration: none;
+    padding: 30px 40px; 
+    color: black;
+    background-color: white;
+    font-size: 30px; 
+    border-radius: 30px;
+
 }

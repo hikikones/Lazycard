@@ -24,10 +24,11 @@ const Cards = (props: ICardsProps) => {
     
     if (props.cards.length === 0) {
         return (
-            <Empty icon="content_copy" message="No cards" />
+            <Empty icon="content_copy" message="Add Steps" />
         );
     }
 
+    const [showBack, setShowBack] = React.useState<boolean>(false);
     const [showAmount, setShowAmount] = React.useState<number>(20);
     const [selected, setSelected] = React.useState<number>(props.cards.filter(c => c.selected).length);
     const [searchResults, setSearchResults] = React.useState<Card[]>(null);
@@ -119,32 +120,28 @@ const Cards = (props: ICardsProps) => {
 
     return (
         <div className="col col-center full-width">
-            <section>
-                <Input
-                    className="search-input"
-                    placeholder="Search..."
-                    onChange={onSearch}
-                    onClear={onClearSearch}
-                    icon="search"
-                />
-            </section>
 
             <section className="row row-center col-center wrap space-fixed">
-                <Button
-                    name="Select all"
-                    icon={isAllSelected() ? "check_box" : "check_box_outline_blank"}
-                    action={toggleSelectAll}
-                />
+                {/*<Button
+                    name="Show answer"
+                    icon={showBack ? "check_box" : "check_box_outline_blank"}
+                    action={() => setShowBack(show => !show)}
+                />*/}
 
-                <Dropdown name={`Bulk (${selected})`} icon="assignment" showDownArrow={true}>
-                    <DropdownItem name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
-                    <DropdownItem name="Delete" icon="delete" action={bulkDelete} />
-                </Dropdown>
+                {/*<Dropdown name="Sort" icon={sortBy} showDownArrow={true}>
+                    <DropdownItem name="Newest" icon="arrow_upward" action={() => setSortBy(CardSort.Newest)} />
+                    <DropdownItem name="Oldest" icon="arrow_downward" action={() => setSortBy(CardSort.Oldest)} />
+                    <DropdownItem name="Retention Rate" icon="trending_down" action={() => setSortBy(CardSort.RetentionRateDesc)} />
+                    <DropdownItem name="Retention Rate" icon="trending_up" action={() => setSortBy(CardSort.RetentionRateAsc)} />
+    </Dropdown>*/}
+
+               
+                
                 
             </section>
 
             <section className="cards row-center">
-                {sort(cards()).slice(0, showAmount).map(c =>
+                {cards().slice(0, showAmount).map(c =>
                     <CardSelectable
                         card={c}
                         onDelete={onDelete}

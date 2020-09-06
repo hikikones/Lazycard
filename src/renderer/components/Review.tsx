@@ -7,12 +7,13 @@ import KeyCodes from '../controller/KeyCodes';
 import Card from './Card';
 import Button from './Button';
 import Empty from './Empty';
+import ButtonNavLink from './ButtonNavLink'; 
 
 const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
     const [id] = React.useState<number>(Number(topicId));
 
-    const cards = React.useRef<CardEntity[]>(db.cards.getDue(id));
+    const cards = React.useRef<CardEntity[]>(db.cards.getByTopic(id));
     const index = React.useRef<number>(0);
     const [card, setCard] = React.useState<CardEntity>(cards.current[index.current]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
@@ -78,8 +79,8 @@ const Review = () => {
 
         return (
             <main>
-                <Empty icon="mood" message="No cards to review">
-                    <Button icon="redo" name="Custom study" action={initCustomStudy} />
+                <Empty icon="mood" message="Welcome to ByteBuddy">
+                    <ButtonNavLink to="/topics"  name="Add Your Task" icon="favorite" className="landingbutton"/>
                 </Empty>
             </main>
         );
