@@ -8,11 +8,18 @@ import Button from './Button';
 
 const CardEditor = (props: ICardEditorProps) => {
     const [front, setFront] = React.useState<string>(isNewCard(props) ? "" : props.card.front);
+    const [showCheckbox, setShowCheckbox] = React.useState<boolean>(false);
+    const [minutes, setMinutes] = React.useState<string>(isNewCard(props) ? "0" : `${props.card.time}`);
 
     const frontInput = React.useRef<HTMLTextAreaElement>();
+    const minutesInput = React.useRef<HTMLTextAreaElement>();
 
     const onFrontChange = () => {
         setFront(frontInput.current.value);
+    }
+
+    const onMinutesChange = () => {
+        setMinutes(minutesInput.current.value);
     }
 
     const save = () => {
@@ -20,6 +27,7 @@ const CardEditor = (props: ICardEditorProps) => {
 
         const card = isNewCard(props) ? db.cards.new(props.topicId) : props.card;
         card.front = frontInput.current.value;
+        card.time = parseInt(minutesInput.current.value);
         
         clear();
         frontInput.current.focus();
@@ -72,12 +80,27 @@ const CardEditor = (props: ICardEditorProps) => {
                     onChange={onFrontChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
                 />
+                <label>Add the time to complete task</label>
+                <textarea
+                    ref={minutesInput}
+                    className="time-textarea"
+                    defaultValue={minutes}
+                    rows={2}
+                    onChange={onMinutesChange}
+                    onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
+                />
                 <section className="row space-between">
                     <Button name="Save" icon="done" action={save} />
                     <Button name="Done" icon="close" action={cancel} />
                 </section>
             </section>
 
+            <section className="col">
+                <label>Preview</label>
+                <CardView front={front} time={parseInt(minutes)}>
+                <div hidden={!(minutes && parseInt(minutes) > 0)}>{`Time to complete task: ${minutes} mins`}</div>
+                </CardView>
+            </section>
         </section>
     );
 }
