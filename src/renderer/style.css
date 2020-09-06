@@ -83,7 +83,7 @@ header {
 nav {
     grid-area: nav;
     overflow: hidden;
-    background-color: var(--navigation-color);
+    background-color:#413D3D;;
 }
 
 main {
@@ -99,7 +99,7 @@ aside {
     padding-top: 1rem;
     min-width: 150px;
     max-width: var(--sidebar-max-width);
-    background-color: var(--sidebar-color);
+    background-color: white;
 }
 
 .titlebar-resize {
@@ -158,8 +158,10 @@ a.sidebar {
     padding: 0.25rem 0.75rem;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 1.2rem;
     overflow-wrap: break-word;
+    font-family: Gill Sans, sans-serif;
+    font-weight: bolder;
 }
 
 a.sidebar:hover, a.sidebar.active {
