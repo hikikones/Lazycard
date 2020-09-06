@@ -9,7 +9,7 @@ import Button from './Button';
 const CardEditor = (props: ICardEditorProps) => {
     const [front, setFront] = React.useState<string>(isNewCard(props) ? "" : props.card.front);
     const [showCheckbox, setShowCheckbox] = React.useState<boolean>(false);
-    const [minutes, setMinutes] = React.useState<string>("0");
+    const [minutes, setMinutes] = React.useState<string>(isNewCard(props) ? "0" : `${props.card.time}`);
 
     const frontInput = React.useRef<HTMLTextAreaElement>();
     const minutesInput = React.useRef<HTMLTextAreaElement>();
@@ -20,13 +20,6 @@ const CardEditor = (props: ICardEditorProps) => {
 
     const onMinutesChange = () => {
         setMinutes(minutesInput.current.value);
-    }
-
-    const checkBoxSet = () => {
-        if (showCheckbox){
-            setShowCheckbox(!showCheckbox);
-        }
-        
     }
 
     const save = () => {
@@ -87,7 +80,7 @@ const CardEditor = (props: ICardEditorProps) => {
                     onChange={onFrontChange}
                     onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e, true)}
                 />
-                <label>Add the time to complete duration</label>
+                <label>Add the time to complete task</label>
                 <textarea
                     ref={minutesInput}
                     className="time-textarea"
