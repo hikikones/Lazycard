@@ -284,10 +284,11 @@ hr {
     max-width: var(--card-max-width);
     color: var(--surface-text-color);
     background-color: var(--surface-color);
-    padding: 10px 20px;
+    padding: 10px 15px;
     font-size: 50px;
     font-family:Gill Sans, sans-serif;
     text-align:center;
+    border: 5px solid #504D4D;
 }
 
 .card a {
