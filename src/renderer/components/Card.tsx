@@ -47,9 +47,14 @@ const Card = (props: ICardProps) => {
     return (
         <>
             <CardView front={props.card.front}>
+                <div className = "top-corner">
                     <Button name="Audio" icon="volume_up" action={playAudio} />
-                    <Button name="Edit" icon="edit" action={toggleEditor} />
-                    <Button name="Delete" icon="delete" action={onDelete} />
+                    </div>
+
+                    <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false} >
+                    <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
+                    <DropdownItem name="Delete" icon="delete" action={onDelete} />
+                    </Dropdown>
 
                
                 <TimerSimple timerEnabled={true} seconds={10} minutes={1}></TimerSimple>
