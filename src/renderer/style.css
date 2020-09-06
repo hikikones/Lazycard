@@ -78,7 +78,6 @@ p
     text-align: center; 
     font-size: 40px; 
     padding-top: 40px;
-    padding-bottom: 20px;
 }
 
 header {
@@ -105,7 +104,7 @@ aside {
     grid-area: sidebar;
     overflow: hidden;
     padding-top: 1rem;
-    min-width: 150px;
+    min-width: 200px;
     max-width: var(--sidebar-max-width);
     background-color: var(--sidebar-color);
 }
@@ -163,11 +162,12 @@ a.navigation.active i.icon, a.navigation:hover i.icon {
 }
 
 a.sidebar {
-    padding: 0.25rem 0.75rem;
+    padding: 1rem 1rem;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    font-size: 14px;
+    font-size: 20px;
     overflow-wrap: break-word;
+    text-align: center;
 }
 
 a.sidebar:hover, a.sidebar.active {
@@ -301,7 +301,7 @@ hr {
     right: 0;
     padding: 0.1rem 0.5rem;
     font-weight: 400;
-    font-size: 0.7rem;
+    font-size: 14px;
     white-space: nowrap;
     text-align: right;
     overflow: hidden;
@@ -345,7 +345,7 @@ hr {
 }
 
 .dropdown-menu a.button {
-    font-size: 0.9rem;
+    font-size: 10px;
 }
 
 .dropdown-menu a.button i.icon {
@@ -373,6 +373,7 @@ a.button {
     padding: 20px 20px;
     color: var(--button-text-color);
     background-color: var(--button-color);
+    font-size: 30px; 
 }
 
 a.button:hover, a.button:focus {
@@ -404,7 +405,7 @@ h1.topic-name:hover {
 input.topic-name {
     border: none;
     font-family: var(--font-main);
-    font-size: 2em;
+    font-size: 10px;
     font-weight: bold;
     margin: 0.67em 0;
     box-sizing: border-box;

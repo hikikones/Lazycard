@@ -48,7 +48,7 @@ const Card = (props: ICardProps) => {
         <>
             <CardView front={props.card.front}>
                 <div className = "top-corner">
-                    <Button name="Audio" icon="volume_up" action={playAudio} />
+                    <Button name="" icon="volume_up" action={playAudio} />
                     </div>
 
                     <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false} >
