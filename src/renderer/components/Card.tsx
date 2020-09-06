@@ -50,6 +50,8 @@ const Card = (props: ICardProps) => {
                     <Button name="Audio" icon="volume_up" action={playAudio} />
                     <Button name="Edit" icon="edit" action={toggleEditor} />
                     <Button name="Delete" icon="delete" action={onDelete} />
+
+               
                 <TimerSimple timerEnabled={true} seconds={10} minutes={1}></TimerSimple>
                 {props.children || null}
             </CardView>

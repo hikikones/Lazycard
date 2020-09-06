@@ -4,9 +4,11 @@ import md from '../controller/Markdown';
 
 const Card = (props: ICardViewProps) => {
     return (
-        <div className="card shadow">
+        <div className = "card-padding">
+        <div className="card">
             <CardContent markdown={props.front} />
             {props.children || null}
+        </div>
         </div>
     );
 }
