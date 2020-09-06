@@ -1,3 +1,4 @@
+/**/
 @import "~katex/dist/katex.min.css";
 @import "~material-icons/iconfont/material-icons.css";
 @import "~lato-font/css/lato-font.css";
@@ -28,7 +29,7 @@
     --sidebar-highlight-color: #e6e6e6;
     --sidebar-text-color: #333333;
 
-    --background-color: ghostwhite;
+    --background-color: #98CDC6;
     --background-text-color: black;
     
     --surface-color: white;
@@ -266,16 +267,12 @@ hr {
 }
 
 .cards {
-    display: grid;
-    grid-gap: 1rem;
-    grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), var(--card-max-width)));
-    width: 100%;
     max-width: var(--cards-max-width);
 }
 
 .card {
     padding: 1rem;
-    border-radius: 2px;
+    border-radius: 5px;
     position: relative;
     box-sizing: border-box;
     overflow-wrap: break-word;
@@ -516,4 +513,9 @@ input.topic-name {
 
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-highlight-color);
+}
+
+.card-padding
+{
+    padding-top: 25px;
 }
