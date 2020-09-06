@@ -391,6 +391,8 @@ h1.topic-name {
     padding: 0.25rem;
     box-sizing: border-box;
     overflow-wrap: break-word;
+    background-color:white;
+    border: 4px solid black;
 }
 
 h1.topic-name:hover {
