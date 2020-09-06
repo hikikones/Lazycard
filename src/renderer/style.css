@@ -29,7 +29,7 @@
     --sidebar-highlight-color: #e6e6e6;
     --sidebar-text-color: #333333;
 
-    --background-color: #98CDC6;
+    --background-color: #f6d7dc;
     --background-text-color: black;
     
     --surface-color: white;
@@ -441,11 +441,16 @@ input.topic-name {
 }
 
 .empty-state {
-    opacity: 0.2;
+    opacity: 1;
 }
 
 .empty-state i.icon {
-    font-size: 4rem;
+    font-size: 100px;
+}
+
+h1
+{
+    font-size: 50px;
 }
 
 .modal-container {
@@ -534,4 +539,17 @@ input.topic-name {
 .card-padding
 {
     padding-top: 25px;
+}
+
+.landingbutton
+{
+    display: inline-block;
+    white-space: nowrap;
+    text-decoration: none;
+    padding: 30px 40px; 
+    color: black;
+    background-color: white;
+    font-size: 30px; 
+    border-radius: 30px;
+
 }

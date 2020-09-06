@@ -79,8 +79,8 @@ const Review = () => {
 
         return (
             <main>
-                <Empty icon="mood" message="Welcome to ByteBuddy!">
-                    <ButtonNavLink to="/topics"  name="Add Your Task!" icon="favorite"/>
+                <Empty icon="mood" message="Welcome to ByteBuddy">
+                    <ButtonNavLink to="/topics"  name="Add Your Task" icon="favorite" className="landingbutton"/>
                 </Empty>
             </main>
         );
