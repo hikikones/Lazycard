@@ -7,6 +7,7 @@ import KeyCodes from '../controller/KeyCodes';
 import Card from './Card';
 import Button from './Button';
 import Empty from './Empty';
+import ButtonNavLink from './ButtonNavLink'; 
 
 const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
@@ -78,8 +79,8 @@ const Review = () => {
 
         return (
             <main>
-                <Empty icon="mood" message="No cards to review">
-                    <Button icon="redo" name="Custom study" action={initCustomStudy} />
+                <Empty icon="mood" message="Welcome to ByteBuddy">
+                    <ButtonNavLink to="/topics"  name="Add Your Task" icon="favorite" className="landingbutton"/>
                 </Empty>
             </main>
         );

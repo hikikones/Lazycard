@@ -12,7 +12,7 @@
     --navigation-width: 48px;
     --main-padding: 1rem 2rem;
     --sidebar-max-width: 250px;
-    --card-min-width: 250px;
+    --card-min-width: 550px;
     --card-max-width: 400px;
     --time-min-width: 20px;
     --time-max-width: 25px;
@@ -31,7 +31,7 @@
     --sidebar-highlight-color: #e6e6e6;
     --sidebar-text-color: #333333;
 
-    --background-color: #98CDC6;
+    --background-color: #f6d7dc;
     --background-text-color: black;
     
     --surface-color: white;
@@ -75,6 +75,13 @@ body {
     height: 100vh;
 }
 
+p
+{
+    text-align: center; 
+    font-size: 40px; 
+    padding-top: 40px;
+}
+
 header {
     grid-area: header;
     position: relative;
@@ -85,7 +92,7 @@ header {
 nav {
     grid-area: nav;
     overflow: hidden;
-    background-color: var(--navigation-color);
+    background-color:#413D3D;;
 }
 
 main {
@@ -99,9 +106,9 @@ aside {
     grid-area: sidebar;
     overflow: hidden;
     padding-top: 1rem;
-    min-width: 150px;
+    min-width: 200px;
     max-width: var(--sidebar-max-width);
-    background-color: var(--sidebar-color);
+    background-color: white;
 }
 
 .titlebar-resize {
@@ -157,11 +164,14 @@ a.navigation.active i.icon, a.navigation:hover i.icon {
 }
 
 a.sidebar {
-    padding: 0.25rem 0.75rem;
+    padding: 1rem 1rem;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    font-size: 0.9rem;
     overflow-wrap: break-word;
+    font-family: Gill Sans, sans-serif;
+    font-weight: bolder;
+    font-size: 20px;
+    text-align: center;
 }
 
 a.sidebar:hover, a.sidebar.active {
@@ -282,6 +292,11 @@ hr {
     max-width: var(--card-max-width);
     color: var(--surface-text-color);
     background-color: var(--surface-color);
+    padding: 10px 15px;
+    font-size: 50px;
+    font-family:Gill Sans, sans-serif;
+    text-align:center;
+    border: 5px solid #504D4D;
 }
 
 .card a {
@@ -295,7 +310,7 @@ hr {
     right: 0;
     padding: 0.1rem 0.5rem;
     font-weight: 400;
-    font-size: 0.7rem;
+    font-size: 14px;
     white-space: nowrap;
     text-align: right;
     overflow: hidden;
@@ -305,8 +320,8 @@ hr {
 
 .card-checkbox {
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 60px;
+    left: calc(var(--card-min-width) - 80px);
 }
 
 .timer-checkbox {
@@ -329,6 +344,13 @@ hr {
     font-size: 36px;
 }
 
+.top-corner
+{
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+}
+
 .dropdown {
     display: inline-block;
     position: relative;
@@ -342,7 +364,7 @@ hr {
 }
 
 .dropdown-menu a.button {
-    font-size: 0.9rem;
+    font-size: 10px;
 }
 
 .dropdown-menu a.button i.icon {
@@ -367,9 +389,10 @@ a.button {
     display: inline-block;
     white-space: nowrap;
     text-decoration: none;
-    padding: 4px 6px;
+    padding: 20px 20px;
     color: var(--button-text-color);
     background-color: var(--button-color);
+    font-size: 30px; 
 }
 
 a.button:hover, a.button:focus {
@@ -381,7 +404,7 @@ a.button:active {
 }
 
 a.button i.icon {
-    font-size: 24px;
+    font-size: 35px;
 }
 
 i.icon {
@@ -392,6 +415,8 @@ h1.topic-name {
     padding: 0.25rem;
     box-sizing: border-box;
     overflow-wrap: break-word;
+    background-color:white;
+    border: 4px solid black;
 }
 
 h1.topic-name:hover {
@@ -401,7 +426,7 @@ h1.topic-name:hover {
 input.topic-name {
     border: none;
     font-family: var(--font-main);
-    font-size: 2em;
+    font-size: 10px;
     font-weight: bold;
     margin: 0.67em 0;
     box-sizing: border-box;
@@ -437,11 +462,16 @@ input.topic-name {
 }
 
 .empty-state {
-    opacity: 0.2;
+    opacity: 1;
 }
 
 .empty-state i.icon {
-    font-size: 4rem;
+    font-size: 100px;
+}
+
+h1
+{
+    font-size: 50px;
 }
 
 .modal-container {
@@ -530,4 +560,17 @@ input.topic-name {
 .card-padding
 {
     padding-top: 25px;
+}
+
+.landingbutton
+{
+    display: inline-block;
+    white-space: nowrap;
+    text-decoration: none;
+    padding: 30px 40px; 
+    color: black;
+    background-color: white;
+    font-size: 30px; 
+    border-radius: 30px;
+
 }

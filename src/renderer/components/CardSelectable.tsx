@@ -20,13 +20,6 @@ const CardSelectable = (props: ICardSelectableProps) => {
                 card={props.card}
                 onDelete={() => props.onDelete(props.card)}
             >
-                {(props.card.selected || showCheckbox) &&
-                    <Button
-                        icon={props.card.selected ? "check_box" : "check_box_outline_blank"}
-                        action={toggleSelect}
-                        className="button card-checkbox"
-                    />
-                }
             </Card>
         </div>
     );
