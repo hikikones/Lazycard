@@ -12,7 +12,7 @@
     --navigation-width: 48px;
     --main-padding: 1rem 2rem;
     --sidebar-max-width: 250px;
-    --card-min-width: 250px;
+    --card-min-width: 550px;
     --card-max-width: 400px;
     --cards-max-width: 1280px;
     --modal-max-width: 720px;
@@ -71,6 +71,14 @@ body {
     grid-template-rows: var(--titlebar-height) 1fr;
     grid-template-columns: var(--navigation-width) auto 1fr;
     height: 100vh;
+}
+
+p
+{
+    text-align: center; 
+    font-size: 40px; 
+    padding-top: 40px;
+    padding-bottom: 20px;
 }
 
 header {
@@ -158,7 +166,7 @@ a.sidebar {
     padding: 0.25rem 0.75rem;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 14px;
     overflow-wrap: break-word;
 }
 
@@ -303,8 +311,8 @@ hr {
 
 .card-checkbox {
     position: absolute;
-    top: 0;
-    left: 0;
+    top: 60px;
+    left: calc(var(--card-min-width) - 80px);
 }
 
 .card-textarea {
@@ -315,6 +323,13 @@ hr {
 
 .review-buttons a.button i.icon {
     font-size: 36px;
+}
+
+.top-corner
+{
+    position: absolute; 
+    top: 0; 
+    left: 0; 
 }
 
 .dropdown {
@@ -355,7 +370,7 @@ a.button {
     display: inline-block;
     white-space: nowrap;
     text-decoration: none;
-    padding: 4px 6px;
+    padding: 20px 20px;
     color: var(--button-text-color);
     background-color: var(--button-color);
 }
@@ -369,7 +384,7 @@ a.button:active {
 }
 
 a.button i.icon {
-    font-size: 24px;
+    font-size: 35px;
 }
 
 i.icon {

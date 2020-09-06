@@ -78,10 +78,6 @@ const CardEditor = (props: ICardEditorProps) => {
                 </section>
             </section>
 
-            <section className="col">
-                <label>Preview</label>
-                <CardView front={front} />
-            </section>
         </section>
     );
 }

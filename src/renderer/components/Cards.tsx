@@ -128,12 +128,6 @@ const Cards = (props: ICardsProps) => {
                     action={() => setShowBack(show => !show)}
                 />*/}
 
-                <Button
-                    name="Select all"
-                    icon={isAllSelected() ? "check_box" : "check_box_outline_blank"}
-                    action={toggleSelectAll}
-                />
-
                 {/*<Dropdown name="Sort" icon={sortBy} showDownArrow={true}>
                     <DropdownItem name="Newest" icon="arrow_upward" action={() => setSortBy(CardSort.Newest)} />
                     <DropdownItem name="Oldest" icon="arrow_downward" action={() => setSortBy(CardSort.Oldest)} />
@@ -142,12 +136,12 @@ const Cards = (props: ICardsProps) => {
     </Dropdown>*/}
 
                
-                    <Button name="Move" icon="arrow_forward" action={() => setShowBulkMove(true)} />
+                
                 
             </section>
 
             <section className="cards row-center">
-                {sort(cards()).slice(0, showAmount).map(c =>
+                {cards().slice(0, showAmount).map(c =>
                     <CardSelectable
                         card={c}
                         onDelete={onDelete}
