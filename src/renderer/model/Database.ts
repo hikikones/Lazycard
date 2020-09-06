@@ -277,6 +277,7 @@ abstract class Entity<E extends EntityData, F extends EntityExport> {
 export class Card extends Entity<CardData, CardExport> {
     public front: string;
     public back: string;
+    public time: number;
     public dueDate: Date;
     public dueDays: number;
     public attempts: number;

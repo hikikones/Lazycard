@@ -23,12 +23,12 @@ const Card = (props: ICardProps) => {
 
     return (
         <>
-            <CardView front={props.card.front}>
+            <CardView front={props.card.front} time={props.card.time}>
                 <Dropdown name="" icon="more_horiz" className="card-dropdown" showDownArrow={false}>
                     <DropdownItem name="Edit" icon="edit" action={toggleEditor} />
                     <DropdownItem name="Delete" icon="delete" action={onDelete} />
                 </Dropdown>
-
+                <div hidden={!(props.card.time && props.card.time > 0)}>{`Time to complete task: ${props.card.time} mins`}</div>
                 {props.children || null}
             </CardView>
 

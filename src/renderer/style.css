@@ -13,6 +13,8 @@
     --sidebar-max-width: 250px;
     --card-min-width: 250px;
     --card-max-width: 400px;
+    --time-min-width: 20px;
+    --time-max-width: 25px;
     --cards-max-width: 1280px;
     --modal-max-width: 720px;
 
@@ -310,8 +312,18 @@ hr {
     left: 0;
 }
 
+.timer-checkbox {
+    position: relative;
+}
+
 .card-textarea {
     width: var(--card-min-width);
+    border-radius: 2px;
+    resize: vertical;
+}
+
+.time-textarea {
+    width: var(--time-min-width);
     border-radius: 2px;
     resize: vertical;
 }
