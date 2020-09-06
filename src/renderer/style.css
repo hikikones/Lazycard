@@ -90,7 +90,7 @@ header {
 nav {
     grid-area: nav;
     overflow: hidden;
-    background-color: var(--navigation-color);
+    background-color:#413D3D;;
 }
 
 main {
@@ -106,7 +106,7 @@ aside {
     padding-top: 1rem;
     min-width: 200px;
     max-width: var(--sidebar-max-width);
-    background-color: var(--sidebar-color);
+    background-color: white;
 }
 
 .titlebar-resize {
@@ -165,8 +165,10 @@ a.sidebar {
     padding: 1rem 1rem;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    font-size: 20px;
     overflow-wrap: break-word;
+    font-family: Gill Sans, sans-serif;
+    font-weight: bolder;
+    font-size: 20px;
     text-align: center;
 }
 
@@ -288,6 +290,11 @@ hr {
     max-width: var(--card-max-width);
     color: var(--surface-text-color);
     background-color: var(--surface-color);
+    padding: 10px 15px;
+    font-size: 50px;
+    font-family:Gill Sans, sans-serif;
+    text-align:center;
+    border: 5px solid #504D4D;
 }
 
 .card a {
@@ -396,6 +403,8 @@ h1.topic-name {
     padding: 0.25rem;
     box-sizing: border-box;
     overflow-wrap: break-word;
+    background-color:white;
+    border: 4px solid black;
 }
 
 h1.topic-name:hover {
