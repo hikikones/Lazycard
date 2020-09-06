@@ -12,7 +12,7 @@ const Review = () => {
     const { topicId } = useParams<{topicId: string}>();
     const [id] = React.useState<number>(Number(topicId));
 
-    const cards = React.useRef<CardEntity[]>(db.cards.getDue(id));
+    const cards = React.useRef<CardEntity[]>(db.cards.getByTopic(id));
     const index = React.useRef<number>(0);
     const [card, setCard] = React.useState<CardEntity>(cards.current[index.current]);
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
