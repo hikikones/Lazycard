@@ -36,7 +36,7 @@
     "chai": "^4.2.0",
     "copy-webpack-plugin": "^6.1.0",
     "css-loader": "^3.6.0",
-    "electron": "^9.2.1",
+    "electron": "^9.3.0",
     "electron-builder": "^22.8.0",
     "file-loader": "^6.1.0",
     "html-webpack-plugin": "^4.4.1",
