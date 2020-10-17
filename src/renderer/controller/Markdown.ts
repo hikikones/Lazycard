@@ -1,10 +1,12 @@
-import MarkdownIt from 'markdown-it';
-
 const katex = require('@iktakahiro/markdown-it-katex');
 const prism = require('markdown-it-prism');
 
 class Markdown {
-    private readonly md = new MarkdownIt();
+    private readonly md = require('markdown-it')({
+        html: true,
+        linkify: true,
+        typographer: true
+    });
 
     public constructor() {
         this.md.use(katex);
