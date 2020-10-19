@@ -112,6 +112,13 @@ const ImportOptions = (props: IImportOptionsProps) => {
     return (
         <Modal show={props.show} onClickOutside={props.onClickOutside} >
             <h2>Import</h2>
+            <p>
+                Import a Lazytopic file or a plain Anki text file.
+            </p>
+            <p>
+                Note: Anki text files are assumed to be exported using the <code>Cards in Plain Text (*.txt)</code>
+                option where cards are seperated by a newline <code>\n</code> and the fields (front and back) are separated by a tab <code>\t</code>.
+            </p>
             <table>
                 <thead>
                     <tr>

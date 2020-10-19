@@ -56,12 +56,14 @@ class Database {
     }
 
     public import(mergeTopic: boolean, allowDuplicateCards: boolean): Topic {
-        const lazytopic = dialog.openFile('lazytopic', ['lazytopic']);
+        const file = dialog.openFile('lazytopic/anki', ['lazytopic', 'txt']);
         
-        if (lazytopic === undefined) return null;
+        if (file === undefined) return null;
 
-        const buffer = fs.readFileSync(lazytopic);
-        const json: TopicExport = JSON.parse(buffer.toString());
+        const isAnkiTopic = path.extname(file) == '.txt';
+
+        const buffer = fs.readFileSync(file);
+        const json: TopicExport = isAnkiTopic ? this.parseAnkiTopic(buffer) : JSON.parse(buffer.toString());
 
         const topicExists = this.topics.exists(json.name);
         const topic = (topicExists && mergeTopic)
@@ -90,6 +92,21 @@ class Database {
         this.cards.reset();
         this.topics.reset();
         this.parse(this.read(dbFile));
+    }
+
+    private parseAnkiTopic(buffer: Buffer): TopicExport {
+        const cards: CardExport[] = [];
+
+        const lines = buffer.toString().split('\n');
+        lines.forEach(line => {
+            if (!line.includes('\t')) return;
+            const fields = line.split('\t');
+            const front = fields[0];
+            const back = fields[1];
+            cards.push({ front: front, back: back })
+        });
+
+        return { name: "anki", cards: cards };
     }
 
     private read(file?: string): IDatabase {
