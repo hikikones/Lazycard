@@ -28,7 +28,7 @@ const Review = () => {
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
     const [total, setTotal] = React.useState<number>(cards.current.length);
     const [enableShortcuts, setEnableShortcuts] = React.useState<boolean>(true);
-    
+
     const customStudy = React.useRef<boolean>(false);
 
     const [topics] = React.useState<Record<number, TopicEntity>>(db.topics.getAllAsRecord());
@@ -114,7 +114,7 @@ const Review = () => {
 
             {enableShortcuts &&
                 <div className="review-buttons space-fixed">
-                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
+                    {showAnswer || <Button icon="flip_to_front" action={() => setShowAnswer(true)} shortcut={KeyCodes.Space} />}
                     {showAnswer && <Button icon="done" action={() => handleReview(true)} shortcut={KeyCodes.ArrowUp} />}
                     {showAnswer && <Button icon="close" action={() => handleReview(false)} shortcut={KeyCodes.ArrowDown} />}
                     <Button icon="double_arrow" action={skip} shortcut={KeyCodes.ArrowRight} />
@@ -122,7 +122,7 @@ const Review = () => {
             }
             {enableShortcuts ||
                 <div className="review-buttons space-fixed">
-                    {showAnswer || <Button icon="lock_open" action={() => setShowAnswer(true)} />}
+                    {showAnswer || <Button icon="flip_to_front" action={() => setShowAnswer(true)} />}
                     {showAnswer && <Button icon="done" action={() => handleReview(true)} />}
                     {showAnswer && <Button icon="close" action={() => handleReview(false)} />}
                     <Button icon="double_arrow" action={skip} />

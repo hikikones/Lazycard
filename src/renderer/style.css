@@ -1,5 +1,5 @@
 @import "~katex/dist/katex.min.css";
-@import "~material-icons/iconfont/material-icons.css";
+@import "~material-design-icons-iconfont/dist/material-design-icons.css";
 @import "~lato-font/css/lato-font.css";
 @import "~typeface-roboto-mono/index.css";
 
@@ -30,7 +30,7 @@
 
     --background-color: ghostwhite;
     --background-text-color: black;
-    
+
     --surface-color: white;
     --surface-text-color: black;
     --shadow-color: rgba(0, 0, 0, 0.15);
@@ -64,7 +64,7 @@ body {
 
 #app {
     display: grid;
-    grid-template-areas: 
+    grid-template-areas:
         "header header header"
         "nav sidebar main";
     grid-template-rows: var(--titlebar-height) 1fr;
@@ -257,7 +257,7 @@ label {
     opacity: 0.5;
 }
 
-hr { 
+hr {
     border: 0;
     height: 1px;
     background-image: -webkit-linear-gradient(left, var(--surface-color), var(--surface-text-color), var(--surface-color));
