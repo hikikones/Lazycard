@@ -28,7 +28,7 @@ const Review = () => {
     const [showAnswer, setShowAnswer] = React.useState<boolean>(false);
     const [total, setTotal] = React.useState<number>(cards.current.length);
     const [enableShortcuts, setEnableShortcuts] = React.useState<boolean>(true);
-    
+
     const customStudy = React.useRef<boolean>(false);
 
     const [topics] = React.useState<Record<number, TopicEntity>>(db.topics.getAllAsRecord());

@@ -5,7 +5,7 @@ const demo = (): IDatabase => {
 
     return {
         version: "1.1.0",
-        topics: [{id: 1, name: "Demo"}],
+        topics: [{id: 1, name: "Demo Topic"}],
         cards: [
             {
                 id: 1,
