@@ -56,7 +56,7 @@ const Topic = (props: ITopicProps) => {
 
             <section className="row row-center col-center wrap space-fixed">
                 {showCardEditor || <Button name="Add new card" icon="add" action={toggleCardEditor} />}
-                {hasCards && <ButtonLink name="Review" icon="model_training" to={`/review/${props.topic.id}`} />}
+                {hasCards && <ButtonLink name="Review" icon="drafts" to={`/review/${props.topic.id}`} />}
                 {hasCards &&
                     <Dropdown name="Export" icon="save" showDownArrow={true}>
                         <DropdownItem name="JSON" icon="archive" action={() => db.export(props.topic.id)} />
