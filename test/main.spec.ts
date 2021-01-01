@@ -4,7 +4,7 @@ import assert from "assert";
 const electronPath = require("electron"); // Require Electron from the binaries included in node_modules.
 const path = require("path");
 
-const isTestEnv = process.env.NODE_ENV === "test";
+const isCI = process.env.CI === "true";
 
 function createLocalApplication() {
   return new Application({
@@ -29,11 +29,17 @@ function createCIApplication() {
   });
 }
 
+async function resetData() {
+  const config = await import("../src/renderer/model/Config");
+  config.default.resetData();
+}
+
 describe("Application launch", function () {
   let app: Application;
 
   beforeEach(function () {
-    app = isTestEnv ? createCIApplication() : createLocalApplication();
+    resetData();
+    app = isCI ? createCIApplication() : createLocalApplication();
     return app.start();
   });
 
@@ -46,23 +52,34 @@ describe("Application launch", function () {
   it("shows an initial window", function (done) {
     app.client.getWindowCount().then(function (count: number) {
       // Note that getWindowCount() will return 2 if `dev tools` are opened.
-      assert.strictEqual(count, 1);
+      assert(count > 0);
       done();
     });
   });
-  it("Finds the first card", function (done) {
+  it("Finds the first card on the reviews pane", function (done) {
     app.client
       .$("#card")
       .then(async (value) => {
-        assert(
-          (await value.getText()).indexOf(
-            "Use keyboard shortcuts for quicker reviewing."
-          ) !== -1
-        );
+        const cardText = await value.getText();
+        assert(cardText.length > 0);
         done();
       })
       .catch((e) => {
         done(e);
       });
+  });
+  it("Navigates to the cards pane", async function () {
+    try {
+      const { client } = app;
+
+      const nav = await (await client.$("#cards-nav")).click();
+
+      const value = await app.client.$("#cards-pane-heading");
+      const cardText = await value.getText();
+      assert(cardText === "All Cards");
+      return;
+    } catch (e) {
+      return e;
+    }
   });
 });

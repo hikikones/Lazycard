@@ -6,10 +6,13 @@
   "scripts": {
     "development": "webpack --mode development",
     "production": "webpack --mode production",
-    "start": "npm run development && electron .",
+    "build:test": "webpack --mode development --env NODE_ENV=test",
+    "start": "NODE_ENV=test npm run development && electron .",
     "package": "npm run production && electron-builder --dir",
+    "package:test": "NODE_ENV=test npm run build:test && electron-builder --dir",
     "publish": "npm run production && electron-builder -p never",
-    "test:integration": "NODE_ENV='test' npm run package && mocha -r ts-node/register test/**/*.spec.ts"
+    "test:integration": "NODE_ENV='test' npm run package && mocha -r ts-node/register test/**/*.spec.ts",
+    "test:integration:ci": "NODE_ENV='test' npm run package:test && mocha -r ts-node/register test/**/*.spec.ts"
   },
   "keywords": [
     "flashcard",
@@ -39,6 +42,7 @@
     "css-loader": "^3.6.0",
     "electron": "^9.3.1",
     "electron-builder": "^22.9.1",
+    "electron-mocha": "^10.0.0",
     "file-loader": "^6.1.0",
     "html-webpack-plugin": "^4.4.1",
     "mocha": "^8.2.1",
