@@ -7,6 +7,10 @@ body, html {
     overflow: hidden;
 }
 
+canvas {
+    touch-action: none;
+}
+
 #app > div {
     display: grid;
     grid-template-rows: 100vh;

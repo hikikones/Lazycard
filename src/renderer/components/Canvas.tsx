@@ -28,38 +28,40 @@ const Canvas = () => {
     let mousePos: Point;
     let isDrawing: boolean = false;
 
-    const handleDrawStart = (e: React.MouseEvent) => {
+    const handleDrawStart = (e: React.PointerEvent) => {
         addUndo();
         clearRedos();
         isDrawing = true;
         updateMousePos(e);
         applyBrush();
+        context.lineWidth = size * e.pressure;
         drawCircle();
     }
     
-    const handleDrawMove = (e: React.MouseEvent) => {
+    const handleDrawMove = (e: React.PointerEvent) => {
         if (!isDrawing) {
             updateMousePos(e);
             return;
         }
         const prevMousePos = mousePos;
         updateMousePos(e);
+        context.lineWidth = size * e.pressure;
         drawLine(prevMousePos, mousePos);
     }
 
-    const handleDrawEnd = (e: React.MouseEvent) => {
+    const handleDrawEnd = (e: React.PointerEvent) => {
         isDrawing = false;
         context.globalCompositeOperation = "source-over";
     }
 
-    const handleDrawEnter = (e: React.MouseEvent) => {
+    const handleDrawEnter = (e: React.PointerEvent) => {
         if (e.buttons === 0) return;
         isDrawing = true;
         updateMousePos(e);
         applyBrush();
     }
 
-    const updateMousePos = (e: React.MouseEvent) => {
+    const updateMousePos = (e: React.PointerEvent) => {
         const x = e.pageX - canvas.current.offsetLeft;
         const y = e.pageY - canvas.current.offsetTop;
         mousePos = { x, y };
@@ -292,11 +294,11 @@ const Canvas = () => {
                 ref={canvas}
                 width={width}
                 height={height}
-                onMouseDown={(e: React.MouseEvent) => handleDrawStart(e)}
-                onMouseMove={(e: React.MouseEvent) => handleDrawMove(e)}
-                onMouseUp={(e: React.MouseEvent) => handleDrawEnd(e)}
-                onMouseLeave={(e: React.MouseEvent) => handleDrawEnd(e)}
-                onMouseEnter={(e: React.MouseEvent) => handleDrawEnter(e)}
+                onPointerDown={(e: React.PointerEvent) => handleDrawStart(e)}
+                onPointerMove={(e: React.PointerEvent) => handleDrawMove(e)}
+                onPointerUp={(e: React.PointerEvent) => handleDrawEnd(e)}
+                onPointerLeave={(e: React.PointerEvent) => handleDrawEnd(e)}
+                onPointerEnter={(e: React.PointerEvent) => handleDrawEnter(e)}
             />
             <div className="draw-menu row-of-items">
                 <Button
