@@ -30,16 +30,17 @@ const html = (topic: Topic, cards: Card[]) => {
     <script>
         function save() {
             var data = {
-                "name": "${topic.name}",
-                "cards": [ ${cards.map(c => `{
-                    "front": \`${c.front.replace(/\\/g,"\\\\").replace(/`/g,"\\`")}\`,
-                    "back": \`${c.back.replace(/\\/g,"\\\\").replace(/`/g,"\\`")}\`
+                "name": ${JSON.stringify(topic.name)},
+                "cards": [${cards.map(c => `
+                {
+                    "front": ${JSON.stringify(c.front)},
+                    "back": ${JSON.stringify(c.back)}
                 },`).join('')} ]
             };
             var json = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
             var link = document.createElement("a");
             link.setAttribute("href", json);
-            link.setAttribute("download", "${topic.name}.lazytopic");
+            link.setAttribute("download", ${JSON.stringify(topic.name + ".lazytopic")});
             link.click();
         }
     </script>
@@ -58,15 +59,20 @@ const html = (topic: Topic, cards: Card[]) => {
         ul, ol {margin-top: 0}
     </style>
 </head>
+
 <body>
-    <h1 class="topic">${topic.name}</h1>
-    <button class="btn btn-primary p-centered" onClick="save()">Save</button>
-    <div class="cards">
-        ${cards.map(c =>`<div class="card">${md.parse(c.front)}<hr/>${md.parse(c.back)}</div>`).join('')}
-    </div>
+<h1 class="topic">${topic.name}</h1>
+<button class="btn btn-primary p-centered" onClick="save()">Save</button>
+
+<div class="cards">
+
+${cards.map(c =>`<div class="card">${md.parse(c.front)}<hr/>${md.parse(c.back)}</div>`).join('\n')}
+
+</div>
+
 </body>
 </html>
-    `
+`
 }
 
 export default html;
