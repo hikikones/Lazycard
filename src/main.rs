@@ -1,3 +1,11 @@
+use dioxus::prelude::*;
+
 fn main() {
-    database::Database::open("db.db").unwrap();
+    dioxus::desktop::launch(app);
+}
+
+fn app(cx: Scope) -> Element {
+    cx.render(rsx! {
+        h1{"Hello"}
+    })
 }

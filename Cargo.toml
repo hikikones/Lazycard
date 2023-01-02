@@ -10,8 +10,6 @@ members = ["crates/*"]
 version = "0.1.0"
 edition = "2021"
 
-[workspace.dependencies]
-database = { path = "crates/database" }
-
 [dependencies]
-database = { workspace = true }
+dioxus = { version = "0.2", features = ["desktop", "router"] }
+database = { path = "crates/database" }
