@@ -1,5 +1,8 @@
+use std::{cell::RefCell, rc::Rc};
+
 use dioxus::prelude::*;
 
+mod config;
 mod routes;
 
 fn main() {
@@ -7,6 +10,13 @@ fn main() {
 }
 
 fn app(cx: Scope) -> Element {
+    cx.use_hook(|_| {
+        let cfg = config::Config::default();
+        let db: Option<database::Database> = None;
+        cx.provide_context(Rc::new(RefCell::new(cfg)));
+        cx.provide_context(Rc::new(RefCell::new(db)));
+    });
+
     cx.render(rsx! {
         Router {
             nav {
@@ -24,7 +34,8 @@ fn app(cx: Scope) -> Element {
                 Route { to: "/add_card", routes::AddCard {} }
                 Route { to: "/edit_card/:id", routes::EditCard {} }
                 Route { to: "/settings", routes::Settings {} }
-                Redirect { from: "", to: "/review" }
+                Route { to: "/load", routes::Load {} }
+                Redirect { from: "", to: "/load" }
             }
         }
     })
