@@ -13,3 +13,4 @@ edition = "2021"
 [dependencies]
 dioxus = { version = "0.2", features = ["desktop", "router"] }
 database = { path = "crates/database" }
+markdown = { path = "crates/markdown" }
