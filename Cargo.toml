@@ -1,7 +1,17 @@
 [package]
 name = "lazycard"
+version.workspace = true
+edition.workspace = true
+
+[workspace]
+members = ["crates/*"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
+[workspace.dependencies]
+database = { path = "crates/database" }
+
 [dependencies]
-rusqlite = { version = "0.28", features = ["bundled"] }
+database = { workspace = true }
