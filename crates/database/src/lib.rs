@@ -11,8 +11,20 @@ pub struct Database(Connection);
 impl Database {
     pub fn open(path: impl AsRef<Path>) -> DbResult<Self> {
         let conn = Connection::open(path)?;
+        let db = Self(conn);
 
-        Ok(Self(conn))
+        const CURRENT_VERSION: Id = 1;
+
+        match db.version() {
+            0 => {
+                db.execute_all(include_str!("schema.sql")).unwrap();
+                db.set_version(CURRENT_VERSION);
+            }
+            CURRENT_VERSION => {}
+            _ => todo!(),
+        }
+
+        Ok(db)
     }
 
     pub fn version(&self) -> Id {
@@ -21,7 +33,7 @@ impl Database {
     }
 
     pub fn set_version(&self, version: Id) {
-        self.execute_single("PRAGMA user_version = ?", [version])
+        self.execute_single(&format!("PRAGMA user_version = {version}"), [])
             .unwrap();
     }
 
@@ -32,10 +44,7 @@ impl Database {
         self.0.execute(sql, params)
     }
 
-    pub fn execute_all<P>(&self, sql: &str) -> DbResult<()>
-    where
-        P: Params,
-    {
+    pub fn execute_all(&self, sql: &str) -> DbResult<()> {
         self.0.execute_batch(sql)
     }
 

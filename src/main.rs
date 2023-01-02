@@ -1,3 +1,3 @@
 fn main() {
-    println!("Hello, world!");
+    database::Database::open("db.db").unwrap();
 }
