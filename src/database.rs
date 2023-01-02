@@ -1,115 +1,79 @@
-use std::{marker::PhantomData, path::Path};
+use std::path::Path;
 
-use rusqlite::{Connection, Params, Row, Statement};
+use rusqlite::{Connection, Params, Row};
+
+type Id = i64;
+type ModifiedRows = usize;
+type DbResult<T> = Result<T, rusqlite::Error>;
 
 pub struct Database(Connection);
 
-type Id = i64;
-
-pub trait FromRow: Sized {
-    fn from_row(row: &Row) -> Result<Self, rusqlite::Error>;
-}
-
 impl Database {
-    pub fn open(path: impl AsRef<Path>) -> Result<Self, rusqlite::Error> {
+    pub fn open(path: impl AsRef<Path>) -> DbResult<Self> {
         let conn = Connection::open(path)?;
 
         Ok(Self(conn))
     }
 
     pub fn version(&self) -> Id {
-        self.fetch("SELECT user_version FROM pragma_user_version")
-            .unwrap()
-            .single()
+        self.query_single("SELECT user_version FROM pragma_user_version", [])
             .unwrap()
     }
 
     pub fn set_version(&self, version: Id) {
-        todo!()
+        self.execute_single("PRAGMA user_version = ?", [version])
+            .unwrap();
     }
 
-    pub fn execute(&self, sql: &str, args: impl Params) -> Result<usize, rusqlite::Error> {
-        self.0.execute(sql, args)
-    }
-
-    pub fn fetch<T>(&self, sql: &str) -> Result<Fetch<'_, T>, rusqlite::Error>
-    where
-        T: FromRow,
-    {
-        let statement = self.0.prepare(sql)?;
-        Ok(Fetch {
-            fetcher: Fetcher {
-                statement,
-                data: PhantomData,
-            },
-        })
-    }
-}
-
-pub struct Fetch<'a, T>
-where
-    T: FromRow,
-{
-    fetcher: Fetcher<'a, T>,
-}
-
-impl<'a, T> Fetch<'a, T>
-where
-    T: FromRow,
-{
-    pub fn single(self) -> Result<T, rusqlite::Error> {
-        self.fetcher.single([])
-    }
-
-    pub fn args<P>(self, args: P) -> FetchArgs<'a, T, P>
+    pub fn execute_single<P>(&self, sql: &str, params: P) -> DbResult<ModifiedRows>
     where
         P: Params,
     {
-        FetchArgs {
-            fetcher: self.fetcher,
-            args,
+        self.0.execute(sql, params)
+    }
+
+    pub fn execute_all<P>(&self, sql: &str) -> DbResult<()>
+    where
+        P: Params,
+    {
+        self.0.execute_batch(sql)
+    }
+
+    pub fn query_single<T, P>(&self, sql: &str, params: P) -> DbResult<T>
+    where
+        T: FromRow,
+        P: Params,
+    {
+        self.0.query_row(sql, params, |row| T::from_row(row))
+    }
+
+    pub fn query_all<T, P>(&self, sql: &str, params: P) -> DbResult<Vec<T>>
+    where
+        T: FromRow,
+        P: Params,
+    {
+        let mut statement = self.0.prepare(sql)?;
+        let rows = statement.query_map(params, |row| T::from_row(row))?;
+
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(row?);
         }
+
+        Ok(items)
+    }
+
+    pub fn last_insert_rowid(&self) -> Id {
+        self.0.last_insert_rowid()
     }
 }
 
-pub struct FetchArgs<'a, T, P>
-where
-    T: FromRow,
-    P: Params,
-{
-    fetcher: Fetcher<'a, T>,
-    args: P,
+pub trait FromRow: Sized {
+    fn from_row(row: &Row) -> Result<Self, rusqlite::Error>;
 }
 
-impl<'a, T, P> FetchArgs<'a, T, P>
-where
-    T: FromRow,
-    P: Params,
-{
-    pub fn single(self) -> Result<T, rusqlite::Error> {
-        self.fetcher.single(self.args)
-    }
-}
-
-struct Fetcher<'a, T>
-where
-    T: FromRow,
-{
-    statement: Statement<'a>,
-    data: PhantomData<T>,
-}
-
-impl<'a, T> Fetcher<'a, T>
-where
-    T: FromRow,
-{
-    pub fn single(mut self, params: impl Params) -> Result<T, rusqlite::Error> {
-        self.statement.query_row(params, |row| T::from_row(row))
-    }
-}
-
-impl FromRow for i64 {
-    fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+impl FromRow for Id {
+    fn from_row(row: &Row) -> DbResult<Self> {
         row.get(0)
     }
 }
