@@ -41,10 +41,7 @@ impl Database {
             .unwrap();
     }
 
-    pub fn execute_single<P>(&self, sql: &str, params: P) -> DbResult<ModifiedRows>
-    where
-        P: Params,
-    {
+    pub fn execute_single(&self, sql: &str, params: impl Params) -> DbResult<ModifiedRows> {
         self.0.execute(sql, params)
     }
 
@@ -52,18 +49,16 @@ impl Database {
         self.0.execute_batch(sql)
     }
 
-    pub fn query_single<T, P>(&self, sql: &str, params: P) -> DbResult<T>
+    pub fn query_single<T>(&self, sql: &str, params: impl Params) -> DbResult<T>
     where
         T: FromRow,
-        P: Params,
     {
         self.0.query_row(sql, params, |row| T::from_row(row))
     }
 
-    pub fn query_all<T, P>(&self, sql: &str, params: P) -> DbResult<Vec<T>>
+    pub fn query_all<T>(&self, sql: &str, params: impl Params) -> DbResult<Vec<T>>
     where
         T: FromRow,
-        P: Params,
     {
         let mut statement = self.0.prepare(sql)?;
         let rows = statement.query_map(params, |row| T::from_row(row))?;
