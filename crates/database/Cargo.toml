@@ -4,4 +4,5 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-rusqlite = { version = "0.28", features = ["bundled"] }
+rusqlite = { version = "0.28", features = ["bundled", "chrono"] }
+chrono = "0.4"

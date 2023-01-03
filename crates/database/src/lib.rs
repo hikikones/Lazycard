@@ -2,6 +2,10 @@ use std::path::Path;
 
 use rusqlite::{Connection, Params, Row};
 
+mod data;
+
+pub use data::*;
+
 type Id = i64;
 type ModifiedRows = usize;
 type DbResult<T> = Result<T, rusqlite::Error>;
