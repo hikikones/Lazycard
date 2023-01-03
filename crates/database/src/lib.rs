@@ -2,86 +2,73 @@ use std::path::Path;
 
 use rusqlite::{Connection, Params, Row};
 
-mod data;
+mod database;
 
-pub use data::*;
+pub use database::*;
 
-type Id = i64;
-type ModifiedRows = usize;
-type DbResult<T> = Result<T, rusqlite::Error>;
+type SqliteId = i64;
+type SqliteResult<T> = Result<T, rusqlite::Error>;
 
-pub struct Database(Connection);
+pub struct Sqlite(Connection);
 
-impl Database {
-    pub fn open(path: impl AsRef<Path>) -> DbResult<Self> {
-        let conn = Connection::open(path)?;
-        let db = Self(conn);
-
-        const CURRENT_VERSION: Id = 1;
-
-        match db.version() {
-            0 => {
-                db.execute_all(include_str!("schema.sql")).unwrap();
-                db.set_version(CURRENT_VERSION);
-            }
-            CURRENT_VERSION => {}
-            _ => todo!(),
-        }
-
-        Ok(db)
+impl Sqlite {
+    fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
+        let connection = Connection::open(path)?;
+        Ok(Self(connection))
     }
 
-    pub fn version(&self) -> Id {
-        self.query_single("SELECT user_version FROM pragma_user_version", [])
+    fn version(&self) -> SqliteId {
+        self.fetch_one("SELECT user_version FROM pragma_user_version", [])
+    }
+
+    fn set_version(&self, version: SqliteId) {
+        self.execute_one(&format!("PRAGMA user_version = {version}"), []);
+    }
+
+    pub fn execute_one(&self, sql: &str, params: impl Params) -> usize {
+        self.0.execute(sql, params).unwrap()
+    }
+
+    pub fn execute_all(&self, sql: &str) {
+        self.0.execute_batch(sql).unwrap();
+    }
+
+    pub fn fetch_one<T>(&self, sql: &str, params: impl Params) -> T
+    where
+        T: FromRow,
+    {
+        self.0
+            .query_row(sql, params, |row| Ok(T::from_row(row)))
             .unwrap()
     }
 
-    pub fn set_version(&self, version: Id) {
-        self.execute_single(&format!("PRAGMA user_version = {version}"), [])
+    pub fn fetch_all<T>(&self, sql: &str, params: impl Params) -> Vec<T>
+    where
+        T: FromRow,
+    {
+        let mut statement = self.0.prepare(sql).unwrap();
+        let rows = statement
+            .query_map(params, |row| Ok(T::from_row(row)))
             .unwrap();
-    }
-
-    pub fn execute_single(&self, sql: &str, params: impl Params) -> DbResult<ModifiedRows> {
-        self.0.execute(sql, params)
-    }
-
-    pub fn execute_all(&self, sql: &str) -> DbResult<()> {
-        self.0.execute_batch(sql)
-    }
-
-    pub fn query_single<T>(&self, sql: &str, params: impl Params) -> DbResult<T>
-    where
-        T: FromRow,
-    {
-        self.0.query_row(sql, params, |row| T::from_row(row))
-    }
-
-    pub fn query_all<T>(&self, sql: &str, params: impl Params) -> DbResult<Vec<T>>
-    where
-        T: FromRow,
-    {
-        let mut statement = self.0.prepare(sql)?;
-        let rows = statement.query_map(params, |row| T::from_row(row))?;
 
         let mut items = Vec::new();
         for row in rows {
-            items.push(row?);
+            items.push(row.unwrap());
         }
-
-        Ok(items)
+        items
     }
 
-    pub fn last_insert_rowid(&self) -> Id {
+    pub fn last_insert_rowid(&self) -> SqliteId {
         self.0.last_insert_rowid()
     }
 }
 
 pub trait FromRow: Sized {
-    fn from_row(row: &Row) -> Result<Self, rusqlite::Error>;
+    fn from_row(row: &Row) -> Self;
 }
 
-impl FromRow for Id {
-    fn from_row(row: &Row) -> DbResult<Self> {
-        row.get(0)
+impl FromRow for SqliteId {
+    fn from_row(row: &Row) -> Self {
+        row.get(0).unwrap()
     }
 }

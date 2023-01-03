@@ -8,7 +8,7 @@ use crate::hooks::use_database;
 pub fn Review(cx: Scope) -> Element {
     let db = use_database(&cx);
 
-    let cards = db.query_all::<Card>("SELECT * FROM cards", []).unwrap();
+    let cards = db.fetch_all::<Card>("SELECT * FROM cards", []);
     for card in cards {
         dbg!(card.id);
     }
