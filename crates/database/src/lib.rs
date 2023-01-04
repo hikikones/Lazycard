@@ -2,12 +2,14 @@ use std::path::Path;
 
 use rusqlite::{Connection, Params, Row};
 
+pub use rusqlite::params;
+
 mod database;
 
 pub use database::*;
 
-type SqliteId = i64;
-type SqliteResult<T> = Result<T, rusqlite::Error>;
+pub type SqliteId = i64;
+pub type SqliteResult<T> = Result<T, rusqlite::Error>;
 
 pub struct Sqlite(Connection);
 
@@ -70,5 +72,11 @@ pub trait FromRow: Sized {
 impl FromRow for SqliteId {
     fn from_row(row: &Row) -> Self {
         row.get(0).unwrap()
+    }
+}
+
+impl FromRow for (SqliteId, String) {
+    fn from_row(row: &Row) -> Self {
+        (row.get(0).unwrap(), row.get(1).unwrap())
     }
 }
