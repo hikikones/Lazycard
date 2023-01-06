@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use chrono::NaiveDate;
+use chrono::NaiveDateTime;
 
 use crate::*;
 
@@ -31,7 +31,7 @@ pub struct Card {
 }
 
 pub struct CardReview {
-    pub due_date: NaiveDate,
+    pub due_date: NaiveDateTime,
     pub due_days: usize,
     pub recall_attempts: usize,
     pub successful_recalls: usize,

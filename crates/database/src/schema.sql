@@ -1,7 +1,7 @@
 CREATE TABLE cards (
     card_id INTEGER PRIMARY KEY,
     content TEXT NOT NULL,
-    due_date TEXT DEFAULT (date('now')) NOT NULL,
+    due_date TEXT DEFAULT (datetime('now')) NOT NULL,
     due_days INTEGER DEFAULT 0 NOT NULL,
     recall_attempts INTEGER DEFAULT 0 NOT NULL,
     successful_recalls INTEGER DEFAULT 0 NOT NULL

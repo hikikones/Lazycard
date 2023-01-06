@@ -24,8 +24,7 @@ pub fn AddCard(cx: Scope) -> Element {
         button {
             onclick: move |_| {
                 db.execute("INSERT INTO cards (content) VALUES (?)")
-                    .args([content.current()])
-                    .single();
+                    .single_with_params([content.current()]);
                 content.set(String::new());
             },
             "Add"

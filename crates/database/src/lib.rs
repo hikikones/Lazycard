@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, path::Path};
 
-use rusqlite::{Connection, Params, Row, Statement};
+use rusqlite::{Connection, Params, Row};
 
 pub use rusqlite::params;
 
@@ -12,6 +12,10 @@ pub type SqliteId = i64;
 pub type SqliteResult<T> = Result<T, rusqlite::Error>;
 
 pub struct Sqlite(Connection);
+
+pub trait FromRow {
+    fn from_row(row: &Row) -> Self;
+}
 
 impl Sqlite {
     fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
@@ -32,21 +36,18 @@ impl Sqlite {
     pub fn execute<'a>(&'a self, sql: &'a str) -> Execute {
         Execute {
             sql,
-            executer: Executer {
-                connection: &self.0,
-            },
+            connection: &self.0,
         }
     }
 
-    pub fn fetch<T>(&self, sql: &str) -> Fetch<T>
+    pub fn fetch<'a, T>(&'a self, sql: &'a str) -> Fetch<T>
     where
         T: FromRow,
     {
         Fetch {
-            fetcher: Fetcher {
-                statement: self.0.prepare(sql).unwrap(),
-                data: PhantomData,
-            },
+            sql,
+            connection: &self.0,
+            data: PhantomData,
         }
     }
 
@@ -55,8 +56,74 @@ impl Sqlite {
     }
 }
 
-pub trait FromRow: Sized {
-    fn from_row(row: &Row) -> Self;
+pub struct Execute<'a> {
+    sql: &'a str,
+    connection: &'a Connection,
+}
+
+impl<'a> Execute<'a> {
+    pub fn single(self) -> usize {
+        self.connection.execute(self.sql, []).unwrap()
+    }
+
+    pub fn single_with_params(self, params: impl Params) -> usize {
+        self.connection.execute(self.sql, params).unwrap()
+    }
+
+    pub fn all(self) {
+        self.connection.execute_batch(self.sql).unwrap();
+    }
+}
+
+pub struct Fetch<'a, T>
+where
+    T: FromRow,
+{
+    sql: &'a str,
+    connection: &'a Connection,
+    data: PhantomData<T>,
+}
+
+impl<'a, T> Fetch<'a, T>
+where
+    T: FromRow,
+{
+    pub fn single(self) -> T {
+        self._single([])
+    }
+
+    pub fn single_with_params(self, params: impl Params) -> T {
+        self._single(params)
+    }
+
+    pub fn all(self) -> Vec<T> {
+        self._all([])
+    }
+
+    pub fn all_with_params(self, params: impl Params) -> Vec<T> {
+        self._all(params)
+    }
+
+    fn _single(self, params: impl Params) -> T {
+        self.connection
+            .prepare(self.sql)
+            .unwrap()
+            .query_row(params, |row| Ok(T::from_row(row)))
+            .unwrap()
+    }
+
+    fn _all(self, params: impl Params) -> Vec<T> {
+        let mut statement = self.connection.prepare(self.sql).unwrap();
+        let rows = statement
+            .query_map(params, |row| Ok(T::from_row(row)))
+            .unwrap();
+
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(row.unwrap());
+        }
+        items
+    }
 }
 
 impl FromRow for SqliteId {
@@ -68,148 +135,5 @@ impl FromRow for SqliteId {
 impl FromRow for (SqliteId, String) {
     fn from_row(row: &Row) -> Self {
         (row.get(0).unwrap(), row.get(1).unwrap())
-    }
-}
-
-pub struct Execute<'a> {
-    sql: &'a str,
-    executer: Executer<'a>,
-}
-
-impl<'a> Execute<'a> {
-    pub fn single(self) -> usize {
-        self.executer.single(self.sql, [])
-    }
-
-    pub fn all(self) {
-        self.executer.all(self.sql)
-    }
-
-    pub fn args<P>(self, args: P) -> ExecuteArgs<'a, P>
-    where
-        P: Params,
-    {
-        ExecuteArgs {
-            sql: self.sql,
-            executer: self.executer,
-            args,
-        }
-    }
-}
-
-pub struct ExecuteArgs<'a, P>
-where
-    P: Params,
-{
-    sql: &'a str,
-    executer: Executer<'a>,
-    args: P,
-}
-
-impl<'a, P> ExecuteArgs<'a, P>
-where
-    P: Params,
-{
-    pub fn single(self) -> usize {
-        self.executer.single(self.sql, self.args)
-    }
-}
-
-struct Executer<'a> {
-    connection: &'a Connection,
-}
-
-impl<'a> Executer<'a> {
-    fn single(self, sql: &str, params: impl Params) -> usize {
-        self.connection.execute(sql, params).unwrap()
-    }
-
-    fn all(self, sql: &str) {
-        self.connection.execute_batch(sql).unwrap();
-    }
-}
-
-pub struct Fetch<'a, T>
-where
-    T: FromRow,
-{
-    fetcher: Fetcher<'a, T>,
-}
-
-impl<'a, T> Fetch<'a, T>
-where
-    T: FromRow,
-{
-    pub fn single(self) -> T {
-        self.fetcher.single([])
-    }
-
-    pub fn all(self) -> Vec<T> {
-        self.fetcher.all([])
-    }
-
-    pub fn args<P>(self, args: P) -> FetchArgs<'a, T, P>
-    where
-        P: Params,
-    {
-        FetchArgs {
-            fetcher: self.fetcher,
-            args,
-        }
-    }
-}
-
-pub struct FetchArgs<'a, T, P>
-where
-    T: FromRow,
-    P: Params,
-{
-    fetcher: Fetcher<'a, T>,
-    args: P,
-}
-
-impl<'a, T, P> FetchArgs<'a, T, P>
-where
-    T: FromRow,
-    P: Params,
-{
-    pub fn single(self) -> T {
-        self.fetcher.single(self.args)
-    }
-
-    pub fn all(self) -> Vec<T> {
-        self.fetcher.all(self.args)
-    }
-}
-
-struct Fetcher<'a, T>
-where
-    T: FromRow,
-{
-    statement: Statement<'a>,
-    data: PhantomData<T>,
-}
-
-impl<'a, T> Fetcher<'a, T>
-where
-    T: FromRow,
-{
-    pub fn single(mut self, params: impl Params) -> T {
-        self.statement
-            .query_row(params, |row| Ok(T::from_row(row)))
-            .unwrap()
-    }
-
-    pub fn all(mut self, params: impl Params) -> Vec<T> {
-        let rows = self
-            .statement
-            .query_map(params, |row| Ok(T::from_row(row)))
-            .unwrap();
-
-        let mut items = Vec::new();
-        for row in rows {
-            items.push(row.unwrap());
-        }
-        items
     }
 }
