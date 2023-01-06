@@ -11,11 +11,15 @@ use crate::sqlite::*;
 pub struct Database(Sqlite);
 
 impl Database {
+    pub fn new(path: impl AsRef<Path>) -> SqliteResult<Self> {
+        let sqlite = Sqlite::new(path)?;
+        migrate(&sqlite);
+        Ok(Self(sqlite))
+    }
+
     pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
         let sqlite = Sqlite::open(path)?;
-
         migrate(&sqlite);
-
         Ok(Self(sqlite))
     }
 }

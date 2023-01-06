@@ -10,8 +10,12 @@ members = ["crates/*"]
 version = "0.1.0"
 edition = "2021"
 
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
 [dependencies]
 dioxus = { version = "0.2", features = ["desktop", "router"] }
 config = { path = "crates/config" }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
+serde = { workspace = true }

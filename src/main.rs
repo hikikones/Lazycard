@@ -11,15 +11,44 @@ mod routes;
 
 fn main() {
     dioxus::desktop::launch(|cx| {
-        cx.use_hook(|_| {
+        let cfg = &*cx.use_hook(|_| {
             let cfg = Config::default();
-            let db = Database::open("db.db").unwrap();
-            cx.provide_context(Rc::new(RefCell::new(cfg)));
-            cx.provide_context(Rc::new(db));
+            cx.provide_context(Rc::new(RefCell::new(cfg)))
         });
 
+        if let Some(db_path) = &cfg.borrow().database {
+            if let Ok(db) = Database::open(db_path) {
+                cx.use_hook(|_| {
+                    cx.provide_context(Rc::new(db));
+                });
+
+                return cx.render(rsx! {
+                    App {}
+                });
+            } else {
+                let db_path = db_path.clone();
+                return cx.render(rsx! {
+                    h1 { "TODO: Database not found" }
+                    button {
+                        onclick: move |_| {
+                            Database::new(&db_path).unwrap();
+                            cx.needs_update();
+                        },
+                        "New database"
+                    }
+                });
+            }
+        }
+
         cx.render(rsx! {
-            App {}
+            h1 { "TODO: Welcome" }
+            button {
+                onclick: move |_| {
+                    Database::new(cfg.borrow().database.as_ref().unwrap()).unwrap();
+                    cx.needs_update();
+                },
+                "New database"
+            }
         })
     });
 }

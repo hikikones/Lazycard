@@ -6,6 +6,8 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { database: None }
+        Self {
+            database: Some("db.db".into()),
+        }
     }
 }
