@@ -10,16 +10,7 @@ impl Database {
     pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
         let sqlite = Sqlite::open(path)?;
 
-        const CURRENT_VERSION: SqliteId = 1;
-
-        match sqlite.version() {
-            0 => {
-                sqlite.execute_all(include_str!("schema.sql"));
-                sqlite.set_version(CURRENT_VERSION);
-            }
-            CURRENT_VERSION => {}
-            _ => todo!(),
-        }
+        migrate(&sqlite);
 
         Ok(Self(sqlite))
     }
@@ -72,5 +63,18 @@ impl FromRow for Tag {
             id: row.get(0).unwrap(),
             name: row.get(1).unwrap(),
         }
+    }
+}
+
+fn migrate(sqlite: &Sqlite) {
+    const CURRENT_VERSION: SqliteId = 1;
+
+    match sqlite.version() {
+        CURRENT_VERSION => {}
+        0 => {
+            sqlite.execute(include_str!("schema.sql")).all();
+            sqlite.set_version(CURRENT_VERSION);
+        }
+        _ => todo!(),
     }
 }

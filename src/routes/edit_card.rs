@@ -17,8 +17,10 @@ pub fn EditCard(cx: Scope) -> Element {
     let db = use_database(&cx);
     let router = use_router(&cx);
     let content = use_state(&cx, || {
-        let (_, content) =
-            db.fetch_one::<(SqliteId, String)>("SELECT * FROM cards WHERE card_id = ?", [id]);
+        let (_, content) = db
+            .fetch::<(SqliteId, String)>("SELECT * FROM cards WHERE card_id = ?")
+            .args([id])
+            .single();
         content
     });
 
@@ -35,7 +37,9 @@ pub fn EditCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                db.execute_one("UPDATE cards SET content = ? WHERE card_id = ?", params![content.current(), id]);
+                db.execute("UPDATE cards SET content = ? WHERE card_id = ?")
+                    .args(params![content.current(), id])
+                    .single();
                 router.pop_route();
             },
             "Save"
