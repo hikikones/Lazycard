@@ -2,9 +2,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::ScopeState;
 
+use config::Config;
 use database::Database;
-
-use crate::config::Config;
 
 pub fn use_config(cx: &ScopeState) -> Rc<RefCell<Config>> {
     cx.use_hook(|_| cx.consume_context::<Rc<RefCell<Config>>>().unwrap())
