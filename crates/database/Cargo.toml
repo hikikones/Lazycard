@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 rusqlite = { version = "0.28", features = ["bundled", "chrono"] }
 chrono = "0.4"
+seahash = "4.1"

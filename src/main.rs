@@ -1,8 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
+use dioxus::prelude::*;
+
 use config::Config;
 use database::Database;
-use dioxus::prelude::*;
 
 mod components;
 mod config;

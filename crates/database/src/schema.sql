@@ -22,6 +22,12 @@ CREATE TABLE card_tag (
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+CREATE TABLE media (
+    seahash BLOB PRIMARY KEY NOT NULL,
+    bytes BLOB NOT NULL,
+    file_ext TEXT NOT NULL
+);
+
 INSERT INTO tags (name)
     VALUES  ("Tag1"),
             ("Tag2"),
