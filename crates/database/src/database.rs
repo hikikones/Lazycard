@@ -1,8 +1,9 @@
-use std::ops::Deref;
+use std::{ops::Deref, path::Path};
 
 use chrono::NaiveDateTime;
+use rusqlite::Row;
 
-use crate::*;
+use crate::sqlite::*;
 
 pub struct Database(Sqlite);
 
