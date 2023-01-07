@@ -18,7 +18,7 @@ pub fn Cards(cx: Scope) -> Element {
                 div {
                     MarkdownView {
                         key: "{c.id}",
-                        markdown: "{c.content}",
+                        text: "{c.content}",
                     }
                     button {
                         onclick: |_| {

@@ -4,13 +4,16 @@ use dioxus::prelude::ScopeState;
 
 use config::Config;
 use database::Database;
+use markdown::Markdown;
 
-pub fn use_config(cx: &ScopeState) -> Rc<RefCell<Config>> {
+pub fn use_config(cx: &ScopeState) -> &Rc<RefCell<Config>> {
     cx.use_hook(|| cx.consume_context::<Rc<RefCell<Config>>>().unwrap())
-        .clone()
 }
 
-pub fn use_database(cx: &ScopeState) -> Rc<Database> {
+pub fn use_database(cx: &ScopeState) -> &Rc<Database> {
     cx.use_hook(|| cx.consume_context::<Rc<Database>>().unwrap())
-        .clone()
+}
+
+pub fn use_markdown(cx: &ScopeState) -> &Rc<Markdown> {
+    cx.use_hook(|| cx.consume_context::<Rc<Markdown>>().unwrap())
 }

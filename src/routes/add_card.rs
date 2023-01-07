@@ -19,7 +19,7 @@ pub fn AddCard(cx: Scope) -> Element {
             }
         }
         MarkdownView {
-            markdown: content,
+            text: content,
         }
         button {
             onclick: move |_| {

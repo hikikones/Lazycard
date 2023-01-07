@@ -5,53 +5,66 @@ use dioxus_router::{Link, Redirect, Route, Router};
 
 use config::Config;
 use database::Database;
+use markdown::Markdown;
 
 mod components;
 mod hooks;
 mod routes;
 
 fn main() {
-    dioxus_desktop::launch(|cx| {
-        let cfg = &*cx.use_hook(|| {
-            let cfg = Config::default();
-            cx.provide_context(Rc::new(RefCell::new(cfg)))
-        });
+    dioxus_desktop::launch_cfg(
+        init,
+        dioxus_desktop::Config::new().with_custom_head(format!(
+            r#"
+        <!-- TODO -->
+        "#
+        )),
+    );
+}
 
-        if let Some(db_path) = &cfg.borrow().database {
-            if let Ok(db) = Database::open(db_path) {
-                cx.use_hook(|| {
-                    cx.provide_context(Rc::new(db));
-                });
-
-                return cx.render(rsx! {
-                    App {}
-                });
-            } else {
-                let db_path = db_path.clone();
-                return cx.render(rsx! {
-                    h1 { "TODO: Database not found" }
-                    button {
-                        onclick: move |_| {
-                            Database::new(&db_path).unwrap();
-                            cx.needs_update();
-                        },
-                        "New database"
-                    }
-                });
-            }
-        }
-
-        cx.render(rsx! {
-            h1 { "TODO: Welcome" }
-            button {
-                onclick: move |_| {
-                    Database::new(cfg.borrow().database.as_ref().unwrap()).unwrap();
-                    cx.needs_update();
-                },
-                "New database"
-            }
-        })
+fn init(cx: Scope) -> Element {
+    let cfg = &*cx.use_hook(|| {
+        let cfg = Config::default();
+        cx.provide_context(Rc::new(Markdown::default()));
+        cx.provide_context(Rc::new(RefCell::new(cfg)))
     });
+
+    if let Some(db_path) = &cfg.borrow().database {
+        if let Ok(db) = Database::open(db_path) {
+            cx.use_hook(|| {
+                cx.provide_context(Rc::new(db));
+            });
+
+            return cx.render(rsx! {
+                App {}
+            });
+        } else {
+            let db_path = db_path.clone();
+            return cx.render(rsx! {
+                h1 { "TODO: Database not found" }
+                button {
+                    onclick: move |_| {
+                        Database::new(&db_path).unwrap();
+                        cx.needs_update();
+                    },
+                    "New database"
+                }
+            });
+        }
+    }
+
+    cx.render(rsx! {
+        h1 { "TODO: Welcome" }
+        button {
+            onclick: move |_| {
+                let path = "db.db";
+                Database::new(path).unwrap();
+                cfg.borrow_mut().database = Some(path.into());
+                cx.needs_update();
+            },
+            "New database"
+        }
+    })
 }
 
 #[allow(non_snake_case)]

@@ -5,7 +5,7 @@ pub fn MarkdownEditor<'a>(cx: Scope<'a, MarkdownEditorProps<'a>>) -> Element {
     cx.render(rsx! {
         textarea {
             rows: "10",
-            cols: "80",
+            cols: "60",
             value: "{cx.props.value}",
             oninput: |evt| {
                 cx.props.oninput.call(evt.value.clone());
