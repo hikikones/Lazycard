@@ -4,5 +4,5 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-pulldown-cmark = "0.9"
+pulldown-cmark = { version = "0.9", features = ["simd"] }
 syntect = "5.0"
