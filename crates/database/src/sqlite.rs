@@ -93,40 +93,45 @@ where
     T: FromRow,
 {
     pub fn single(self) -> T {
-        self._single([])
+        self._single([]).unwrap()
     }
 
     pub fn single_with_params(self, params: impl Params) -> T {
-        self._single(params)
+        self._single(params).unwrap()
+    }
+
+    pub fn get_single(self) -> Option<T> {
+        self._single([]).ok()
+    }
+
+    pub fn get_single_with_params(self, params: impl Params) -> Option<T> {
+        self._single(params).ok()
     }
 
     pub fn all(self) -> Vec<T> {
-        self._all([])
+        self._all([]).unwrap()
     }
 
     pub fn all_with_params(self, params: impl Params) -> Vec<T> {
-        self._all(params)
+        self._all(params).unwrap()
     }
 
-    fn _single(self, params: impl Params) -> T {
+    fn _single(self, params: impl Params) -> SqliteResult<T> {
         self.connection
-            .prepare(self.sql)
-            .unwrap()
+            .prepare(self.sql)?
             .query_row(params, |row| Ok(T::from_row(row)))
-            .unwrap()
     }
 
-    fn _all(self, params: impl Params) -> Vec<T> {
-        let mut statement = self.connection.prepare(self.sql).unwrap();
-        let rows = statement
-            .query_map(params, |row| Ok(T::from_row(row)))
-            .unwrap();
+    fn _all(self, params: impl Params) -> SqliteResult<Vec<T>> {
+        let mut statement = self.connection.prepare(self.sql)?;
+        let rows = statement.query_map(params, |row| Ok(T::from_row(row)))?;
 
         let mut items = Vec::new();
         for row in rows {
             items.push(row.unwrap());
         }
-        items
+
+        Ok(items)
     }
 }
 

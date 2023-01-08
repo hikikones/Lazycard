@@ -63,15 +63,15 @@ impl<'e> CustomParser<'e> {
     fn parse_code_block<'a>(&'a mut self) -> Option<Event<'e>> {
         let mut to_highlight = String::new();
 
-        while let Some(event) = self.parser.next() {
+        while let Some(ref event) = self.parser.next() {
             match event {
                 Event::Text(t) => {
-                    to_highlight.push_str(&t);
+                    to_highlight.push_str(t);
                 }
                 Event::End(Tag::CodeBlock(token)) => {
                     let syntax = if let CodeBlockKind::Fenced(val) = token {
                         self.syntax_set
-                            .find_syntax_by_extension(&val.clone().into_string())
+                            .find_syntax_by_extension(val)
                             .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
                     } else {
                         self.syntax_set.find_syntax_plain_text()
