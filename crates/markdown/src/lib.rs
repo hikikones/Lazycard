@@ -49,9 +49,21 @@ impl<'e> Iterator for CustomParser<'e> {
         };
 
         match &next {
-            Event::Start(Tag::CodeBlock(_)) => {
-                return self.parse_code_block();
-            }
+            Event::Start(tag) => match tag {
+                Tag::CodeBlock(_) => {
+                    return self.parse_code_block();
+                }
+                Tag::Image(link, src, title) => {
+                    if !is_url::is_url(src) {
+                        return Some(Event::Start(Tag::Image(
+                            link.clone(),
+                            CowStr::Boxed(format!("{}/{}", config::ASSETS_DIR, src).into()),
+                            title.clone(),
+                        )));
+                    }
+                }
+                _ => {}
+            },
             _ => {}
         }
 

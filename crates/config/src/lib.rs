@@ -10,7 +10,7 @@ pub struct Config {
     is_dirty: bool,
 }
 
-const ASSETS_DIR: &str = "assets";
+pub const ASSETS_DIR: &str = "assets";
 const CONFIG_FILE: &str = "config.toml";
 
 impl Config {
@@ -41,15 +41,12 @@ impl Config {
         self.is_dirty = true;
     }
 
-    pub fn assets_dir(&self) -> &'static str {
-        ASSETS_DIR
-    }
-
-    fn save(&self) {
+    fn save(&mut self) {
         if self.is_dirty {
             let bytes = toml::to_vec(self).unwrap();
             let file = Path::new(CONFIG_FILE);
             std::fs::write(file, bytes).unwrap();
+            self.is_dirty = false;
         }
     }
 }

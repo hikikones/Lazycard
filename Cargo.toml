@@ -11,13 +11,14 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
+config = { path = "crates/config" }
 serde = { version = "1.0", features = ["derive"] }
 
 [dependencies]
 dioxus = "0.3"
 dioxus-desktop = "0.3"
 dioxus-router = "0.3"
-config = { path = "crates/config" }
+config = { workspace = true }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
 serde = { workspace = true }

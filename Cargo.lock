@@ -1443,6 +1443,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae52f28f45ac2bc96edb7714de995cffc174a395fb0abf5bff453587c980d7b9"
 
 [[package]]
+name = "is-url"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecc3c11df614d56dcf271409b7a7efbcec8c07f55f685651232ddf26054d166b"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1634,6 +1644,8 @@ dependencies = [
 name = "markdown"
 version = "0.1.0"
 dependencies = [
+ "config",
+ "is-url",
  "pulldown-cmark",
  "syntect",
 ]
