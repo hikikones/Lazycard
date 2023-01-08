@@ -13,10 +13,7 @@ pub fn AddCard(cx: Scope) -> Element {
     cx.render(rsx! {
         h1 { "Add Card" }
         MarkdownEditor {
-            value: "{content}",
-            oninput: |text| {
-                content.set(text);
-            }
+            text: content,
         }
         MarkdownView {
             text: content,

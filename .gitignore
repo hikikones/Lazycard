@@ -1,1 +1,6 @@
 /target
+
+# App
+/assets
+db.db
+config.toml

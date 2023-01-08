@@ -21,3 +21,4 @@ config = { path = "crates/config" }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
 serde = { workspace = true }
+rfd = "0.10"

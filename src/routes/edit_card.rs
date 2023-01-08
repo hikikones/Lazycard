@@ -27,10 +27,7 @@ pub fn EditCard(cx: Scope) -> Element {
     cx.render(rsx! {
         h1 { "Edit Card ({id})" }
         MarkdownEditor {
-            value: "{content}",
-            oninput: |text| {
-                content.set(text);
-            }
+            text: content,
         }
         MarkdownView {
             text: content,

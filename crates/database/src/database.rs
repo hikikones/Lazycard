@@ -26,6 +26,19 @@ impl Deref for Database {
     }
 }
 
+fn migrate(sqlite: &Sqlite) {
+    const CURRENT_VERSION: SqliteId = 1;
+
+    match sqlite.version() {
+        CURRENT_VERSION => {}
+        0 => {
+            sqlite.execute(include_str!("schema.sql")).all();
+            sqlite.set_version(CURRENT_VERSION);
+        }
+        _ => todo!(),
+    }
+}
+
 pub struct Card {
     pub id: SqliteId,
     pub content: String,
@@ -80,6 +93,12 @@ impl FromSql for Seahash {
     }
 }
 
+impl FromRow for Seahash {
+    fn from_row(row: &Row) -> Self {
+        row.get(0).unwrap()
+    }
+}
+
 impl FromRow for Card {
     fn from_row(row: &Row) -> Self {
         Self {
@@ -111,18 +130,5 @@ impl FromRow for Media {
             bytes: row.get(1).unwrap(),
             file_ext: row.get(2).unwrap(),
         }
-    }
-}
-
-fn migrate(sqlite: &Sqlite) {
-    const CURRENT_VERSION: SqliteId = 1;
-
-    match sqlite.version() {
-        CURRENT_VERSION => {}
-        0 => {
-            sqlite.execute(include_str!("schema.sql")).all();
-            sqlite.set_version(CURRENT_VERSION);
-        }
-        _ => todo!(),
     }
 }

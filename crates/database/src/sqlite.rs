@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, path::Path};
 
-use rusqlite::{Connection, OpenFlags, Params, Row};
+use rusqlite::{Connection, Params, Row};
 
 pub type SqliteId = i64;
 pub type SqliteResult<T> = Result<T, rusqlite::Error>;
@@ -14,11 +14,6 @@ pub trait FromRow {
 impl Sqlite {
     pub(crate) fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
         let connection = Connection::open(path)?;
-        Ok(Self(connection))
-    }
-
-    pub(crate) fn open_with_flags(path: impl AsRef<Path>, flags: OpenFlags) -> SqliteResult<Self> {
-        let connection = Connection::open_with_flags(path, flags)?;
         Ok(Self(connection))
     }
 
