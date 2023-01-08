@@ -12,18 +12,13 @@ pub trait FromRow {
 }
 
 impl Sqlite {
-    pub(crate) fn new(path: impl AsRef<Path>) -> SqliteResult<Self> {
+    pub(crate) fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
         let connection = Connection::open(path)?;
         Ok(Self(connection))
     }
 
-    pub(crate) fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
-        let connection = Connection::open_with_flags(
-            path,
-            OpenFlags::SQLITE_OPEN_READ_WRITE
-                | OpenFlags::SQLITE_OPEN_URI
-                | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-        )?;
+    pub(crate) fn open_with_flags(path: impl AsRef<Path>, flags: OpenFlags) -> SqliteResult<Self> {
+        let connection = Connection::open_with_flags(path, flags)?;
         Ok(Self(connection))
     }
 

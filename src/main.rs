@@ -44,7 +44,7 @@ fn init(cx: Scope) -> Element {
                 h1 { "TODO: Database not found" }
                 button {
                     onclick: move |_| {
-                        Database::new(&db_path).unwrap();
+                        Database::open(&db_path).unwrap();
                         cx.needs_update();
                     },
                     "New database"
@@ -58,7 +58,7 @@ fn init(cx: Scope) -> Element {
         button {
             onclick: move |_| {
                 let path = "db.db";
-                Database::new(path).unwrap();
+                Database::open(path).unwrap();
                 cfg.borrow_mut().database = Some(path.into());
                 cx.needs_update();
             },
