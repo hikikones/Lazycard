@@ -23,3 +23,5 @@ database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
 serde = { workspace = true }
 rfd = "0.10"
+regex = "1.7"
+const_format = "0.2"

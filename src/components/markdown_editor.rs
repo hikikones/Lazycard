@@ -11,22 +11,23 @@ pub fn MarkdownEditor<'a>(cx: Scope, text: &'a UseState<String>) -> Element {
         div {
             button {
                 onclick: |_| {
-                    let file = &rfd::FileDialog::new()
+                    if let Some(file) = &rfd::FileDialog::new()
                         .add_filter("Image", &["jpeg", "jpg", "png"])
                         .pick_file()
-                        .unwrap();
-                    let ext = file.extension().unwrap().to_string_lossy();
-                    let bytes = std::fs::read(file).unwrap();
-                    let hash = Seahash::from(bytes.as_ref());
+                    {
+                        let ext = file.extension().unwrap().to_string_lossy();
+                        let bytes = std::fs::read(file).unwrap();
+                        let hash = Seahash::from(bytes.as_ref());
 
-                    let asset_name = &format!("{}.{}", hash.raw(), ext.to_lowercase());
-                    let asset_path = &Path::new(config::ASSETS_DIR).join(asset_name);
+                        let asset_name = &format!("{}.{}", hash.raw(), ext.to_lowercase());
+                        let asset_path = &Path::new(config::ASSETS_DIR).join(asset_name);
 
-                    if !asset_path.exists() {
-                        std::fs::copy(file, asset_path).unwrap();
+                        if !asset_path.exists() {
+                            std::fs::copy(file, asset_path).unwrap();
+                        }
+
+                        text.make_mut().push_str(&format!("\n![]({asset_name})\n"));
                     }
-
-                    text.make_mut().push_str(&format!("\n![]({asset_name})\n"));
                 },
                 "Image"
             }

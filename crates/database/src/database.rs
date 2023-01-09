@@ -63,42 +63,6 @@ pub struct Media {
     pub file_ext: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Seahash(u64);
-
-impl Seahash {
-    pub fn raw(self) -> u64 {
-        self.0
-    }
-}
-
-impl From<&[u8]> for Seahash {
-    fn from(buf: &[u8]) -> Self {
-        Self(seahash::hash(buf))
-    }
-}
-
-impl ToSql for Seahash {
-    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
-        Ok(ToSqlOutput::Owned(Value::Blob(
-            self.0.to_be_bytes().to_vec(),
-        )))
-    }
-}
-
-impl FromSql for Seahash {
-    fn column_result(value: ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
-        let bytes: [u8; 8] = value.as_blob()?.try_into().unwrap();
-        Ok(Seahash(u64::from_be_bytes(bytes)))
-    }
-}
-
-impl FromRow for Seahash {
-    fn from_row(row: &Row) -> Self {
-        row.get(0).unwrap()
-    }
-}
-
 impl FromRow for Card {
     fn from_row(row: &Row) -> Self {
         Self {
@@ -130,5 +94,45 @@ impl FromRow for Media {
             bytes: row.get(1).unwrap(),
             file_ext: row.get(2).unwrap(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Seahash(u64);
+
+impl Seahash {
+    pub fn from_raw(hash: u64) -> Self {
+        Self(hash)
+    }
+
+    pub fn raw(self) -> u64 {
+        self.0
+    }
+}
+
+impl From<&[u8]> for Seahash {
+    fn from(buf: &[u8]) -> Self {
+        Self(seahash::hash(buf))
+    }
+}
+
+impl ToSql for Seahash {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(Value::Blob(
+            self.0.to_be_bytes().to_vec(),
+        )))
+    }
+}
+
+impl FromSql for Seahash {
+    fn column_result(value: ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        let bytes: [u8; 8] = value.as_blob()?.try_into().unwrap();
+        Ok(Seahash(u64::from_be_bytes(bytes)))
+    }
+}
+
+impl FromRow for Seahash {
+    fn from_row(row: &Row) -> Self {
+        row.get(0).unwrap()
     }
 }

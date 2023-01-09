@@ -1,11 +1,9 @@
-mod add_card;
+mod card_editor;
 mod cards;
-mod edit_card;
 mod review;
 mod settings;
 
-pub use add_card::*;
+pub use card_editor::*;
 pub use cards::*;
-pub use edit_card::*;
 pub use review::*;
 pub use settings::*;
