@@ -1,28 +1,23 @@
-use std::{marker::PhantomData, path::Path};
+use std::marker::PhantomData;
 
 use rusqlite::{Connection, Params, Row};
 
 pub type SqliteId = i64;
 pub type SqliteResult<T> = Result<T, rusqlite::Error>;
 
-pub struct Sqlite(Connection);
+pub struct Sqlite(pub(crate) Connection);
 
 pub trait FromRow {
     fn from_row(row: &Row) -> Self;
 }
 
 impl Sqlite {
-    pub(crate) fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
-        let connection = Connection::open(path)?;
-        Ok(Self(connection))
-    }
-
-    pub(crate) fn version(&self) -> SqliteId {
+    pub fn version(&self) -> SqliteId {
         self.fetch("SELECT user_version FROM pragma_user_version")
             .single()
     }
 
-    pub(crate) fn set_version(&self, version: SqliteId) {
+    pub fn set_version(&self, version: SqliteId) {
         self.execute(&format!("PRAGMA user_version = {version}"))
             .single();
     }

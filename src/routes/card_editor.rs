@@ -28,9 +28,9 @@ pub fn AddCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                db.execute("INSERT INTO cards (content) VALUES (?)")
+                db.borrow().execute("INSERT INTO cards (content) VALUES (?)")
                     .single_with_params([content.current()]);
-                store_media(&html, db.as_ref());
+                store_media(&html, &db.borrow());
                 content.set(String::new());
             },
             "Add"
@@ -50,6 +50,7 @@ pub fn EditCard(cx: Scope) -> Element {
     let router = use_router(&cx);
     let content = use_state(&cx, || {
         let (_, content) = db
+            .borrow()
             .fetch::<(SqliteId, String)>("SELECT * FROM cards WHERE card_id = ?")
             .single_with_params([id]);
         content
@@ -67,9 +68,9 @@ pub fn EditCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                db.execute("UPDATE cards SET content = ? WHERE card_id = ?")
+                db.borrow().execute("UPDATE cards SET content = ? WHERE card_id = ?")
                     .single_with_params((content.current().as_ref(), id));
-                store_media(&html, db.as_ref());
+                store_media(&html, &db.borrow());
                 router.pop_route();
             },
             "Save"

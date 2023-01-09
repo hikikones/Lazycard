@@ -3,18 +3,24 @@ use std::{ops::Deref, path::Path};
 use chrono::NaiveDateTime;
 use rusqlite::{
     types::{FromSql, ToSqlOutput, Value, ValueRef},
-    Row, ToSql,
+    Connection, Row, ToSql,
 };
 
 use crate::sqlite::*;
 
-pub struct Database(Sqlite);
+pub struct Database(Option<Sqlite>);
 
 impl Database {
-    pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
-        let sqlite = Sqlite::open(path)?;
+    pub fn new() -> Self {
+        Self(None)
+    }
+
+    pub fn open(&mut self, path: impl AsRef<Path>) -> SqliteResult<()> {
+        let connection = Connection::open(path)?;
+        let sqlite = Sqlite(connection);
         migrate(&sqlite);
-        Ok(Self(sqlite))
+        self.0 = Some(sqlite);
+        Ok(())
     }
 }
 
@@ -22,7 +28,7 @@ impl Deref for Database {
     type Target = Sqlite;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.0.as_ref().unwrap()
     }
 }
 
@@ -134,5 +140,17 @@ impl FromSql for Seahash {
 impl FromRow for Seahash {
     fn from_row(row: &Row) -> Self {
         row.get(0).unwrap()
+    }
+}
+
+impl FromRow for (Seahash, String) {
+    fn from_row(row: &Row) -> Self {
+        (row.get(0).unwrap(), row.get(1).unwrap())
+    }
+}
+
+impl FromRow for (Seahash, Vec<u8>) {
+    fn from_row(row: &Row) -> Self {
+        (row.get(0).unwrap(), row.get(1).unwrap())
     }
 }

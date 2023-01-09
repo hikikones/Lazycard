@@ -9,7 +9,9 @@ use crate::{components::MarkdownView, hooks::use_database};
 pub fn Cards(cx: Scope) -> Element {
     let db = use_database(&cx);
     let router = use_router(&cx);
-    let cards = use_state(&cx, || db.fetch::<Card>("SELECT * FROM cards").all());
+    let cards = use_state(&cx, || {
+        db.borrow().fetch::<Card>("SELECT * FROM cards").all()
+    });
 
     cx.render(rsx! {
         h1 { "Cards" }
