@@ -8,17 +8,16 @@ CREATE TABLE cards (
 );
 
 CREATE TABLE tags (
-    tag_id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    name TEXT PRIMARY KEY NOT NULL
 );
 
 CREATE TABLE card_tag (
     card_id INTEGER NOT NULL,
-    tag_id INTEGER NOT NULL,
-    PRIMARY KEY (card_id, tag_id)
+    tag_name TEXT NOT NULL,
+    PRIMARY KEY (card_id, tag_name)
     FOREIGN KEY (card_id) REFERENCES cards (card_id)
         ON UPDATE CASCADE ON DELETE CASCADE
-    FOREIGN KEY (tag_id) REFERENCES tags (tag_id)
+    FOREIGN KEY (tag_name) REFERENCES tags (name)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
@@ -29,10 +28,10 @@ CREATE TABLE media (
 );
 
 INSERT INTO tags (name)
-    VALUES  ("Tag1"),
-            ("Tag2"),
-            ("Tag3"),
-            ("Tag4");
+    VALUES  ("tag1"),
+            ("tag2"),
+            ("tag3"),
+            ("tag4");
 
 INSERT INTO cards (content) VALUES
 ("single"),
@@ -52,8 +51,8 @@ second
 third"),
 ("tagless card");
 
-INSERT INTO card_tag (card_id, tag_id)
-    VALUES  (1, 1),
-            (2, 2),
-            (2, 3),
-            (3, 3);
+INSERT INTO card_tag (card_id, tag_name)
+    VALUES  (1, "tag1"),
+            (2, "tag2"),
+            (2, "tag3"),
+            (3, "tag3");

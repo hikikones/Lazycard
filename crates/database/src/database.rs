@@ -59,7 +59,6 @@ pub struct CardReview {
 }
 
 pub struct Tag {
-    pub id: SqliteId,
     pub name: String,
 }
 
@@ -87,8 +86,7 @@ impl FromRow for Card {
 impl FromRow for Tag {
     fn from_row(row: &Row) -> Self {
         Self {
-            id: row.get(0).unwrap(),
-            name: row.get(1).unwrap(),
+            name: row.get(0).unwrap(),
         }
     }
 }
