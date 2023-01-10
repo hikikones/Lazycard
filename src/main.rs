@@ -5,7 +5,6 @@ use dioxus_router::{Link, Redirect, Route, Router};
 
 use config::Config;
 use database::Database;
-use markdown::Markdown;
 
 mod components;
 mod hooks;
@@ -26,7 +25,6 @@ pub fn app(cx: Scope) -> Element {
     cx.use_hook(|| {
         cx.provide_context(Rc::new(RefCell::new(Config::new())));
         cx.provide_context(Rc::new(RefCell::new(Database::new())));
-        cx.provide_context(Rc::new(Markdown::default()));
     });
 
     cx.render(rsx! {

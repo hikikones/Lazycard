@@ -1,50 +1,26 @@
+use once_cell::sync::Lazy;
 use pulldown_cmark::{html, CodeBlockKind, CowStr, Event, Options, Parser, Tag};
-use syntect::{
-    highlighting::{Theme, ThemeSet},
-    html::highlighted_html_for_string,
-    parsing::SyntaxSet,
-};
+use syntect::{highlighting::ThemeSet, html::highlighted_html_for_string, parsing::SyntaxSet};
 
-pub struct Markdown {
-    theme_set: ThemeSet,
-    syntax_set: SyntaxSet,
+static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(|| SyntaxSet::load_defaults_newlines());
+static THEME_SET: Lazy<ThemeSet> = Lazy::new(|| ThemeSet::load_defaults());
+
+pub fn to_html(markdown: &str) -> String {
+    let mut html_output = String::with_capacity(markdown.len() * 3 / 2);
+    html::push_html(
+        &mut html_output,
+        CustomParser(Parser::new_ext(markdown, Options::all())),
+    );
+    html_output
 }
 
-impl Markdown {
-    pub fn to_html(&self, text: &str) -> String {
-        let custom_parser = CustomParser {
-            parser: Parser::new_ext(text, Options::all()),
-            syntax_set: &self.syntax_set,
-            theme: &self.theme_set.themes["base16-eighties.dark"],
-        };
-
-        let mut html_output = String::with_capacity(text.len() * 3 / 2);
-        html::push_html(&mut html_output, custom_parser);
-
-        html_output
-    }
-}
-
-impl Default for Markdown {
-    fn default() -> Self {
-        Self {
-            theme_set: ThemeSet::load_defaults(),
-            syntax_set: SyntaxSet::load_defaults_newlines(),
-        }
-    }
-}
-
-struct CustomParser<'e> {
-    parser: Parser<'e, 'e>,
-    syntax_set: &'e SyntaxSet,
-    theme: &'e Theme,
-}
+struct CustomParser<'e>(Parser<'e, 'e>);
 
 impl<'e> Iterator for CustomParser<'e> {
     type Item = Event<'e>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some(next) = self.parser.next() else {
+        let Some(next) = self.0.next() else {
             return None;
         };
 
@@ -75,27 +51,23 @@ impl<'e> CustomParser<'e> {
     fn parse_code_block<'a>(&'a mut self) -> Option<Event<'e>> {
         let mut to_highlight = String::new();
 
-        while let Some(ref event) = self.parser.next() {
+        while let Some(ref event) = self.0.next() {
             match event {
                 Event::Text(t) => {
                     to_highlight.push_str(t);
                 }
                 Event::End(Tag::CodeBlock(token)) => {
+                    let ss = &SYNTAX_SET;
                     let syntax = if let CodeBlockKind::Fenced(val) = token {
-                        self.syntax_set
-                            .find_syntax_by_extension(val)
-                            .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
+                        ss.find_syntax_by_extension(val)
+                            .unwrap_or_else(|| ss.find_syntax_plain_text())
                     } else {
-                        self.syntax_set.find_syntax_plain_text()
+                        ss.find_syntax_plain_text()
                     };
 
-                    let html = highlighted_html_for_string(
-                        &to_highlight,
-                        self.syntax_set,
-                        &syntax,
-                        self.theme,
-                    )
-                    .unwrap();
+                    let theme = &THEME_SET.themes["base16-eighties.dark"];
+                    let html =
+                        highlighted_html_for_string(&to_highlight, ss, &syntax, theme).unwrap();
 
                     return Some(Event::Html(CowStr::Boxed(html.into_boxed_str())));
                 }

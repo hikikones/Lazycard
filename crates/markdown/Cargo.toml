@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 pulldown-cmark = { version = "0.9", features = ["simd"] }
+once_cell = "1.17"
 syntect = "5.0"
 is-url = "1.0"
 config = { workspace = true }

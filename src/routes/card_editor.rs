@@ -5,18 +5,14 @@ use dioxus_router::{use_route, use_router};
 
 use database::*;
 
-use crate::{
-    components::MarkdownEditor,
-    hooks::{use_database, use_markdown},
-};
+use crate::{components::MarkdownEditor, hooks::use_database};
 
 #[allow(non_snake_case)]
 pub fn AddCard(cx: Scope) -> Element {
     let db = use_database(&cx);
-    let md = use_markdown(&cx);
     let content = use_state(&cx, || String::new());
 
-    let html = md.to_html(&content);
+    let html = markdown::to_html(&content);
 
     cx.render(rsx! {
         h1 { "Add Card" }
@@ -46,7 +42,6 @@ pub fn EditCard(cx: Scope) -> Element {
         .parse::<SqliteId>()
         .unwrap();
     let db = use_database(&cx);
-    let md = use_markdown(&cx);
     let router = use_router(&cx);
     let content = use_state(&cx, || {
         let (_, content) = db
@@ -56,7 +51,7 @@ pub fn EditCard(cx: Scope) -> Element {
         content
     });
 
-    let html = md.to_html(&content);
+    let html = markdown::to_html(&content);
 
     cx.render(rsx! {
         h1 { "Edit Card ({id})" }
