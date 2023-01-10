@@ -5,9 +5,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     database: Option<PathBuf>,
-
-    #[serde(skip)]
-    is_dirty: bool,
 }
 
 pub const ASSETS_DIR: &str = "assets";
@@ -26,10 +23,7 @@ impl Config {
             }
         }
 
-        Self {
-            database: None,
-            is_dirty: false,
-        }
+        Self { database: None }
     }
 
     pub fn database(&self) -> Option<&PathBuf> {
@@ -38,21 +32,12 @@ impl Config {
 
     pub fn set_database(&mut self, path: PathBuf) {
         self.database = Some(path);
-        self.is_dirty = true;
-    }
-
-    fn save(&mut self) {
-        if self.is_dirty {
-            let bytes = toml::to_vec(self).unwrap();
-            let file = Path::new(CONFIG_FILE);
-            std::fs::write(file, bytes).unwrap();
-            self.is_dirty = false;
-        }
-    }
-}
-
-impl Drop for Config {
-    fn drop(&mut self) {
         self.save();
+    }
+
+    fn save(&self) {
+        let bytes = toml::to_vec(self).unwrap();
+        let file = Path::new(CONFIG_FILE);
+        std::fs::write(file, bytes).unwrap();
     }
 }
