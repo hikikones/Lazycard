@@ -1,4 +1,4 @@
-use std::{ops::Deref, path::Path};
+use std::{num::ParseIntError, ops::Deref, path::Path, str::FromStr};
 
 use chrono::NaiveDateTime;
 use rusqlite::{
@@ -119,6 +119,15 @@ impl Seahash {
 impl From<&[u8]> for Seahash {
     fn from(buf: &[u8]) -> Self {
         Self(seahash::hash(buf))
+    }
+}
+
+impl FromStr for Seahash {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hash = s.parse::<u64>()?;
+        Ok(Self(hash))
     }
 }
 

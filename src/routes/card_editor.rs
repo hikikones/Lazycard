@@ -87,20 +87,18 @@ fn store_media(html: &str, db: &Database) {
         let Some(ext) = asset_path.extension() else {
             return;
         };
-        let Ok(hash) = file_stem.to_string_lossy().parse::<u64>() else {
-            return
+        let Ok(hash) = file_stem.to_string_lossy().parse::<Seahash>() else {
+            return;
         };
-
-        let seahash = Seahash::from_raw(hash);
 
         if db
             .fetch::<Seahash>("SELECT seahash FROM media WHERE seahash = ?")
-            .get_single_with_params([seahash])
+            .get_single_with_params([hash])
             .is_none()
         {
             let bytes = std::fs::read(asset_path).unwrap();
             db.execute("INSERT INTO media (seahash, bytes, file_ext) VALUES (?, ?, ?)")
-                .single_with_params(params![seahash, bytes, ext.to_string_lossy()]);
+                .single_with_params(params![hash, bytes, ext.to_string_lossy()]);
         }
     }
 }
