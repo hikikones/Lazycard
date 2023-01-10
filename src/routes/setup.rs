@@ -1,5 +1,9 @@
+use std::path::Path;
+
 use dioxus::prelude::*;
 use dioxus_router::use_router;
+
+use database::Seahash;
 
 use crate::hooks::{use_config, use_database};
 
@@ -11,7 +15,7 @@ pub fn Setup(cx: Scope) -> Element {
 
     let Some(db_path) = cfg.borrow().database().cloned() else {
         return cx.render(rsx! {
-            h1 { "TODO: Greetings" }
+            h1 { "TODO: Welcome" }
             button {
                 onclick: move |_| {
                     let path = "db.db";
@@ -45,7 +49,29 @@ pub fn Setup(cx: Scope) -> Element {
         });
     };
 
-    router.push_route("/load", None, None);
+    let assets = db
+        .borrow()
+        .fetch::<(Seahash, String)>("SELECT seahash, file_ext FROM media")
+        .all();
 
-    None
+    for (hash, ext) in assets {
+        let asset_file = format!("{}/{}.{}", config::ASSETS_DIR, hash.raw(), ext);
+        let asset_path = Path::new(&asset_file);
+        if !asset_path.exists() {
+            let (_, bytes) = db
+                .borrow()
+                .fetch::<(Seahash, Vec<u8>)>("SELECT seahash, bytes FROM media WHERE seahash = ?")
+                .single_with_params([hash]);
+            std::fs::write(asset_path, bytes).unwrap();
+        }
+    }
+
+    let router_clone = router.clone();
+    use_effect(&cx, (), |_| async move {
+        router_clone.push_route("/review", None, None);
+    });
+
+    cx.render(rsx! {
+        h1 { "Success" }
+    })
 }

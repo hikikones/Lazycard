@@ -38,7 +38,6 @@ pub fn app(cx: Scope) -> Element {
                 }
             }
             Route { to: "/setup", main { routes::Setup {} } }
-            Route { to: "/load", main { routes::Load {} } }
             Route { to: "/review", main { routes::Review {} } }
             Route { to: "/add_card", main { routes::AddCard {} } }
             Route { to: "/edit_card/:id", main { routes::EditCard {} } }
