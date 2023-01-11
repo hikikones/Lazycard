@@ -12,6 +12,15 @@ CREATE TABLE schedules (
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+CREATE TABLE reviews (
+    id INTEGER PRIMARY KEY,
+    date TEXT NOT NULL,
+    success INTEGER NOT NULL,
+    card_id INTEGER NOT NULL,
+    FOREIGN KEY (card_id) REFERENCES cards (id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
 CREATE TABLE tags (
     name TEXT PRIMARY KEY NOT NULL
 );

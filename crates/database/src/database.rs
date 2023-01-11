@@ -56,7 +56,14 @@ pub struct Card {
 pub struct Schedule {
     pub id: SqliteId,
     pub due_date: NaiveDateTime,
-    pub due_days: usize,
+    pub due_days: u32,
+    pub card_id: SqliteId,
+}
+
+pub struct Review {
+    pub id: SqliteId,
+    pub date: NaiveDateTime,
+    pub success: bool,
     pub card_id: SqliteId,
 }
 
