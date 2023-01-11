@@ -27,17 +27,21 @@ pub fn app(cx: Scope) -> Element {
         cx.provide_context(Rc::new(RefCell::new(Database::new())));
     });
 
+    let show_nav = use_state(&cx, || false);
+
     cx.render(rsx! {
         Router {
-            nav {
-                ul {
-                    Link { to: "/review", li { "Review" }}
-                    Link { to: "/add_card", li { "Add Card" }}
-                    Link { to: "/cards", li { "Cards" }}
-                    Link { to: "/settings", li { "Settings" }}
+            show_nav.current().then(|| rsx! {
+                nav {
+                    ul {
+                        Link { to: "/review", li { "Review" }}
+                        Link { to: "/add_card", li { "Add Card" }}
+                        Link { to: "/cards", li { "Cards" }}
+                        Link { to: "/settings", li { "Settings" }}
+                    }
                 }
-            }
-            Route { to: "/setup", main { routes::Setup {} } }
+            })
+            Route { to: "/setup", main { routes::Setup { show_nav: show_nav } } }
             Route { to: "/review", main { routes::Review {} } }
             Route { to: "/add_card", main { routes::AddCard {} } }
             Route { to: "/edit_card/:id", main { routes::EditCard {} } }

@@ -7,11 +7,20 @@ use database::Seahash;
 
 use crate::hooks::{use_config, use_database};
 
+#[derive(Props)]
+pub struct SetupProps<'a> {
+    show_nav: &'a UseState<bool>,
+}
+
 #[allow(non_snake_case)]
-pub fn Setup(cx: Scope) -> Element {
+pub fn Setup<'a>(cx: Scope<'a, SetupProps>) -> Element<'a> {
     let cfg = use_config(&cx);
     let db = use_database(&cx);
     let router = use_router(&cx);
+
+    if *cx.props.show_nav.current() {
+        cx.props.show_nav.set(false);
+    }
 
     let Some(db_path) = cfg.borrow().database().cloned() else {
         return cx.render(rsx! {
@@ -72,10 +81,8 @@ pub fn Setup(cx: Scope) -> Element {
         }
     }
 
-    let router_clone = router.clone();
-    use_effect(&cx, (), |_| async move {
-        router_clone.push_route("/review", None, None);
-    });
+    cx.props.show_nav.set(true);
+    router.push_route("/review", None, None);
 
     cx.render(rsx! {
         h1 { "Success" }
