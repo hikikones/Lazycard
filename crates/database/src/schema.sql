@@ -26,7 +26,7 @@ CREATE TABLE card_tag (
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-CREATE TABLE media (
+CREATE TABLE assets (
     seahash BLOB PRIMARY KEY NOT NULL,
     bytes BLOB NOT NULL,
     extension TEXT NOT NULL

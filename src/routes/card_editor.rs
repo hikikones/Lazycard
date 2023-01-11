@@ -30,7 +30,7 @@ pub fn AddCard(cx: Scope) -> Element {
                         [content.current()],
                     )
                     .unwrap();
-                store_media(&html, &db.borrow());
+                store_assets(&html, &db.borrow());
                 content.set(String::new());
             },
             "Add"
@@ -73,7 +73,7 @@ pub fn EditCard(cx: Scope) -> Element {
                         (content.current().as_ref(), id),
                     )
                     .unwrap();
-                store_media(&html, &db.borrow());
+                store_assets(&html, &db.borrow());
                 router.pop_route();
             },
             "Save"
@@ -81,12 +81,12 @@ pub fn EditCard(cx: Scope) -> Element {
     })
 }
 
-fn store_media(html: &str, db: &Database) {
+fn store_assets(html: &str, db: &Database) {
     // const ASSET_REGEX: &str = const_format::concatcp!(r#"src\s*=\s*["|']"#, config::ASSETS_DIR, r#"/(.+?)["|']"#);
     const ASSET_REGEX: &str = const_format::concatcp!(config::ASSETS_DIR, r"/[0-9]*.[\w]*");
 
-    let re = regex::Regex::new(ASSET_REGEX).unwrap();
-    for caps in re.captures_iter(html) {
+    let regex = regex::Regex::new(ASSET_REGEX).unwrap();
+    for caps in regex.captures_iter(html) {
         let asset_path = Path::new(&caps[0]);
 
         let Some(file_stem) = asset_path.file_stem() else {
@@ -101,7 +101,7 @@ fn store_media(html: &str, db: &Database) {
 
         if db
             .fetch_one::<Seahash>(
-                "SELECT seahash FROM media WHERE seahash = ?",
+                "SELECT seahash FROM assets WHERE seahash = ?",
                 [hash],
                 |row| row.get(0),
             )
@@ -109,7 +109,7 @@ fn store_media(html: &str, db: &Database) {
         {
             let bytes = std::fs::read(asset_path).unwrap();
             db.execute_one(
-                "INSERT INTO media (seahash, bytes, extension) VALUES (?, ?, ?)",
+                "INSERT INTO assets (seahash, bytes, extension) VALUES (?, ?, ?)",
                 params![hash, bytes, ext.to_string_lossy()],
             )
             .unwrap();

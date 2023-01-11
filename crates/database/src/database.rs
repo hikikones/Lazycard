@@ -64,7 +64,7 @@ pub struct Tag {
     pub name: String,
 }
 
-pub struct Media {
+pub struct Asset {
     pub seahash: Seahash,
     pub bytes: Vec<u8>,
     pub extension: String,

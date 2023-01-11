@@ -51,7 +51,7 @@ pub fn Setup(cx: Scope) -> Element {
 
     let assets = db
         .borrow()
-        .fetch_all::<(Seahash, String)>("SELECT seahash, extension FROM media", [], |row| {
+        .fetch_all::<(Seahash, String)>("SELECT seahash, extension FROM assets", [], |row| {
             Ok((row.get(0).unwrap(), row.get(1).unwrap()))
         })
         .unwrap();
@@ -63,7 +63,7 @@ pub fn Setup(cx: Scope) -> Element {
             let bytes = db
                 .borrow()
                 .fetch_one::<Vec<u8>>(
-                    "SELECT seahash, bytes FROM media WHERE seahash = ?",
+                    "SELECT seahash, bytes FROM assets WHERE seahash = ?",
                     [hash],
                     |row| row.get(1),
                 )
