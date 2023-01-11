@@ -109,7 +109,7 @@ fn store_media(html: &str, db: &Database) {
         {
             let bytes = std::fs::read(asset_path).unwrap();
             db.execute_one(
-                "INSERT INTO media (seahash, bytes, file_ext) VALUES (?, ?, ?)",
+                "INSERT INTO media (seahash, bytes, extension) VALUES (?, ?, ?)",
                 params![hash, bytes, ext.to_string_lossy()],
             )
             .unwrap();

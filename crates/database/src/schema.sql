@@ -29,7 +29,7 @@ CREATE TABLE card_tag (
 CREATE TABLE media (
     seahash BLOB PRIMARY KEY NOT NULL,
     bytes BLOB NOT NULL,
-    file_ext TEXT NOT NULL
+    extension TEXT NOT NULL
 );
 
 INSERT INTO tags (name)

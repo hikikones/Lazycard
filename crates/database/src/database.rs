@@ -67,7 +67,7 @@ pub struct Tag {
 pub struct Media {
     pub seahash: Seahash,
     pub bytes: Vec<u8>,
-    pub file_ext: String,
+    pub extension: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

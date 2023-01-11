@@ -51,7 +51,7 @@ pub fn Setup(cx: Scope) -> Element {
 
     let assets = db
         .borrow()
-        .fetch_all::<(Seahash, String)>("SELECT seahash, file_ext FROM media", [], |row| {
+        .fetch_all::<(Seahash, String)>("SELECT seahash, extension FROM media", [], |row| {
             Ok((row.get(0).unwrap(), row.get(1).unwrap()))
         })
         .unwrap();
