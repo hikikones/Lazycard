@@ -46,7 +46,7 @@ pub fn EditCard(cx: Scope) -> Element {
     let content = use_state(&cx, || {
         let (_, content) = db
             .borrow()
-            .fetch::<(SqliteId, String)>("SELECT * FROM cards WHERE card_id = ?")
+            .fetch::<(SqliteId, String)>("SELECT id, content FROM cards WHERE id = ?")
             .single_with_params([id]);
         content
     });
@@ -63,7 +63,7 @@ pub fn EditCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                db.borrow().execute("UPDATE cards SET content = ? WHERE card_id = ?")
+                db.borrow().execute("UPDATE cards SET content = ? WHERE id = ?")
                     .single_with_params((content.current().as_ref(), id));
                 store_media(&html, &db.borrow());
                 router.pop_route();

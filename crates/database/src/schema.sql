@@ -1,5 +1,5 @@
 CREATE TABLE cards (
-    card_id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     content TEXT NOT NULL,
     due_date TEXT DEFAULT (datetime('now')) NOT NULL,
     due_days INTEGER DEFAULT 0 NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE card_tag (
     card_id INTEGER NOT NULL,
     tag_name TEXT NOT NULL,
     PRIMARY KEY (card_id, tag_name)
-    FOREIGN KEY (card_id) REFERENCES cards (card_id)
+    FOREIGN KEY (card_id) REFERENCES cards (id)
         ON UPDATE CASCADE ON DELETE CASCADE
     FOREIGN KEY (tag_name) REFERENCES tags (name)
         ON UPDATE CASCADE ON DELETE CASCADE
