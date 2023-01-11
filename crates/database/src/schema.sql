@@ -1,10 +1,15 @@
 CREATE TABLE cards (
     id INTEGER PRIMARY KEY,
-    content TEXT NOT NULL,
+    content TEXT NOT NULL
+);
+
+CREATE TABLE schedules (
+    id INTEGER PRIMARY KEY,
     due_date TEXT DEFAULT (datetime('now')) NOT NULL,
     due_days INTEGER DEFAULT 0 NOT NULL,
-    recall_attempts INTEGER DEFAULT 0 NOT NULL,
-    successful_recalls INTEGER DEFAULT 0 NOT NULL
+    card_id INTEGER NOT NULL,
+    FOREIGN KEY (card_id) REFERENCES cards (id)
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE tags (

@@ -48,14 +48,13 @@ fn migrate(sqlite: &Sqlite) {
 pub struct Card {
     pub id: SqliteId,
     pub content: String,
-    pub review: CardReview,
 }
 
-pub struct CardReview {
+pub struct Schedule {
+    pub id: SqliteId,
     pub due_date: NaiveDateTime,
     pub due_days: usize,
-    pub recall_attempts: usize,
-    pub successful_recalls: usize,
+    pub card_id: SqliteId,
 }
 
 pub struct Tag {
@@ -73,12 +72,17 @@ impl FromRow for Card {
         Self {
             id: row.get(0).unwrap(),
             content: row.get(1).unwrap(),
-            review: CardReview {
-                due_date: row.get(2).unwrap(),
-                due_days: row.get(3).unwrap(),
-                recall_attempts: row.get(4).unwrap(),
-                successful_recalls: row.get(5).unwrap(),
-            },
+        }
+    }
+}
+
+impl FromRow for Schedule {
+    fn from_row(row: &Row) -> Self {
+        Self {
+            id: row.get(0).unwrap(),
+            due_date: row.get(1).unwrap(),
+            due_days: row.get(2).unwrap(),
+            card_id: row.get(3).unwrap(),
         }
     }
 }
