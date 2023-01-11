@@ -10,7 +10,14 @@ pub fn Cards(cx: Scope) -> Element {
     let db = use_database(&cx);
     let router = use_router(&cx);
     let cards = use_state(&cx, || {
-        db.borrow().fetch::<Card>("SELECT * FROM cards").all()
+        db.borrow()
+            .fetch_all::<Card>("SELECT id, content FROM cards", [], |row| {
+                Ok(Card {
+                    id: row.get(0).unwrap(),
+                    content: row.get(1).unwrap(),
+                })
+            })
+            .unwrap()
     });
 
     cx.render(rsx! {

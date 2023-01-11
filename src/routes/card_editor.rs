@@ -24,8 +24,12 @@ pub fn AddCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                db.borrow().execute("INSERT INTO cards (content) VALUES (?)")
-                    .single_with_params([content.current()]);
+                db.borrow()
+                    .execute_one(
+                        "INSERT INTO cards (content) VALUES (?)",
+                        [content.current()],
+                    )
+                    .unwrap();
                 store_media(&html, &db.borrow());
                 content.set(String::new());
             },
@@ -44,11 +48,11 @@ pub fn EditCard(cx: Scope) -> Element {
     let db = use_database(&cx);
     let router = use_router(&cx);
     let content = use_state(&cx, || {
-        let (_, content) = db
-            .borrow()
-            .fetch::<(SqliteId, String)>("SELECT id, content FROM cards WHERE id = ?")
-            .single_with_params([id]);
-        content
+        db.borrow()
+            .fetch_one::<String>("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
+                row.get(1)
+            })
+            .unwrap()
     });
 
     let html = markdown::to_html(&content);
@@ -63,8 +67,12 @@ pub fn EditCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                db.borrow().execute("UPDATE cards SET content = ? WHERE id = ?")
-                    .single_with_params((content.current().as_ref(), id));
+                db.borrow()
+                    .execute_one(
+                        "UPDATE cards SET content = ? WHERE id = ?",
+                        (content.current().as_ref(), id),
+                    )
+                    .unwrap();
                 store_media(&html, &db.borrow());
                 router.pop_route();
             },
@@ -92,13 +100,19 @@ fn store_media(html: &str, db: &Database) {
         };
 
         if db
-            .fetch::<Seahash>("SELECT seahash FROM media WHERE seahash = ?")
-            .get_single_with_params([hash])
-            .is_none()
+            .fetch_one::<Seahash>(
+                "SELECT seahash FROM media WHERE seahash = ?",
+                [hash],
+                |row| row.get(0),
+            )
+            .is_err()
         {
             let bytes = std::fs::read(asset_path).unwrap();
-            db.execute("INSERT INTO media (seahash, bytes, file_ext) VALUES (?, ?, ?)")
-                .single_with_params(params![hash, bytes, ext.to_string_lossy()]);
+            db.execute_one(
+                "INSERT INTO media (seahash, bytes, file_ext) VALUES (?, ?, ?)",
+                params![hash, bytes, ext.to_string_lossy()],
+            )
+            .unwrap();
         }
     }
 }

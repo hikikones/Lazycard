@@ -3,7 +3,7 @@ use std::{num::ParseIntError, ops::Deref, path::Path, str::FromStr};
 use chrono::NaiveDateTime;
 use rusqlite::{
     types::{FromSql, ToSqlOutput, Value, ValueRef},
-    Connection, Row, ToSql,
+    Connection, ToSql,
 };
 
 use crate::sqlite::*;
@@ -18,8 +18,11 @@ impl Database {
     pub fn open(&mut self, path: impl AsRef<Path>) -> SqliteResult<()> {
         let connection = Connection::open(path)?;
         let sqlite = Sqlite(connection);
+
         migrate(&sqlite);
+
         self.0 = Some(sqlite);
+
         Ok(())
     }
 }
@@ -38,7 +41,7 @@ fn migrate(sqlite: &Sqlite) {
     match sqlite.version() {
         CURRENT_VERSION => {}
         0 => {
-            sqlite.execute(include_str!("schema.sql")).all();
+            sqlite.execute_all(include_str!("schema.sql")).unwrap();
             sqlite.set_version(CURRENT_VERSION);
         }
         _ => todo!(),
@@ -65,44 +68,6 @@ pub struct Media {
     pub seahash: Seahash,
     pub bytes: Vec<u8>,
     pub file_ext: String,
-}
-
-impl FromRow for Card {
-    fn from_row(row: &Row) -> Self {
-        Self {
-            id: row.get(0).unwrap(),
-            content: row.get(1).unwrap(),
-        }
-    }
-}
-
-impl FromRow for Schedule {
-    fn from_row(row: &Row) -> Self {
-        Self {
-            id: row.get(0).unwrap(),
-            due_date: row.get(1).unwrap(),
-            due_days: row.get(2).unwrap(),
-            card_id: row.get(3).unwrap(),
-        }
-    }
-}
-
-impl FromRow for Tag {
-    fn from_row(row: &Row) -> Self {
-        Self {
-            name: row.get(0).unwrap(),
-        }
-    }
-}
-
-impl FromRow for Media {
-    fn from_row(row: &Row) -> Self {
-        Self {
-            seahash: row.get(0).unwrap(),
-            bytes: row.get(1).unwrap(),
-            file_ext: row.get(2).unwrap(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -145,23 +110,5 @@ impl FromSql for Seahash {
     fn column_result(value: ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
         let bytes: [u8; 8] = value.as_blob()?.try_into().unwrap();
         Ok(Seahash(u64::from_be_bytes(bytes)))
-    }
-}
-
-impl FromRow for Seahash {
-    fn from_row(row: &Row) -> Self {
-        row.get(0).unwrap()
-    }
-}
-
-impl FromRow for (Seahash, String) {
-    fn from_row(row: &Row) -> Self {
-        (row.get(0).unwrap(), row.get(1).unwrap())
-    }
-}
-
-impl FromRow for (Seahash, Vec<u8>) {
-    fn from_row(row: &Row) -> Self {
-        (row.get(0).unwrap(), row.get(1).unwrap())
     }
 }

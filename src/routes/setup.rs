@@ -51,17 +51,23 @@ pub fn Setup(cx: Scope) -> Element {
 
     let assets = db
         .borrow()
-        .fetch::<(Seahash, String)>("SELECT seahash, file_ext FROM media")
-        .all();
+        .fetch_all::<(Seahash, String)>("SELECT seahash, file_ext FROM media", [], |row| {
+            Ok((row.get(0).unwrap(), row.get(1).unwrap()))
+        })
+        .unwrap();
 
     for (hash, ext) in assets {
         let asset_file = format!("{}/{}.{}", config::ASSETS_DIR, hash.raw(), ext);
         let asset_path = Path::new(&asset_file);
         if !asset_path.exists() {
-            let (_, bytes) = db
+            let bytes = db
                 .borrow()
-                .fetch::<(Seahash, Vec<u8>)>("SELECT seahash, bytes FROM media WHERE seahash = ?")
-                .single_with_params([hash]);
+                .fetch_one::<Vec<u8>>(
+                    "SELECT seahash, bytes FROM media WHERE seahash = ?",
+                    [hash],
+                    |row| row.get(1),
+                )
+                .unwrap();
             std::fs::write(asset_path, bytes).unwrap();
         }
     }
