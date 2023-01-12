@@ -22,16 +22,17 @@ CREATE TABLE reviews (
 );
 
 CREATE TABLE tags (
-    name TEXT PRIMARY KEY NOT NULL
+    id INTEGER PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
 );
 
 CREATE TABLE card_tag (
     card_id INTEGER NOT NULL,
-    tag_name TEXT NOT NULL,
-    PRIMARY KEY (card_id, tag_name)
+    tag_id TEXT NOT NULL,
+    PRIMARY KEY (card_id, tag_id)
     FOREIGN KEY (card_id) REFERENCES cards (id)
         ON UPDATE CASCADE ON DELETE CASCADE
-    FOREIGN KEY (tag_name) REFERENCES tags (name)
+    FOREIGN KEY (tag_id) REFERENCES tags (id)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
@@ -65,8 +66,8 @@ second
 third"),
 ("tagless card");
 
-INSERT INTO card_tag (card_id, tag_name)
-    VALUES  (1, "tag1"),
-            (2, "tag2"),
-            (2, "tag3"),
-            (3, "tag3");
+INSERT INTO card_tag (card_id, tag_id)
+    VALUES  (1, 1),
+            (2, 2),
+            (2, 3),
+            (3, 3);
