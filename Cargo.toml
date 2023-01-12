@@ -11,6 +11,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
+sqlite = { path = "crates/sqlite" }
 config = { path = "crates/config" }
 serde = { version = "1.0", features = ["derive"] }
 
@@ -18,6 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 dioxus = "0.3"
 dioxus-desktop = "0.3"
 dioxus-router = "0.3"
+sqlite = { workspace = true }
 config = { workspace = true }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }

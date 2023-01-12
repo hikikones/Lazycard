@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
-use database::SqliteId;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
+
+use sqlite::SqliteId;
 
 use crate::{components::MarkdownView, hooks::use_database};
 
@@ -44,8 +45,12 @@ pub fn Cards(cx: Scope) -> Element {
         }
         button {
             onclick: |_| {
-                show_tagless.set(false);
-                selected_tags.write().clear();
+                if **show_tagless {
+                    show_tagless.set(false);
+                }
+                if !selected_tags.read().is_empty() {
+                    selected_tags.write().clear();
+                }
             },
             "Reset"
         }

@@ -1,13 +1,7 @@
 use std::{num::ParseIntError, ops::Deref, path::Path, str::FromStr};
 
 use chrono::NaiveDateTime;
-use rusqlite::{
-    params_from_iter,
-    types::{FromSql, FromSqlResult, ToSqlOutput, Value, ValueRef},
-    Connection, ToSql,
-};
-
-use crate::sqlite::*;
+use sqlite::*;
 
 pub struct Database(Option<Sqlite>);
 
@@ -17,8 +11,7 @@ impl Database {
     }
 
     pub fn open(&mut self, path: impl AsRef<Path>) -> SqliteResult<()> {
-        let connection = Connection::open(path)?;
-        let sqlite = Sqlite(connection);
+        let sqlite = Sqlite::open(path)?;
 
         migrate(&sqlite);
 
@@ -179,7 +172,7 @@ impl FromSql for Seahash {
 }
 
 impl ToSql for Seahash {
-    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
         Ok(ToSqlOutput::Owned(Value::Blob(
             self.0.to_be_bytes().to_vec(),
         )))

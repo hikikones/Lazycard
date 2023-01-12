@@ -1,0 +1,7 @@
+[package]
+name = "sqlite"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rusqlite = { version = "0.28", features = ["bundled", "chrono"] }

@@ -603,8 +603,8 @@ name = "database"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "rusqlite",
  "seahash",
+ "sqlite",
 ]
 
 [[package]]
@@ -1579,6 +1579,7 @@ dependencies = [
  "regex",
  "rfd",
  "serde",
+ "sqlite",
 ]
 
 [[package]]
@@ -2612,6 +2613,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d4f0e86297cad2658d92a707320d87bf4e6ae1050287f51d19b67ef3f153a7b"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "sqlite"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
 ]
 
 [[package]]

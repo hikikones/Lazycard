@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use dioxus_router::{use_route, use_router};
 
 use database::*;
+use sqlite::{params, SqliteId};
 
 use crate::{components::MarkdownEditor, hooks::use_database};
 

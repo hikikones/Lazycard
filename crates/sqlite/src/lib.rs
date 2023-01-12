@@ -1,11 +1,25 @@
-use rusqlite::{Connection, Params, Row};
+use std::path::Path;
+
+use rusqlite::Connection;
+
+pub use rusqlite::{params, params_from_iter, types::*, OpenFlags, Params, Row};
 
 pub type SqliteId = i64;
 pub type SqliteResult<T> = Result<T, rusqlite::Error>;
 
-pub struct Sqlite(pub(crate) Connection);
+pub struct Sqlite(Connection);
 
 impl Sqlite {
+    pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
+        let connection = Connection::open(path)?;
+        Ok(Self(connection))
+    }
+
+    pub fn open_with_flags(path: impl AsRef<Path>, flags: OpenFlags) -> SqliteResult<Self> {
+        let connection = Connection::open_with_flags(path, flags)?;
+        Ok(Self(connection))
+    }
+
     pub fn version(&self) -> SqliteId {
         self.0
             .query_row("SELECT user_version FROM pragma_user_version", [], |row| {
