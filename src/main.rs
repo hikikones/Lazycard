@@ -23,7 +23,7 @@ fn main() {
 
 pub fn app(cx: Scope) -> Element {
     cx.use_hook(|| {
-        cx.provide_context(Rc::new(RefCell::new(Config::new())));
+        cx.provide_context(Rc::new(Config::new()));
         cx.provide_context(Rc::new(RefCell::new(Database::new())));
     });
 

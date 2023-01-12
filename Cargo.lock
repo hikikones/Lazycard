@@ -369,8 +369,7 @@ dependencies = [
 name = "config"
 version = "0.1.0"
 dependencies = [
- "serde",
- "toml",
+ "sqlite",
 ]
 
 [[package]]
@@ -1578,7 +1577,6 @@ dependencies = [
  "markdown",
  "regex",
  "rfd",
- "serde",
  "sqlite",
 ]
 

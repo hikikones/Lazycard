@@ -13,7 +13,6 @@ edition = "2021"
 [workspace.dependencies]
 sqlite = { path = "crates/sqlite" }
 config = { path = "crates/config" }
-serde = { version = "1.0", features = ["derive"] }
 
 [dependencies]
 dioxus = "0.3"
@@ -23,7 +22,6 @@ sqlite = { workspace = true }
 config = { workspace = true }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
-serde = { workspace = true }
 rfd = "0.10"
 regex = "1.7"
 const_format = "0.2"

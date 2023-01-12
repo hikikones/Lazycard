@@ -4,5 +4,4 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-serde = { workspace = true }
-toml = "0.5"
+sqlite = { workspace = true }

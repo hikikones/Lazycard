@@ -22,14 +22,14 @@ pub fn Setup<'a>(cx: Scope<'a, SetupProps>) -> Element<'a> {
         cx.props.show_nav.set(false);
     }
 
-    let Some(db_path) = cfg.borrow().database().cloned() else {
+    let Some(db_path) = cfg.get_database_path() else {
         return cx.render(rsx! {
             h1 { "TODO: Welcome" }
             button {
                 onclick: move |_| {
                     let path = "db.db";
                     db.borrow_mut().open(path).unwrap();
-                    cfg.borrow_mut().set_database(path.into());
+                    cfg.set_database_path(path);
                     cx.needs_update();
                 },
                 "New database"
@@ -44,7 +44,7 @@ pub fn Setup<'a>(cx: Scope<'a, SetupProps>) -> Element<'a> {
                 onclick: move |_| {
                     let path = "db.db";
                     db.borrow_mut().open(path).unwrap();
-                    cfg.borrow_mut().set_database(path.into());
+                    cfg.set_database_path(path);
                     cx.needs_update();
                 },
                 "New database"

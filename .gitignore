@@ -2,5 +2,5 @@
 
 # App
 /assets
+config.db
 db.db
-config.toml
