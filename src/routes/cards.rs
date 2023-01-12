@@ -74,23 +74,30 @@ pub fn Cards(cx: Scope) -> Element {
 #[allow(non_snake_case)]
 fn Tags<'a>(cx: Scope<'a, TagsProps>) -> Element<'a> {
     let db = use_database(&cx);
-    let tags = use_state(&cx, || db.borrow().get_tags());
+    let tags = use_ref(&cx, || db.borrow().get_tags());
 
-    cx.render(rsx! {
-        tags.iter().map(|t| rsx! {
+    let tags_lock = tags.read();
+    let tags_render = tags_lock.iter().map(|tag| {
+        let id = tag.id;
+        let name = tag.name.clone();
+        cx.render(rsx! {
             TagButton {
-                key: "{t.id}",
-                name: &t.name,
-                selected: cx.props.selected.read().contains(&t.id),
-                onclick: |_| {
-                    if cx.props.selected.read().contains(&t.id) {
-                        cx.props.selected.write().remove(&t.id);
+                key: "{id}",
+                name: name,
+                selected: cx.props.selected.read().contains(&id),
+                onclick: move |_| {
+                    if cx.props.selected.read().contains(&id) {
+                        cx.props.selected.write().remove(&id);
                     } else {
-                        cx.props.selected.write().insert(t.id);
+                        cx.props.selected.write().insert(id);
                     }
                 }
             }
         })
+    });
+
+    cx.render(rsx! {
+        tags_render,
     })
 }
 
@@ -117,7 +124,7 @@ fn TagButton<'a>(cx: Scope<'a, TagButtonProps>) -> Element<'a> {
 
 #[derive(Props)]
 struct TagButtonProps<'a> {
-    name: &'a str,
+    name: String,
     selected: bool,
     onclick: EventHandler<'a, Event<MouseData>>,
 }
