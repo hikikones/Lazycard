@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use dioxus::prelude::*;
 use dioxus_router::{use_route, use_router};
@@ -6,12 +6,16 @@ use dioxus_router::{use_route, use_router};
 use database::*;
 use sqlite::{params, SqliteId};
 
-use crate::{components::MarkdownEditor, hooks::use_database};
+use crate::{
+    components::{MarkdownEditor, Tags},
+    hooks::use_database,
+};
 
 #[allow(non_snake_case)]
 pub fn AddCard(cx: Scope) -> Element {
     let db = use_database(&cx);
     let content = use_state(&cx, || String::new());
+    let selected_tags = use_ref(&cx, || HashSet::new());
 
     let html = markdown::to_html(&content);
 
@@ -23,20 +27,34 @@ pub fn AddCard(cx: Scope) -> Element {
         div {
             dangerous_inner_html: "{html}",
         }
+        Tags {
+            selected: selected_tags,
+        }
         button {
             onclick: move |_| {
-                db.borrow()
-                    .execute_one(
-                        "INSERT INTO cards (content) VALUES (?)",
-                        [content.current()],
-                    )
-                    .unwrap();
-                store_assets(&html, &db.borrow());
+                let db = db.borrow();
+                add_card(&content.current(), selected_tags.read().iter().copied(), &db);
+                store_assets(&html, &db);
                 content.set(String::new());
             },
             "Add"
         }
     })
+}
+
+fn add_card(content: &str, tags: impl Iterator<Item = SqliteId>, db: &Database) {
+    db.execute_one("INSERT INTO cards (content) VALUES (?)", [content])
+        .unwrap();
+
+    let card_id = db.last_insert_rowid();
+
+    tags.for_each(|tag_id| {
+        db.execute_one(
+            "INSERT INTO card_tag (card_id, tag_id) VALUES (?, ?)",
+            [card_id, tag_id],
+        )
+        .unwrap();
+    });
 }
 
 #[allow(non_snake_case)]

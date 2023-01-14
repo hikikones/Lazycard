@@ -106,11 +106,13 @@ fn migrate(sqlite: &Sqlite) {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Card {
     pub id: SqliteId,
     pub content: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct Schedule {
     pub id: SqliteId,
     pub due_date: NaiveDateTime,
@@ -118,6 +120,7 @@ pub struct Schedule {
     pub card_id: SqliteId,
 }
 
+#[derive(Debug, Clone)]
 pub struct Review {
     pub id: SqliteId,
     pub date: NaiveDateTime,
@@ -125,11 +128,13 @@ pub struct Review {
     pub card_id: SqliteId,
 }
 
+#[derive(Debug, Clone)]
 pub struct Tag {
     pub id: SqliteId,
     pub name: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct Asset {
     pub seahash: Seahash,
     pub bytes: Vec<u8>,

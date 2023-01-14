@@ -3,9 +3,10 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 
-use sqlite::SqliteId;
-
-use crate::{components::MarkdownView, hooks::use_database};
+use crate::{
+    components::{MarkdownView, Tags},
+    hooks::use_database,
+};
 
 #[allow(non_snake_case)]
 pub fn Cards(cx: Scope) -> Element {
@@ -74,62 +75,4 @@ pub fn Cards(cx: Scope) -> Element {
             }
         })
     })
-}
-
-#[allow(non_snake_case)]
-fn Tags<'a>(cx: Scope<'a, TagsProps>) -> Element<'a> {
-    let db = use_database(&cx);
-    let tags = use_ref(&cx, || db.borrow().get_tags());
-
-    let tags_lock = tags.read();
-    let tags_render = tags_lock.iter().map(|tag| {
-        let id = tag.id;
-        let name = tag.name.clone();
-        cx.render(rsx! {
-            TagButton {
-                key: "{id}",
-                name: name,
-                selected: cx.props.selected.read().contains(&id),
-                onclick: move |_| {
-                    if cx.props.selected.read().contains(&id) {
-                        cx.props.selected.write().remove(&id);
-                    } else {
-                        cx.props.selected.write().insert(id);
-                    }
-                }
-            }
-        })
-    });
-
-    cx.render(rsx! {
-        tags_render,
-    })
-}
-
-#[derive(Props)]
-struct TagsProps<'a> {
-    selected: &'a UseRef<HashSet<SqliteId>>,
-}
-
-#[allow(non_snake_case)]
-fn TagButton<'a>(cx: Scope<'a, TagButtonProps>) -> Element<'a> {
-    let color = if cx.props.selected { "blue" } else { "black" };
-
-    cx.render(rsx! {
-        span {
-            color: "{color}",
-            padding: "5px",
-            onclick: |evt| {
-                cx.props.onclick.call(evt);
-            },
-            "{cx.props.name}"
-        },
-    })
-}
-
-#[derive(Props)]
-struct TagButtonProps<'a> {
-    name: String,
-    selected: bool,
-    onclick: EventHandler<'a, Event<MouseData>>,
 }
