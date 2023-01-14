@@ -9,6 +9,11 @@ const CONFIG_FILE: &str = "config.db";
 
 impl Config {
     pub fn new() -> Self {
+        let assets_dir = Path::new(ASSETS_DIR);
+        if !assets_dir.exists() {
+            std::fs::create_dir(assets_dir).unwrap();
+        }
+
         let sqlite = Sqlite::open(CONFIG_FILE).unwrap();
 
         migrate(&sqlite);

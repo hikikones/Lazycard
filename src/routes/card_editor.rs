@@ -4,6 +4,8 @@ use dioxus::prelude::*;
 use dioxus_router::{use_route, use_router};
 
 use database::*;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use sqlite::{params, SqliteId};
 
 use crate::{
@@ -149,12 +151,18 @@ fn edit_card(
     });
 }
 
-fn store_assets(html: &str, db: &Database) {
-    // const ASSET_REGEX: &str = const_format::concatcp!(r#"src\s*=\s*["|']"#, config::ASSETS_DIR, r#"/(.+?)["|']"#);
-    const ASSET_REGEX: &str = const_format::concatcp!(config::ASSETS_DIR, r"/[0-9]*.[\w]*");
+// static ASSET_REGEX: Lazy<Regex> = Lazy::new(|| {
+//     Regex::new(&format!(
+//         r#"src\s*=\s*["|']{}/(.+?)["|']"#,
+//         config::ASSETS_DIR
+//     ))
+//     .unwrap()
+// });
+static ASSET_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(&format!(r"{}/[0-9]*.[\w]*", config::ASSETS_DIR)).unwrap());
 
-    let regex = regex::Regex::new(ASSET_REGEX).unwrap();
-    for caps in regex.captures_iter(html) {
+fn store_assets(html: &str, db: &Database) {
+    for caps in ASSET_REGEX.captures_iter(html) {
         let asset_path = Path::new(&caps[0]);
 
         let Some(file_stem) = asset_path.file_stem() else {
