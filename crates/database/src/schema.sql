@@ -28,7 +28,7 @@ CREATE TABLE tags (
 
 CREATE TABLE card_tag (
     card_id INTEGER NOT NULL,
-    tag_id TEXT NOT NULL,
+    tag_id INTEGER NOT NULL,
     PRIMARY KEY (card_id, tag_id)
     FOREIGN KEY (card_id) REFERENCES cards (id)
         ON UPDATE CASCADE ON DELETE CASCADE

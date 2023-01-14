@@ -33,7 +33,7 @@ pub fn AddCard(cx: Scope) -> Element {
         button {
             onclick: move |_| {
                 let db = db.borrow();
-                add_card(&content.current(), selected_tags.read().iter().copied(), &db);
+                add_card(&content.current(), &selected_tags.read(), &db);
                 store_assets(&html, &db);
                 content.set(String::new());
             },
@@ -42,13 +42,13 @@ pub fn AddCard(cx: Scope) -> Element {
     })
 }
 
-fn add_card(content: &str, tags: impl Iterator<Item = SqliteId>, db: &Database) {
+fn add_card(content: &str, tags: &HashSet<SqliteId>, db: &Database) {
     db.execute_one("INSERT INTO cards (content) VALUES (?)", [content])
         .unwrap();
 
     let card_id = db.last_insert_rowid();
 
-    tags.for_each(|tag_id| {
+    tags.iter().copied().for_each(|tag_id| {
         db.execute_one(
             "INSERT INTO card_tag (card_id, tag_id) VALUES (?, ?)",
             [card_id, tag_id],
@@ -73,6 +73,20 @@ pub fn EditCard(cx: Scope) -> Element {
             })
             .unwrap()
     });
+    let current_tags = use_ref(&cx, || {
+        let mut tags = HashSet::new();
+        db.borrow()
+            .fetch_with::<SqliteId>(
+                "SELECT card_id, tag_id FROM card_tag WHERE card_id = ?",
+                [id],
+                |row| {
+                    tags.insert(row.get(1).unwrap());
+                },
+            )
+            .unwrap();
+        tags
+    });
+    let selected_tags = use_ref(&cx, || current_tags.read().clone());
 
     let html = markdown::to_html(&content);
 
@@ -84,20 +98,52 @@ pub fn EditCard(cx: Scope) -> Element {
         div {
             dangerous_inner_html: "{html}",
         }
+        Tags {
+            selected: selected_tags,
+        }
         button {
             onclick: move |_| {
-                db.borrow()
-                    .execute_one(
-                        "UPDATE cards SET content = ? WHERE id = ?",
-                        (content.current().as_ref(), id),
-                    )
-                    .unwrap();
-                store_assets(&html, &db.borrow());
+                let db = db.borrow();
+                edit_card(id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
+                store_assets(&html, &db);
                 router.pop_route();
             },
             "Save"
         }
     })
+}
+
+fn edit_card(
+    card_id: SqliteId,
+    content: &str,
+    current_tags: &HashSet<SqliteId>,
+    selected_tags: &HashSet<SqliteId>,
+    db: &Database,
+) {
+    db.execute_one(
+        "UPDATE cards SET content = ? WHERE id = ?",
+        (content, card_id),
+    )
+    .unwrap();
+
+    let to_add = selected_tags.difference(current_tags);
+    let to_remove = current_tags.difference(selected_tags);
+
+    to_add.copied().for_each(|tag_id| {
+        db.execute_one(
+            "INSERT INTO card_tag (card_id, tag_id) VALUES (?, ?)",
+            [card_id, tag_id],
+        )
+        .unwrap();
+    });
+
+    to_remove.copied().for_each(|tag_id| {
+        db.execute_one(
+            "DELETE FROM card_tag WHERE card_id = ? AND tag_id = ?",
+            [card_id, tag_id],
+        )
+        .unwrap();
+    });
 }
 
 fn store_assets(html: &str, db: &Database) {

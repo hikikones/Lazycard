@@ -34,8 +34,8 @@ impl Sqlite {
             .unwrap();
     }
 
-    pub fn execute_one(&self, sql: &str, params: impl Params) -> SqliteResult<usize> {
-        self.0.execute(sql, params)
+    pub fn execute_one(&self, sql: &str, args: impl Params) -> SqliteResult<usize> {
+        self.0.execute(sql, args)
     }
 
     pub fn execute_all(&self, sql: &str) -> SqliteResult<()> {
@@ -68,11 +68,11 @@ impl Sqlite {
         Ok(items)
     }
 
-    pub fn fetch_iter<T>(
+    pub fn fetch_with<T>(
         &self,
         sql: &str,
         args: impl Params,
-        f: impl Fn(&Row),
+        mut f: impl FnMut(&Row),
     ) -> SqliteResult<()> {
         let mut statement = self.0.prepare(sql)?;
         let mut rows = statement.query(args)?;
