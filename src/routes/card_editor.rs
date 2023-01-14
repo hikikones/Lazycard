@@ -42,7 +42,7 @@ pub fn AddCard(cx: Scope) -> Element {
     })
 }
 
-fn add_card(content: &str, tags: &HashSet<SqliteId>, db: &Database) {
+fn add_card(content: &str, tags: &HashSet<TagId>, db: &Database) {
     db.execute_one("INSERT INTO cards (content) VALUES (?)", [content])
         .unwrap();
 
@@ -51,7 +51,7 @@ fn add_card(content: &str, tags: &HashSet<SqliteId>, db: &Database) {
     tags.iter().copied().for_each(|tag_id| {
         db.execute_one(
             "INSERT INTO card_tag (card_id, tag_id) VALUES (?, ?)",
-            [card_id, tag_id],
+            (card_id, tag_id),
         )
         .unwrap();
     });
@@ -59,18 +59,21 @@ fn add_card(content: &str, tags: &HashSet<SqliteId>, db: &Database) {
 
 #[allow(non_snake_case)]
 pub fn EditCard(cx: Scope) -> Element {
-    let id = use_route(&cx)
-        .segment("id")
-        .unwrap()
-        .parse::<SqliteId>()
-        .unwrap();
     let db = use_database(&cx);
+    let route = use_route(&cx);
     let router = use_router(&cx);
+
+    let card_id = *cx.use_hook(|| {
+        let id = route.segment("id").unwrap().parse::<SqliteId>().unwrap();
+        CardId::from_raw(id)
+    });
     let content = use_state(&cx, || {
         db.borrow()
-            .fetch_one::<String>("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
-                row.get(1)
-            })
+            .fetch_one::<String>(
+                "SELECT id, content FROM cards WHERE id = ?",
+                [card_id],
+                |row| row.get(1),
+            )
             .unwrap()
     });
     let current_tags = use_ref(&cx, || {
@@ -78,7 +81,7 @@ pub fn EditCard(cx: Scope) -> Element {
         db.borrow()
             .fetch_with::<SqliteId>(
                 "SELECT card_id, tag_id FROM card_tag WHERE card_id = ?",
-                [id],
+                [card_id],
                 |row| {
                     tags.insert(row.get(1).unwrap());
                 },
@@ -91,7 +94,7 @@ pub fn EditCard(cx: Scope) -> Element {
     let html = markdown::to_html(&content);
 
     cx.render(rsx! {
-        h1 { "Edit Card ({id})" }
+        h1 { "Edit Card ({card_id})" }
         MarkdownEditor {
             text: content,
         }
@@ -104,7 +107,7 @@ pub fn EditCard(cx: Scope) -> Element {
         button {
             onclick: move |_| {
                 let db = db.borrow();
-                edit_card(id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
+                edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
                 store_assets(&html, &db);
                 router.pop_route();
             },
@@ -114,10 +117,10 @@ pub fn EditCard(cx: Scope) -> Element {
 }
 
 fn edit_card(
-    card_id: SqliteId,
+    card_id: CardId,
     content: &str,
-    current_tags: &HashSet<SqliteId>,
-    selected_tags: &HashSet<SqliteId>,
+    current_tags: &HashSet<TagId>,
+    selected_tags: &HashSet<TagId>,
     db: &Database,
 ) {
     db.execute_one(
@@ -132,7 +135,7 @@ fn edit_card(
     to_add.copied().for_each(|tag_id| {
         db.execute_one(
             "INSERT INTO card_tag (card_id, tag_id) VALUES (?, ?)",
-            [card_id, tag_id],
+            (card_id, tag_id),
         )
         .unwrap();
     });
@@ -140,7 +143,7 @@ fn edit_card(
     to_remove.copied().for_each(|tag_id| {
         db.execute_one(
             "DELETE FROM card_tag WHERE card_id = ? AND tag_id = ?",
-            [card_id, tag_id],
+            (card_id, tag_id),
         )
         .unwrap();
     });

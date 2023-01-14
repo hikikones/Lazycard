@@ -66,7 +66,7 @@ pub fn Setup<'a>(cx: Scope<'a, SetupProps>) -> Element<'a> {
         .unwrap();
 
     for (hash, ext) in assets {
-        let asset_file = format!("{}/{}.{}", config::ASSETS_DIR, hash.raw(), ext);
+        let asset_file = format!("{}/{}.{}", config::ASSETS_DIR, hash, ext);
         let asset_path = Path::new(&asset_file);
         if !asset_path.exists() {
             let bytes = db

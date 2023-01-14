@@ -1,8 +1,7 @@
 use std::collections::HashSet;
 
+use database::TagId;
 use dioxus::prelude::*;
-
-use sqlite::SqliteId;
 
 use crate::hooks::use_database;
 
@@ -35,7 +34,7 @@ pub fn Tags<'a>(cx: Scope<'a, TagsProps>) -> Element<'a> {
 
 #[derive(Props)]
 pub struct TagsProps<'a> {
-    selected: &'a UseRef<HashSet<SqliteId>>,
+    selected: &'a UseRef<HashSet<TagId>>,
 }
 
 #[allow(non_snake_case)]

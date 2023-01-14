@@ -19,7 +19,7 @@ pub fn MarkdownEditor<'a>(cx: Scope, text: &'a UseState<String>) -> Element {
                         let bytes = std::fs::read(file).unwrap();
                         let hash = Seahash::from(bytes.as_ref());
 
-                        let asset_name = &format!("{}.{}", hash.raw(), ext.to_lowercase());
+                        let asset_name = &format!("{}.{}", hash, ext.to_lowercase());
                         let asset_path = &Path::new(config::ASSETS_DIR).join(asset_name);
 
                         if !asset_path.exists() {

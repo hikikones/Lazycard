@@ -1,4 +1,4 @@
-use std::{num::ParseIntError, ops::Deref, path::Path, str::FromStr};
+use std::{fmt::Display, num::ParseIntError, ops::Deref, path::Path, str::FromStr};
 
 use chrono::NaiveDateTime;
 use sqlite::*;
@@ -40,7 +40,7 @@ impl Database {
         .unwrap()
     }
 
-    pub fn get_cards_with_tags(&self, tags: impl AsRef<[SqliteId]>) -> Vec<Card> {
+    pub fn get_cards_with_tags(&self, tags: impl AsRef<[TagId]>) -> Vec<Card> {
         let tags = tags.as_ref();
 
         if tags.is_empty() {
@@ -108,29 +108,29 @@ fn migrate(sqlite: &Sqlite) {
 
 #[derive(Debug, Clone)]
 pub struct Card {
-    pub id: SqliteId,
+    pub id: CardId,
     pub content: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct Schedule {
-    pub id: SqliteId,
+    pub id: ScheduleId,
     pub due_date: NaiveDateTime,
     pub due_days: u32,
-    pub card_id: SqliteId,
+    pub card_id: CardId,
 }
 
 #[derive(Debug, Clone)]
 pub struct Review {
-    pub id: SqliteId,
+    pub id: ReviewId,
     pub date: NaiveDateTime,
     pub success: bool,
-    pub card_id: SqliteId,
+    pub card_id: CardId,
 }
 
 #[derive(Debug, Clone)]
 pub struct Tag {
-    pub id: SqliteId,
+    pub id: TagId,
     pub name: String,
 }
 
@@ -141,16 +141,150 @@ pub struct Asset {
     pub extension: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CardId(SqliteId);
+
+impl CardId {
+    pub const fn from_raw(id: SqliteId) -> Self {
+        Self(id)
+    }
+
+    pub const fn raw(self) -> SqliteId {
+        self.0
+    }
+}
+
+impl Display for CardId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromSql for CardId {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let id = SqliteId::column_result(value)?;
+        Ok(Self(id))
+    }
+}
+
+impl ToSql for CardId {
+    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
+        self.0.to_sql()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ScheduleId(SqliteId);
+
+impl ScheduleId {
+    pub const fn from_raw(id: SqliteId) -> Self {
+        Self(id)
+    }
+
+    pub const fn raw(self) -> SqliteId {
+        self.0
+    }
+}
+
+impl Display for ScheduleId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromSql for ScheduleId {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let id = SqliteId::column_result(value)?;
+        Ok(Self(id))
+    }
+}
+
+impl ToSql for ScheduleId {
+    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
+        self.0.to_sql()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ReviewId(SqliteId);
+
+impl ReviewId {
+    pub const fn from_raw(id: SqliteId) -> Self {
+        Self(id)
+    }
+
+    pub const fn raw(self) -> SqliteId {
+        self.0
+    }
+}
+
+impl Display for ReviewId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromSql for ReviewId {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let id = SqliteId::column_result(value)?;
+        Ok(Self(id))
+    }
+}
+
+impl ToSql for ReviewId {
+    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
+        self.0.to_sql()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TagId(SqliteId);
+
+impl TagId {
+    pub const fn from_raw(id: SqliteId) -> Self {
+        Self(id)
+    }
+
+    pub const fn raw(self) -> SqliteId {
+        self.0
+    }
+}
+
+impl Display for TagId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromSql for TagId {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        let id = SqliteId::column_result(value)?;
+        Ok(Self(id))
+    }
+}
+
+impl ToSql for TagId {
+    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
+        self.0.to_sql()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Seahash(u64);
 
 impl Seahash {
-    pub fn from_raw(hash: u64) -> Self {
+    pub const fn from_raw(hash: u64) -> Self {
         Self(hash)
     }
 
-    pub fn raw(self) -> u64 {
+    pub const fn raw(self) -> u64 {
         self.0
+    }
+}
+
+impl Display for Seahash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
