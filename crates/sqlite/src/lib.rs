@@ -51,6 +51,22 @@ impl Sqlite {
         self.0.query_row(sql, args, f)
     }
 
+    pub fn fetch_one_maybe<T>(
+        &self,
+        sql: &str,
+        args: impl Params,
+        f: impl FnOnce(&Row) -> SqliteResult<T>,
+    ) -> SqliteResult<Option<T>> {
+        let mut stmt = self.0.prepare(sql)?;
+        let mut rows = stmt.query(args)?;
+
+        if let Ok(Some(row)) = rows.next() {
+            return Ok(Some(f(row)?));
+        }
+
+        Ok(None)
+    }
+
     pub fn fetch_all<T>(
         &self,
         sql: &str,
@@ -68,7 +84,7 @@ impl Sqlite {
         Ok(items)
     }
 
-    pub fn fetch_with<T>(
+    pub fn fetch_with(
         &self,
         sql: &str,
         args: impl Params,

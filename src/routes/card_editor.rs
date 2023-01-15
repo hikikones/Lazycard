@@ -79,9 +79,9 @@ pub fn EditCard(cx: Scope) -> Element {
             .unwrap()
     });
     let current_tags = use_ref(&cx, || {
-        let mut tags = HashSet::new();
+        let mut tags = HashSet::<TagId>::new();
         db.borrow()
-            .fetch_with::<SqliteId>(
+            .fetch_with(
                 "SELECT card_id, tag_id FROM card_tag WHERE card_id = ?",
                 [card_id],
                 |row| {
