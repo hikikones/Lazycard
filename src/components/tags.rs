@@ -1,14 +1,30 @@
 use std::collections::HashSet;
 
-use database::TagId;
 use dioxus::prelude::*;
 
+use database::TagId;
+
 use crate::hooks::use_database;
+
+#[derive(Clone)]
+struct Tag {
+    id: TagId,
+    name: String,
+}
 
 #[allow(non_snake_case)]
 pub fn Tags<'a>(cx: Scope<'a, TagsProps>) -> Element<'a> {
     let db = use_database(&cx);
-    let tags = use_ref(&cx, || db.borrow().get_tags());
+    let tags = use_ref(&cx, || {
+        db.borrow()
+            .fetch_all("SELECT id, name FROM tags", [], |row| {
+                Ok(Tag {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            })
+            .unwrap()
+    });
 
     cx.render(rsx! {
         div {

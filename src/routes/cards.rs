@@ -3,10 +3,18 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 
+use database::CardId;
+use sqlite::params_from_iter;
+
 use crate::{
     components::{MarkdownView, Tags},
     hooks::use_database,
 };
+
+struct Card {
+    id: CardId,
+    content: String,
+}
 
 #[allow(non_snake_case)]
 pub fn Cards(cx: Scope) -> Element {
@@ -23,12 +31,64 @@ pub fn Cards(cx: Scope) -> Element {
     use_effect(
         &cx,
         (selected_tags, show_tagless),
-        |(selected, show)| async move {
-            let cards = if *show.current() {
-                db_clone.borrow().get_cards_without_tags()
+        |(selected, tagless)| async move {
+            let cards = if *tagless.current() {
+                db_clone
+                    .borrow()
+                    .fetch_all(
+                        "
+                        SELECT * FROM cards c WHERE NOT EXISTS ( \
+                            SELECT ct.card_id FROM card_tag ct \
+                            WHERE c.id = ct.card_id \
+                        )",
+                        [],
+                        |row| {
+                            Ok(Card {
+                                id: row.get(0)?,
+                                content: row.get(1)?,
+                            })
+                        },
+                    )
+                    .unwrap()
             } else {
-                let ids = selected.read().iter().copied().collect::<Box<[_]>>();
-                db_clone.borrow().get_cards_with_tags(ids)
+                let len = selected.read().len();
+                if len == 0 {
+                    db_clone
+                        .borrow()
+                        .fetch_all("SELECT id, content FROM cards", [], |row| {
+                            Ok(Card {
+                                id: row.get(0)?,
+                                content: row.get(1)?,
+                            })
+                        })
+                        .unwrap()
+                } else {
+                    db_clone
+                        .borrow()
+                        .fetch_all(
+                            &format!(
+                                "
+                                SELECT id, content FROM cards c \
+                                JOIN card_tag ct ON ct.card_id = c.id WHERE tag_id IN ({}) \
+                                GROUP BY ct.card_id HAVING Count(*) = {}
+                                ",
+                                (0..len)
+                                    .into_iter()
+                                    .map(|_| "?")
+                                    .collect::<Box<[_]>>()
+                                    .join(","),
+                                len
+                            ),
+                            params_from_iter(selected.read().iter()),
+                            |row| {
+                                Ok(Card {
+                                    id: row.get(0)?,
+                                    content: row.get(1)?,
+                                })
+                            },
+                        )
+                        .unwrap()
+                }
             };
             cards_clone.set(cards);
         },

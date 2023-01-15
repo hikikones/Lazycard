@@ -1,20 +1,13 @@
 CREATE TABLE cards (
     id INTEGER PRIMARY KEY,
-    content TEXT NOT NULL
-);
-
-CREATE TABLE schedules (
-    id INTEGER PRIMARY KEY,
-    due_date TEXT DEFAULT (datetime('now')) NOT NULL,
-    due_days INTEGER DEFAULT 0 NOT NULL,
-    card_id INTEGER NOT NULL,
-    FOREIGN KEY (card_id) REFERENCES cards (id)
-        ON UPDATE CASCADE ON DELETE CASCADE
+    content TEXT NOT NULL,
+    create_date TEXT DEFAULT (date('now')) NOT NULL,
+    review_date TEXT DEFAULT (date('now')) NOT NULL
 );
 
 CREATE TABLE reviews (
     id INTEGER PRIMARY KEY,
-    date TEXT NOT NULL,
+    date TEXT DEFAULT (date('now')) NOT NULL,
     success INTEGER NOT NULL,
     card_id INTEGER NOT NULL,
     FOREIGN KEY (card_id) REFERENCES cards (id)

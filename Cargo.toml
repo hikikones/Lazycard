@@ -13,6 +13,7 @@ edition = "2021"
 [workspace.dependencies]
 sqlite = { path = "crates/sqlite" }
 config = { path = "crates/config" }
+chrono = "0.4"
 once_cell = "1.17"
 
 [dependencies]
@@ -23,6 +24,7 @@ sqlite = { workspace = true }
 config = { workspace = true }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
+once_cell = { workspace = true }
+chrono = { workspace = true }
 rfd = "0.10"
 regex = "1.7"
-once_cell = { workspace = true }
