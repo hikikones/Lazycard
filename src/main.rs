@@ -22,32 +22,51 @@ fn main() {
 }
 
 pub fn app(cx: Scope) -> Element {
-    cx.use_hook(|| {
-        cx.provide_context(Rc::new(Config::new()));
+    let initial_route = *cx.use_hook(|| {
         cx.provide_context(Rc::new(RefCell::new(Database::new())));
+        let cfg = cx.provide_context(Rc::new(Config::new()));
+        if cfg.get_database_path().is_some() {
+            "/open_database"
+        } else {
+            "/welcome"
+        }
     });
-
-    let show_nav = use_state(&cx, || false);
 
     cx.render(rsx! {
         Router {
-            show_nav.current().then(|| rsx! {
-                nav {
-                    ul {
-                        Link { to: "/review", li { "Review" }}
-                        Link { to: "/add_card", li { "Add Card" }}
-                        Link { to: "/cards", li { "Cards" }}
-                        Link { to: "/settings", li { "Settings" }}
-                    }
-                }
-            })
-            Route { to: "/setup", main { routes::Setup { show_nav: show_nav } } }
-            Route { to: "/review", main { routes::Review {} } }
-            Route { to: "/add_card", main { routes::AddCard {} } }
-            Route { to: "/edit_card/:id", main { routes::EditCard {} } }
-            Route { to: "/cards", main { routes::Cards {} } }
-            Route { to: "/settings", main { routes::Settings {} } }
-            Redirect { from: "", to: "/setup" }
+            Route { to: "/welcome", routes::Welcome {} }
+            Route { to: "/open_database", routes::OpenDatabase {} }
+            Route { to: "/review", Main { routes::Review {} } }
+            Route { to: "/add_card", Main { routes::AddCard {} } }
+            Route { to: "/edit_card/:id", Main { routes::EditCard {} } }
+            Route { to: "/cards", Main { routes::Cards {} } }
+            Route { to: "/settings", Main { routes::Settings {} } }
+            Redirect { from: "", to: initial_route }
+        }
+    })
+}
+
+#[allow(non_snake_case)]
+#[inline_props]
+pub fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
+    cx.render(rsx! {
+        Navigation {}
+        main {
+            children
+        }
+    })
+}
+
+#[allow(non_snake_case)]
+pub fn Navigation<'a>(cx: Scope) -> Element {
+    cx.render(rsx! {
+        nav {
+            ul {
+                Link { to: "/review", li { "Review" }}
+                Link { to: "/add_card", li { "Add Card" }}
+                Link { to: "/cards", li { "Cards" }}
+                Link { to: "/settings", li { "Settings" }}
+            }
         }
     })
 }

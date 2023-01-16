@@ -11,9 +11,7 @@ impl Database {
 
     pub fn open(&mut self, path: impl AsRef<Path>) -> SqliteResult<()> {
         let sqlite = Sqlite::open(path)?;
-
         migrate(&sqlite);
-
         self.0 = Some(sqlite);
 
         Ok(())

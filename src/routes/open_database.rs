@@ -7,52 +7,30 @@ use database::Seahash;
 
 use crate::hooks::{use_config, use_database};
 
-#[derive(Props)]
-pub struct SetupProps<'a> {
-    show_nav: &'a UseState<bool>,
-}
-
 #[allow(non_snake_case)]
-pub fn Setup<'a>(cx: Scope<'a, SetupProps>) -> Element<'a> {
-    let cfg = use_config(&cx);
+pub fn OpenDatabase(cx: Scope) -> Element {
     let db = use_database(&cx);
+    let cfg = use_config(&cx);
     let router = use_router(&cx);
 
-    if *cx.props.show_nav.current() {
-        cx.props.show_nav.set(false);
-    }
+    let path = cfg.get_database_path().unwrap();
 
-    let Some(db_path) = cfg.get_database_path() else {
+    if !path.exists() {
         return cx.render(rsx! {
-            h1 { "TODO: Welcome" }
+            h1 { "Database not found" }
             button {
                 onclick: move |_| {
                     let path = "db.db";
                     db.borrow_mut().open(path).unwrap();
                     cfg.set_database_path(path);
-                    cx.needs_update();
-                },
-                "New database"
-            }
-        });
-    };
-
-    if !db_path.exists() {
-        return cx.render(rsx! {
-            h1 { "TODO: Database not found" }
-            button {
-                onclick: move |_| {
-                    let path = "db.db";
-                    db.borrow_mut().open(path).unwrap();
-                    cfg.set_database_path(path);
-                    cx.needs_update();
+                    router.push_route("/review", None, None);
                 },
                 "New database"
             }
         });
     }
 
-    let Ok(_) = db.borrow_mut().open(db_path) else {
+    let Ok(_) = db.borrow_mut().open(path) else {
         return cx.render(rsx! {
             h1 { "TODO: Could not open database" }
         });
@@ -81,7 +59,6 @@ pub fn Setup<'a>(cx: Scope<'a, SetupProps>) -> Element<'a> {
         }
     }
 
-    cx.props.show_nav.set(true);
     router.push_route("/review", None, None);
 
     cx.render(rsx! {

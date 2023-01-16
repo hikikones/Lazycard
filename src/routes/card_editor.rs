@@ -34,9 +34,8 @@ pub fn AddCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                let db = db.borrow();
-                add_card(&content.current(), &selected_tags.read(), &db);
-                store_assets(&html, &db);
+                add_card(&content.current(), &selected_tags.read(), &db.borrow());
+                store_assets(&html, &db.borrow());
                 content.set(String::new());
             },
             "Add"
@@ -108,9 +107,8 @@ pub fn EditCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                let db = db.borrow();
-                edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
-                store_assets(&html, &db);
+                edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db.borrow());
+                store_assets(&html, &db.borrow());
                 router.pop_route();
             },
             "Save"

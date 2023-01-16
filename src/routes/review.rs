@@ -14,16 +14,7 @@ struct Card {
 #[allow(non_snake_case)]
 pub fn Review(cx: Scope) -> Element {
     let db = use_database(&cx);
-    let total = *cx.use_hook(|| {
-        db.borrow()
-            .fetch_one::<u32>(
-                "SELECT COUNT(id) FROM cards
-                    WHERE review_date <= (date('now'))",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap()
-    });
+    let total = *cx.use_hook(|| get_due_count(&db.borrow()));
 
     if total == 0 {
         return cx.render(rsx! {
@@ -86,6 +77,15 @@ pub fn Review(cx: Scope) -> Element {
             }
         }
     })
+}
+
+fn get_due_count(db: &Database) -> u32 {
+    db.fetch_one(
+        "SELECT COUNT(id) FROM cards WHERE review_date <= (date('now'))",
+        [],
+        |row| row.get(0),
+    )
+    .unwrap()
 }
 
 fn get_due_card(db: &Database) -> Card {

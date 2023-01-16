@@ -20,6 +20,10 @@ impl Sqlite {
         Ok(Self(connection))
     }
 
+    pub fn path(&self) -> Option<&Path> {
+        self.0.path()
+    }
+
     pub fn version(&self) -> SqliteId {
         self.0
             .query_row("SELECT user_version FROM pragma_user_version", [], |row| {
