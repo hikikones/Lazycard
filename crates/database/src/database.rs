@@ -39,101 +39,54 @@ fn migrate(sqlite: &Sqlite) {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CardId(SqliteId);
+macro_rules! make_id_struct {
+    ($pub:vis $t:ident) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        $pub struct $t(SqliteId);
 
-impl CardId {
-    pub const fn from_raw(id: SqliteId) -> Self {
-        Self(id)
-    }
+        impl $t {
+            pub const fn from_raw(id: SqliteId) -> Self {
+                Self(id)
+            }
 
-    pub const fn raw(self) -> SqliteId {
-        self.0
-    }
+            pub const fn raw(self) -> SqliteId {
+                self.0
+            }
+        }
+
+        impl std::fmt::Display for $t {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl FromSql for $t {
+            fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+                let id = SqliteId::column_result(value)?;
+                Ok(Self(id))
+            }
+        }
+
+        impl ToSql for $t {
+            fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
+                self.0.to_sql()
+            }
+        }
+
+        impl FromStr for $t {
+            type Err = ParseIntError;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let id = s.parse::<SqliteId>()?;
+                Ok(Self(id))
+            }
+        }
+    };
 }
 
-impl Display for CardId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl FromSql for CardId {
-    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
-        let id = SqliteId::column_result(value)?;
-        Ok(Self(id))
-    }
-}
-
-impl ToSql for CardId {
-    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
-        self.0.to_sql()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ReviewId(SqliteId);
-
-impl ReviewId {
-    pub const fn from_raw(id: SqliteId) -> Self {
-        Self(id)
-    }
-
-    pub const fn raw(self) -> SqliteId {
-        self.0
-    }
-}
-
-impl Display for ReviewId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl FromSql for ReviewId {
-    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
-        let id = SqliteId::column_result(value)?;
-        Ok(Self(id))
-    }
-}
-
-impl ToSql for ReviewId {
-    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
-        self.0.to_sql()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TagId(SqliteId);
-
-impl TagId {
-    pub const fn from_raw(id: SqliteId) -> Self {
-        Self(id)
-    }
-
-    pub const fn raw(self) -> SqliteId {
-        self.0
-    }
-}
-
-impl Display for TagId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl FromSql for TagId {
-    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
-        let id = SqliteId::column_result(value)?;
-        Ok(Self(id))
-    }
-}
-
-impl ToSql for TagId {
-    fn to_sql(&self) -> SqliteResult<ToSqlOutput<'_>> {
-        self.0.to_sql()
-    }
-}
+make_id_struct!(pub CardId);
+make_id_struct!(pub ReviewId);
+make_id_struct!(pub TagId);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Seahash(u64);

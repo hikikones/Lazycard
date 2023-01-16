@@ -149,17 +149,17 @@ fn edit_card(
     });
 }
 
-// static ASSET_REGEX: Lazy<Regex> = Lazy::new(|| {
-//     Regex::new(&format!(
-//         r#"src\s*=\s*["|']{}/(.+?)["|']"#,
-//         config::ASSETS_DIR
-//     ))
-//     .unwrap()
-// });
-static ASSET_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(&format!(r"{}/[0-9]*.[\w]*", config::ASSETS_DIR)).unwrap());
-
 fn store_assets(html: &str, db: &Database) {
+    // static ASSET_REGEX: Lazy<Regex> = Lazy::new(|| {
+    //     Regex::new(&format!(
+    //         r#"src\s*=\s*["|']{}/(.+?)["|']"#,
+    //         config::ASSETS_DIR
+    //     ))
+    //     .unwrap()
+    // });
+    static ASSET_REGEX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(&format!(r"{}/[0-9]*.[\w]*", config::ASSETS_DIR)).unwrap());
+
     for caps in ASSET_REGEX.captures_iter(html) {
         let asset_path = Path::new(&caps[0]);
 
@@ -174,6 +174,7 @@ fn store_assets(html: &str, db: &Database) {
         };
 
         if db
+            // TODO: fetch_maybe
             .fetch_one::<Seahash>(
                 "SELECT seahash FROM assets WHERE seahash = ?",
                 [hash],
