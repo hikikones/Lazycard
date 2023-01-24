@@ -26,5 +26,6 @@ database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
 once_cell = { workspace = true }
 chrono = { workspace = true }
+sir = { version = "0.3", features = ["dioxus"] }
 rfd = "0.10"
 regex = "1.7"
