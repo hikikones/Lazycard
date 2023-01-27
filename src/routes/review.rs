@@ -1,10 +1,14 @@
 use std::ops::Sub;
 
 use dioxus::prelude::*;
+use sir::css;
 
 use database::{CardId, Database};
 
-use crate::{components::MarkdownView, hooks::use_database};
+use crate::{
+    components::{Button, ButtonSize, IconName, MarkdownView},
+    hooks::use_database,
+};
 
 struct Card {
     id: CardId,
@@ -33,47 +37,75 @@ pub fn Review(cx: Scope) -> Element {
     let card = use_state(&cx, || get_due_card(&db.borrow()));
 
     cx.render(rsx! {
-        h1 { "Review" }
-
-        span { "{count} / {total}" }
-        br {}
-
-        MarkdownView {
-            text: &card.content
-        }
-
         div {
-            button {
-                onclick: move |_| {
-                    update_card_review(card, true, &db.borrow());
-                    count.with_mut(|c| {
-                        *c += 1;
-                        if *c < total {
-                            card.set(get_due_card(&db.borrow()));
-                        }
-                    });
-                },
-                "Yes"
+            class: css!("
+                display: flex;
+                height: 100%;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+            "),
+
+            div {
+                h1 { "Review" }
+                span { "{count} / {total}" }
+                Button {
+                    icon: IconName::SettingsFill,
+                    name: "My Button",
+                    size: ButtonSize::Medium,
+                    disabled: true,
+                    onclick: move |_| {
+                        // todo
+                    },
+                }
             }
-            button {
-                onclick: move |_| {
-                    update_card_review(card, false, &db.borrow());
-                    count.with_mut(|c| {
-                        *c += 1;
-                        if *c < total {
-                            card.set(get_due_card(&db.borrow()));
-                        }
-                    });
-                },
-                "No"
+
+            MarkdownView {
+                text: &card.content
             }
-            button {
-                onclick: move |_| {
-                    if **count < total - 1 {
-                        card.set(get_due_card_except(card.id, &db.borrow()));
+
+            div {
+                // class: css!("
+                //     di
+                // "),
+
+                Button {
+                    icon: IconName::Done,
+                    size: ButtonSize::XXL,
+                    onclick: move |_| {
+                        update_card_review(card, true, &db.borrow());
+                        count.with_mut(|c| {
+                            *c += 1;
+                            if *c < total {
+                                card.set(get_due_card(&db.borrow()));
+                            }
+                        });
                     }
-                },
-                "Skip"
+                }
+
+                Button {
+                    icon: IconName::Close,
+                    size: ButtonSize::XXL,
+                    onclick: move |_| {
+                        update_card_review(card, false, &db.borrow());
+                        count.with_mut(|c| {
+                            *c += 1;
+                            if *c < total {
+                                card.set(get_due_card(&db.borrow()));
+                            }
+                        });
+                    }
+                }
+
+                Button {
+                    icon: IconName::DoubleArrow,
+                    size: ButtonSize::XXL,
+                    onclick: move |_| {
+                        if **count < total - 1 {
+                            card.set(get_due_card_except(card.id, &db.borrow()));
+                        }
+                    },
+                }
             }
         }
     })

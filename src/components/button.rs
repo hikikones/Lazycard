@@ -9,56 +9,76 @@ pub struct ButtonProps<'a> {
     #[props(default = "")]
     name: &'a str,
     icon: Option<IconName>,
+    #[props(default)]
+    size: ButtonSize,
     #[props(default = "")]
     class: &'a str,
     #[props(default)]
     disabled: bool,
 }
 
+#[derive(Default)]
+pub enum ButtonSize {
+    Small,
+    #[default]
+    Medium,
+    Large,
+    XL,
+    XXL,
+}
+
 #[allow(non_snake_case)]
 pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
-    let icon = cx.props.icon.map(|icon_name| {
-        rsx! {
-            Icon {
-                name: icon_name,
-                size: 24,
-                fill: "red",
-            }
-        }
-    });
-
-    let css = css!(
+    let btn_css = css!(
         "
-        display: inline-block;
-        white-space: nowrap;
-        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+        border: none;
+        line-height: 0;
         padding: 4px 6px;
-        outline: 0;
-        border: 0;
-        color: black;
+        color: var(--secondary-text-color);
         background-color: transparent;
 
         &:hover {
-            background-color: blue;
-        }
-
-        &:focus {
-            background-color: green;
+            background-color: var(--secondary-color);
         }
         
         &:active {
-            background-color: red;
+            background-color: var(--secondary-variant-color);
         }
         
         &:disabled {
-            background-color: black;
+            color: var(--secondary-text-color);
+            background-color: transparent;
+            cursor: unset;
+            opacity: 0.5;
         }
     "
     );
 
+    let size = match cx.props.size {
+        ButtonSize::Small => 20,
+        ButtonSize::Medium => 24,
+        ButtonSize::Large => 28,
+        ButtonSize::XL => 32,
+        ButtonSize::XXL => 64,
+    };
+
+    let icon = cx.props.icon.map(|icon| {
+        rsx! {
+            Icon {
+                name: icon,
+                size: size,
+                fill: "var(--secondary-text-color)",
+                class: css!("margin-right: 3px;"),
+            }
+        }
+    });
+
     cx.render(rsx! {
         button {
-            class: format_args!("{} {}", css, cx.props.class),
+            class: format_args!("{} {}", btn_css, cx.props.class),
             disabled: "{cx.props.disabled}",
             onclick: |evt| {
                 if !cx.props.disabled {

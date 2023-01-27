@@ -1,4 +1,32 @@
+:root {
+    --base-color: white;
+    --base-text-color: black;
+
+    --primary-color: #333333;
+    --primary-variant-color: #7b7b7d;
+    --primary-text-color: white;
+
+    --secondary-color: #e6e6e6;
+    --secondary-variant-color: #f1f1f1;
+    --secondary-text-color: #181818;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* TODO */
+    }
+}
+
 body {
-    background: aliceblue;
+    color: var(--base-text-color);
+    background-color: var(--base-color);
     overflow-x: hidden;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+:focus:not(:-moz-focusring) {
+    outline: none;
 }

@@ -38,7 +38,7 @@ fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
                     height: 100vh;
                     min-width: 48px;
                     max-width: 48px;
-                    background: #333333;
+                    background: var(--primary-color);
                 "),
 
                 div {
@@ -64,7 +64,6 @@ fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
             main {
                 class: css!("
                     flex-grow: 1;
-                    background: lightgrey;
                     padding: 1rem;
                 "),
 
@@ -81,16 +80,16 @@ fn NavLink<'a>(cx: Scope<'a, NavLinkProps<'a>>) -> Element {
             to: cx.props.to,
             class: css!("
                 display: flex;
-                &.active svg { fill: white; }
+                &.active svg { fill: var(--primary-text-color); }
             "),
             Icon {
                 name: cx.props.icon,
                 class: css!("
                     padding: 10px;
-                    &:hover { fill: white; }
+                    &:hover { fill: var(--primary-text-color); }
                 "),
                 size: 28,
-                fill: "#7b7b7d",
+                fill: "var(--primary-variant-color)",
             }
         }
     })
