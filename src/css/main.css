@@ -1,6 +1,9 @@
 :root {
-    --base-color: white;
+    --base-color: whitesmoke;
     --base-text-color: black;
+
+    --surface-color: white;
+    --surface-text-color: black;
 
     --primary-color: #333333;
     --primary-variant-color: #7b7b7d;
@@ -18,8 +21,8 @@
 }
 
 body {
-    color: var(--base-text-color);
     background-color: var(--base-color);
+    color: var(--base-text-color);
     overflow-x: hidden;
 }
 

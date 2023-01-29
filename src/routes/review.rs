@@ -6,7 +6,7 @@ use sir::css;
 use database::{CardId, Database};
 
 use crate::{
-    components::{Button, IconName, IconSize, MarkdownView},
+    components::{Button, IconName, IconSize},
     hooks::use_database,
 };
 
@@ -60,6 +60,8 @@ pub fn Review(cx: Scope) -> Element {
                     margin: 1rem;
                     border: none;
                     box-shadow: 0 0.25rem 1rem rgba(48, 55, 66, 0.15);
+                    background-color: var(--surface-color);
+                    color: var(--surface-text-color);
                 "),
                 dangerous_inner_html: format_args!("{}", markdown::to_html(&card.content)),
             }
