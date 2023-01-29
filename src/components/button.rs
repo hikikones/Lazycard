@@ -6,8 +6,7 @@ use super::{Icon, IconName};
 #[derive(Props)]
 pub struct ButtonProps<'a> {
     onclick: EventHandler<'a, Event<MouseData>>,
-    #[props(default = "")]
-    name: &'a str,
+    name: Option<&'a str>,
     icon: Option<IconName>,
     #[props(default)]
     size: ButtonSize,
@@ -36,7 +35,7 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
         cursor: pointer;
         border: none;
         line-height: 0;
-        padding: 4px 6px;
+        padding: 0.25rem;
         color: var(--secondary-text-color);
         background-color: transparent;
 
@@ -54,6 +53,14 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
             cursor: unset;
             opacity: 0.5;
         }
+
+        & > svg {
+            fill: var(--secondary-text-color);
+        }
+
+        & > svg + span {
+            margin-left: 0.25rem;
+        }
     "
     );
 
@@ -65,13 +72,17 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
         ButtonSize::XXL => 64,
     };
 
+    let name = cx.props.name.map(|name| {
+        rsx! {
+            span { "{name}" }
+        }
+    });
+
     let icon = cx.props.icon.map(|icon| {
         rsx! {
             Icon {
                 name: icon,
                 size: size,
-                fill: "var(--secondary-text-color)",
-                class: css!("margin-right: 3px;"),
             }
         }
     });
@@ -86,7 +97,7 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
                 }
             },
             icon,
-            "{cx.props.name}"
+            name,
         }
     })
 }
