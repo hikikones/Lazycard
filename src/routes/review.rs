@@ -47,21 +47,21 @@ pub fn Review(cx: Scope) -> Element {
             "),
 
             div {
-                h1 { "Review" }
-                span { "{count} / {total}" }
-                Button {
-                    icon: IconName::Settings,
-                    name: "My Button",
-                    icon_size: IconSize::Medium,
-                    disabled: true,
-                    onclick: move |_| {
-                        // todo
-                    },
+                span {
+                    opacity: "0.5",
+                    "{count} / {total}"
                 }
             }
 
-            MarkdownView {
-                text: &card.content
+            div {
+                class: css!("
+                    max-width: 75ch;
+                    padding: 1rem 2rem;
+                    margin: 1rem;
+                    border: none;
+                    box-shadow: 0 0.25rem 1rem rgba(48, 55, 66, 0.15);
+                "),
+                dangerous_inner_html: format_args!("{}", markdown::to_html(&card.content)),
             }
 
             div {
@@ -80,6 +80,7 @@ pub fn Review(cx: Scope) -> Element {
                 }
 
                 Button {
+                    class: css!("margin: 0 1rem;"),
                     icon: IconName::Close,
                     icon_size: IconSize::Large,
                     onclick: move |_| {
