@@ -50,13 +50,13 @@ fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
                     "),
 
                     div {
-                        NavLink { to: "/review", icon: IconName::DraftsFill }
-                        NavLink { to: "/cards", icon: IconName::LayersFill }
-                        NavLink { to: "/add_card", icon: IconName::AddCircleFill }
+                        NavLink { to: "/review", icon: IconName::Drafts }
+                        NavLink { to: "/cards", icon: IconName::Layers }
+                        NavLink { to: "/add_card", icon: IconName::AddCircle }
                     }
 
                     div {
-                        NavLink { to: "/settings", icon: IconName::SettingsFill }
+                        NavLink { to: "/settings", icon: IconName::Settings }
                     }
                 }
             }

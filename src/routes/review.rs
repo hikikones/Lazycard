@@ -50,7 +50,7 @@ pub fn Review(cx: Scope) -> Element {
                 h1 { "Review" }
                 span { "{count} / {total}" }
                 Button {
-                    icon: IconName::SettingsFill,
+                    icon: IconName::Settings,
                     name: "My Button",
                     icon_size: IconSize::Medium,
                     disabled: true,
