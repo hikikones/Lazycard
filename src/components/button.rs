@@ -22,9 +22,9 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
         "
         display: inline-flex;
         align-items: center;
+        white-space: nowrap;
         cursor: pointer;
         border: none;
-        line-height: 0;
         padding: 0.25rem;
         color: var(--secondary-text-color);
         background-color: transparent;

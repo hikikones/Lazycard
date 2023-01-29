@@ -27,5 +27,6 @@ markdown = { path = "crates/markdown" }
 once_cell = { workspace = true }
 chrono = { workspace = true }
 sir = { version = "0.3", features = ["dioxus"] }
+uuid = { version = "1.2", features = ["v4", "fast-rng"] }
 rfd = "0.10"
 regex = "1.7"

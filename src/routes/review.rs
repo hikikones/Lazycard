@@ -6,7 +6,7 @@ use sir::css;
 use database::{CardId, Database};
 
 use crate::{
-    components::{Button, IconName, IconSize},
+    components::{Button, Dropdown, IconName, IconSize},
     hooks::use_database,
 };
 
@@ -50,6 +50,22 @@ pub fn Review(cx: Scope) -> Element {
                 span {
                     opacity: "0.5",
                     "{count} / {total}"
+                }
+                Dropdown {
+                    name: "Dropdown",
+                    Button {
+                        name: "Button 1",
+                        onclick: |_| {
+                            // todo
+                        }
+                    }
+                    Button {
+                        name: "Button 22222",
+                        icon: IconName::AddBox,
+                        onclick: |_| {
+                            // todo
+                        }
+                    }
                 }
             }
 
