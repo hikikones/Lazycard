@@ -6,7 +6,7 @@ use sir::css;
 use database::{CardId, Database};
 
 use crate::{
-    components::{Button, ButtonSize, IconName, MarkdownView},
+    components::{Button, IconName, IconSize, MarkdownView},
     hooks::use_database,
 };
 
@@ -52,7 +52,7 @@ pub fn Review(cx: Scope) -> Element {
                 Button {
                     icon: IconName::SettingsFill,
                     name: "My Button",
-                    size: ButtonSize::Medium,
+                    icon_size: IconSize::Medium,
                     disabled: true,
                     onclick: move |_| {
                         // todo
@@ -65,13 +65,9 @@ pub fn Review(cx: Scope) -> Element {
             }
 
             div {
-                // class: css!("
-                //     di
-                // "),
-
                 Button {
                     icon: IconName::Done,
-                    size: ButtonSize::XXL,
+                    icon_size: IconSize::Large,
                     onclick: move |_| {
                         update_card_review(card, true, &db.borrow());
                         count.with_mut(|c| {
@@ -85,7 +81,7 @@ pub fn Review(cx: Scope) -> Element {
 
                 Button {
                     icon: IconName::Close,
-                    size: ButtonSize::XXL,
+                    icon_size: IconSize::Large,
                     onclick: move |_| {
                         update_card_review(card, false, &db.borrow());
                         count.with_mut(|c| {
@@ -99,7 +95,7 @@ pub fn Review(cx: Scope) -> Element {
 
                 Button {
                     icon: IconName::DoubleArrow,
-                    size: ButtonSize::XXL,
+                    icon_size: IconSize::Large,
                     onclick: move |_| {
                         if **count < total - 1 {
                             card.set(get_due_card_except(card.id, &db.borrow()));

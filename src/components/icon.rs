@@ -15,11 +15,23 @@ pub enum IconName {
     DoubleArrow,
 }
 
+#[allow(dead_code)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub enum IconSize {
+    Tiny,
+    Small,
+    #[default]
+    Medium,
+    Large,
+    Gigantic,
+    Custom(u32),
+}
+
 #[derive(Props, PartialEq)]
 pub struct IconProps<'a> {
     name: IconName,
-    #[props(default = 24)]
-    size: u32,
+    #[props(default)]
+    size: IconSize,
     #[props(default = "black")]
     fill: &'a str,
     #[props(default = "")]
@@ -28,10 +40,19 @@ pub struct IconProps<'a> {
 
 #[allow(non_snake_case)]
 pub fn Icon<'a>(cx: Scope<'a, IconProps<'a>>) -> Element {
+    let size = match cx.props.size {
+        IconSize::Tiny => 16,
+        IconSize::Small => 20,
+        IconSize::Medium => 24,
+        IconSize::Large => 36,
+        IconSize::Gigantic => 48,
+        IconSize::Custom(v) => v,
+    };
+
     cx.render(rsx! {
         svg {
-            width: "{cx.props.size}",
-            height: "{cx.props.size}",
+            width: "{size}",
+            height: "{size}",
             fill: "{cx.props.fill}",
             class: "{cx.props.class}",
             view_box: "0 0 48 48",

@@ -3,7 +3,7 @@ use dioxus_router::{Link, Redirect, Route, Router};
 use sir::css;
 
 use crate::{
-    components::{Icon, IconName},
+    components::{Icon, IconName, IconSize},
     routes,
 };
 
@@ -84,11 +84,11 @@ fn NavLink<'a>(cx: Scope<'a, NavLinkProps<'a>>) -> Element {
             "),
             Icon {
                 name: cx.props.icon,
+                size: IconSize::Custom(28),
                 class: css!("
                     padding: 10px;
                     &:hover { fill: var(--primary-text-color); }
                 "),
-                size: 28,
                 fill: "var(--primary-variant-color)",
             }
         }

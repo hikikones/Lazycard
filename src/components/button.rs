@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use sir::css;
 
-use super::{Icon, IconName};
+use super::{Icon, IconName, IconSize};
 
 #[derive(Props)]
 pub struct ButtonProps<'a> {
@@ -9,21 +9,11 @@ pub struct ButtonProps<'a> {
     name: Option<&'a str>,
     icon: Option<IconName>,
     #[props(default)]
-    size: ButtonSize,
+    icon_size: IconSize,
     #[props(default = "")]
     class: &'a str,
     #[props(default)]
     disabled: bool,
-}
-
-#[derive(Default)]
-pub enum ButtonSize {
-    Small,
-    #[default]
-    Medium,
-    Large,
-    XL,
-    XXL,
 }
 
 #[allow(non_snake_case)]
@@ -64,14 +54,6 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
     "
     );
 
-    let size = match cx.props.size {
-        ButtonSize::Small => 20,
-        ButtonSize::Medium => 24,
-        ButtonSize::Large => 28,
-        ButtonSize::XL => 32,
-        ButtonSize::XXL => 64,
-    };
-
     let name = cx.props.name.map(|name| {
         rsx! {
             span { "{name}" }
@@ -82,7 +64,7 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
         rsx! {
             Icon {
                 name: icon,
-                size: size,
+                size: cx.props.icon_size,
             }
         }
     });
