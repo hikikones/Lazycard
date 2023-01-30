@@ -75,7 +75,7 @@ pub fn Review(cx: Scope) -> Element {
                     padding: 1rem 2rem;
                     margin: 1rem;
                     border: none;
-                    box-shadow: 0 0.25rem 1rem rgba(48, 55, 66, 0.15);
+                    box-shadow: 0 0.25rem 1rem var(--shadow-color);
                     background-color: var(--surface-color);
                     color: var(--surface-text-color);
                 "),
