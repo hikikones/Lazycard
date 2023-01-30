@@ -12,6 +12,7 @@ pub enum IconName {
     Done,
     Close,
     DoubleArrow,
+    ExpandMore,
 }
 
 #[allow(dead_code)]
@@ -76,6 +77,7 @@ impl IconName {
             IconName::Done => "M18.9 35.7 7.7 24.5l2.15-2.15 9.05 9.05 19.2-19.2 2.15 2.15Z",
             IconName::Close => "m12.45 37.65-2.1-2.1L21.9 24 10.35 12.45l2.1-2.1L24 21.9l11.55-11.55 2.1 2.1L26.1 24l11.55 11.55-2.1 2.1L24 26.1Z",
             IconName::DoubleArrow => "m12.1 38 10.5-14-10.5-14h3.7l10.5 14-10.5 14Zm12.6 0 10.5-14-10.5-14h3.7l10.5 14-10.5 14Z",
+            IconName::ExpandMore => "m24 30.75-12-12 2.15-2.15L24 26.5l9.85-9.85L36 18.8Z",
         }
     }
 }

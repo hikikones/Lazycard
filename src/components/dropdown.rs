@@ -2,11 +2,14 @@ use dioxus::prelude::*;
 use dioxus_desktop::use_eval;
 use sir::{css, global_css};
 
+use crate::components::Button;
+
 #[derive(Props)]
 pub struct DropdownProps<'a> {
-    name: Option<&'a str>,
     #[props(default)]
     disabled: bool,
+    #[props(default)]
+    body: Element<'a>,
     children: Element<'a>,
 }
 
@@ -38,27 +41,20 @@ pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
         ));
     };
 
-    let name = cx.props.name.map(|name| {
-        rsx! {
-            span {
-                pointer_events: "none",
-                "{name}"
-            }
-        }
-    });
-
     cx.render(rsx! {
         div {
             id: "{uuid}",
             class: css!("
+                display: inline-block;
                 position: relative;
             "),
 
-            button {
-                disabled: "{cx.props.disabled}",
+            Button {
+                disabled: cx.props.disabled,
                 onclick: on_click,
-                name,
+                &cx.props.body,
             }
+
             div {
                 class: css!("
                     visibility: hidden;

@@ -6,7 +6,7 @@ use sir::css;
 use database::{CardId, Database};
 
 use crate::{
-    components::{Button, Dropdown, IconName, IconSize},
+    components::{Button, Dropdown, Icon, IconName, IconSize},
     hooks::use_database,
 };
 
@@ -51,20 +51,29 @@ pub fn Review(cx: Scope) -> Element {
                     opacity: "0.5",
                     "{count} / {total}"
                 }
+
                 Dropdown {
-                    name: "Dropdown",
-                    Button {
-                        name: "Button 1",
-                        onclick: |_| {
-                            // todo
+                    disabled: false,
+                    body: cx.render(rsx! {
+                        Icon {
+                            name: IconName::AddBox,
+                            size: IconSize::Medium,
                         }
+                        span { "Dropdown" }
+                        Icon {
+                            name: IconName::ExpandMore,
+                            size: IconSize::Medium,
+                        }
+                    }),
+                    Button {
+                        onclick: |_| {},
+                        span { "Button 1" }
+                        Icon { name: IconName::AddBox }
                     }
                     Button {
-                        name: "Button 22222",
-                        icon: IconName::AddBox,
-                        onclick: |_| {
-                            // todo
-                        }
+                        onclick: |_| {},
+                        Icon { name: IconName::AddBox }
+                        span { "Button 22222" }
                     }
                 }
             }
@@ -84,8 +93,6 @@ pub fn Review(cx: Scope) -> Element {
 
             div {
                 Button {
-                    icon: IconName::Done,
-                    icon_size: IconSize::Large,
                     onclick: move |_| {
                         update_card_review(card, true, &db.borrow());
                         count.with_mut(|c| {
@@ -94,13 +101,15 @@ pub fn Review(cx: Scope) -> Element {
                                 card.set(get_due_card(&db.borrow()));
                             }
                         });
+                    },
+                    Icon {
+                        name: IconName::Done,
+                        size: IconSize::Large,
                     }
                 }
 
                 Button {
                     class: css!("margin: 0 1rem;"),
-                    icon: IconName::Close,
-                    icon_size: IconSize::Large,
                     onclick: move |_| {
                         update_card_review(card, false, &db.borrow());
                         count.with_mut(|c| {
@@ -109,17 +118,23 @@ pub fn Review(cx: Scope) -> Element {
                                 card.set(get_due_card(&db.borrow()));
                             }
                         });
+                    },
+                    Icon {
+                        name: IconName::Close,
+                        size: IconSize::Large,
                     }
                 }
 
                 Button {
-                    icon: IconName::DoubleArrow,
-                    icon_size: IconSize::Large,
                     onclick: move |_| {
                         if **count < total - 1 {
                             card.set(get_due_card_except(card.id, &db.borrow()));
                         }
                     },
+                    Icon {
+                        name: IconName::DoubleArrow,
+                        size: IconSize::Large,
+                    }
                 }
             }
         }
