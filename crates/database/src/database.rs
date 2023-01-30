@@ -45,6 +45,8 @@ macro_rules! make_id_struct {
         $pub struct $t(SqliteId);
 
         impl $t {
+            pub const ZERO: Self = Self(0);
+
             pub const fn from_raw(id: SqliteId) -> Self {
                 Self(id)
             }

@@ -6,35 +6,104 @@ use sir::css;
 use database::{CardId, Database};
 
 use crate::{
-    components::{Button, Dropdown, Icon, IconName, IconSize},
+    components::{Button, Icon, IconName, IconSize},
     hooks::use_database,
 };
-
-struct Card {
-    id: CardId,
-    content: String,
-}
 
 #[allow(non_snake_case)]
 pub fn Review(cx: Scope) -> Element {
     let db = use_database(&cx);
-    let total = *cx.use_hook(|| get_due_count(&db.borrow()));
+    let total_cards = *cx.use_hook(|| get_due_count(&db.borrow()));
 
-    if total == 0 {
+    if total_cards == 0 {
         return cx.render(rsx! {
             h1 { "No cards to review" }
         });
     }
 
-    let count = use_state(&cx, || 0);
+    let review_count = use_state(&cx, || 0);
 
-    if **count == total {
+    if **review_count == total_cards {
         return cx.render(rsx! {
             h1 { "Good job" }
         });
     }
 
-    let card = use_state(&cx, || get_due_card(&db.borrow()));
+    let card_id = use_state(&cx, || CardId::ZERO);
+    let card_content = use_state(&cx, || Vec::new());
+    let show_count = use_state(&cx, || 1);
+
+    let db_clone = db.clone();
+    let card_id_clone = card_id.clone();
+    use_effect(&cx, review_count, |_| async move {
+        let next_id = get_due_card_id(&db_clone.borrow());
+        card_id_clone.set(next_id);
+    });
+
+    let db_clone = db.clone();
+    let card_content_clone = card_content.clone();
+    let show_count_clone = show_count.clone();
+    use_effect(&cx, card_id, |id| async move {
+        if id.raw() == 0 {
+            return;
+        }
+
+        let content = get_card_content(*id, &db_clone.borrow());
+        let split = content.split("\n---\n").map(|s| s.to_string()).collect();
+        card_content_clone.set(split);
+        show_count_clone.set(1);
+    });
+
+    let card_render = card_content
+        .iter()
+        .take(**show_count)
+        .enumerate()
+        .map(|(i, s)| {
+            let last = i == **show_count - 1;
+            rsx! {
+                div {
+                    padding: "0 1rem",
+                    dangerous_inner_html: format_args!("{}", markdown::to_html(s)),
+                },
+                (!last).then(|| rsx!(hr {}))
+            }
+        });
+
+    let button_render = match **show_count < card_content.len() {
+        true => rsx! {
+            Button {
+                onclick: move |_| {
+                    *show_count.make_mut() += 1;
+                },
+                Icon {
+                    name: IconName::LockOpen,
+                    size: IconSize::Large,
+                }
+            }
+        },
+        false => rsx! {
+            Button {
+                onclick: move |_| {
+                    update_card_review(**card_id, true, &db.borrow());
+                    *review_count.make_mut() += 1;
+                },
+                Icon {
+                    name: IconName::Done,
+                    size: IconSize::Large,
+                }
+            }
+            Button {
+                onclick: move |_| {
+                    update_card_review(**card_id, false, &db.borrow());
+                    *review_count.make_mut() += 1;
+                },
+                Icon {
+                    name: IconName::Close,
+                    size: IconSize::Large,
+                }
+            }
+        },
+    };
 
     cx.render(rsx! {
         div {
@@ -49,87 +118,36 @@ pub fn Review(cx: Scope) -> Element {
             div {
                 span {
                     opacity: "0.5",
-                    "{count} / {total}"
-                }
-
-                Dropdown {
-                    disabled: false,
-                    body: cx.render(rsx! {
-                        Icon {
-                            name: IconName::AddBox,
-                            size: IconSize::Medium,
-                        }
-                        span { "Dropdown" }
-                        Icon {
-                            name: IconName::ExpandMore,
-                            size: IconSize::Medium,
-                        }
-                    }),
-                    Button {
-                        onclick: |_| {},
-                        span { "Button 1" }
-                        Icon { name: IconName::AddBox }
-                    }
-                    Button {
-                        onclick: |_| {},
-                        Icon { name: IconName::AddBox }
-                        span { "Button 22222" }
-                    }
+                    "{review_count} / {total_cards}"
                 }
             }
 
             div {
                 class: css!("
                     max-width: 75ch;
-                    padding: 1rem 2rem;
+                    padding: 1rem;
                     margin: 1rem;
                     border: none;
                     box-shadow: 0 0.25rem 1rem var(--shadow-color);
                     background-color: var(--surface-color);
                     color: var(--surface-text-color);
                 "),
-                dangerous_inner_html: format_args!("{}", markdown::to_html(&card.content)),
+                card_render
             }
 
             div {
-                Button {
-                    onclick: move |_| {
-                        update_card_review(card, true, &db.borrow());
-                        count.with_mut(|c| {
-                            *c += 1;
-                            if *c < total {
-                                card.set(get_due_card(&db.borrow()));
-                            }
-                        });
-                    },
-                    Icon {
-                        name: IconName::Done,
-                        size: IconSize::Large,
+                class: css!("
+                    & > * {
+                        margin: 0 0.5rem;
                     }
-                }
+                "),
 
-                Button {
-                    class: css!("margin: 0 1rem;"),
-                    onclick: move |_| {
-                        update_card_review(card, false, &db.borrow());
-                        count.with_mut(|c| {
-                            *c += 1;
-                            if *c < total {
-                                card.set(get_due_card(&db.borrow()));
-                            }
-                        });
-                    },
-                    Icon {
-                        name: IconName::Close,
-                        size: IconSize::Large,
-                    }
-                }
+                button_render,
 
                 Button {
                     onclick: move |_| {
-                        if **count < total - 1 {
-                            card.set(get_due_card_except(card.id, &db.borrow()));
-                        }
+                        let next_id = get_due_card_id_except(**card_id, &db.borrow());
+                        card_id.set(next_id);
                     },
                     Icon {
                         name: IconName::DoubleArrow,
@@ -150,56 +168,42 @@ fn get_due_count(db: &Database) -> u32 {
     .unwrap()
 }
 
-fn get_due_card(db: &Database) -> Card {
-    db.fetch_one(
-        "
-            SELECT id, content, review_date FROM cards \
-            WHERE review_date <= (date('now')) \
-            ORDER BY RANDOM() \
-            LIMIT 1
-            ",
-        [],
-        |row| {
-            Ok(Card {
-                id: row.get(0)?,
-                content: row.get(1)?,
-            })
-        },
-    )
+fn get_due_card_id(db: &Database) -> CardId {
+    get_due_card_id_except(CardId::ZERO, db)
+}
+
+fn get_card_content(id: CardId, db: &Database) -> String {
+    db.fetch_one("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
+        Ok(row.get(1)?)
+    })
     .unwrap()
 }
 
-fn get_due_card_except(id: CardId, db: &Database) -> Card {
+fn get_due_card_id_except(id: CardId, db: &Database) -> CardId {
     db.fetch_one(
         "
-            SELECT id, content, review_date FROM cards \
-            WHERE review_date <= (date('now')) \
-            AND id != ? \
+            SELECT id, review_date FROM cards \
+            WHERE review_date <= (date('now')) AND id != ? \
             ORDER BY RANDOM() \
             LIMIT 1
             ",
         [id],
-        |row| {
-            Ok(Card {
-                id: row.get(0)?,
-                content: row.get(1)?,
-            })
-        },
+        |row| Ok(row.get(0)?),
     )
     .unwrap()
 }
 
-fn update_card_review(card: &Card, success: bool, db: &Database) {
+fn update_card_review(id: CardId, success: bool, db: &Database) {
     db.execute_one(
         "INSERT INTO reviews (success, card_id) VALUES (?, ?)",
-        (success, card.id),
+        (success, id),
     )
     .unwrap();
 
     let successes = db
         .fetch_all::<bool>(
             "SELECT success, card_id FROM reviews WHERE card_id = ?",
-            [card.id],
+            [id],
             |row| row.get(0),
         )
         .unwrap();
@@ -215,7 +219,7 @@ fn update_card_review(card: &Card, success: bool, db: &Database) {
 
     db.execute_one(
         "UPDATE cards SET review_date = ? WHERE id = ?",
-        (next_review.date_naive(), card.id),
+        (next_review.date_naive(), id),
     )
     .unwrap();
 }

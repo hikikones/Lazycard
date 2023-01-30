@@ -36,28 +36,16 @@ CREATE TABLE assets (
 );
 
 INSERT INTO tags (name)
-    VALUES  ("tag1"),
-            ("tag2"),
-            ("tag3"),
-            ("tag4");
+    VALUES  ('tag1'),
+            ('tag2'),
+            ('tag3'),
+            ('tag4');
 
-INSERT INTO cards (content) VALUES
-("single"),
-("front
-
----
-
-back"),
-("first
-
----
-
-second
-
----
-
-third"),
-("tagless card");
+INSERT INTO cards (content)
+    VALUES  ('single'),
+            ('front' || char(10) || '---' || char(10) || 'back'),
+            ('first' || char(10) || '---' || char(10) || 'second' || char(10) || '---' || char(10) || 'third'),
+            ('tagless card');
 
 INSERT INTO card_tag (card_id, tag_id)
     VALUES  (1, 1),
