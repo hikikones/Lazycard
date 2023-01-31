@@ -43,8 +43,8 @@ INSERT INTO tags (name)
 
 INSERT INTO cards (content)
     VALUES  ('single'),
-            ('front' || char(10) || '---' || char(10) || 'back'),
-            ('first' || char(10) || '---' || char(10) || 'second' || char(10) || '---' || char(10) || 'third'),
+            ('front' || char(10) || char(10) || '---' || char(10) || char(10) || 'back'),
+            ('first' || char(10) || char(10) || '---' || char(10) || char(10) || 'second' || char(10) || char(10) || '---' || char(10) || char(10) || 'third'),
             ('tagless card');
 
 INSERT INTO card_tag (card_id, tag_id)

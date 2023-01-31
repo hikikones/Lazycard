@@ -49,7 +49,10 @@ pub fn Review(cx: Scope) -> Element {
         }
 
         let content = get_card_content(*id, &db_clone.borrow());
-        let split = content.split("\n---\n").map(|s| s.to_string()).collect();
+        let split = content
+            .split("\n\n---\n\n")
+            .map(|s| s.to_string())
+            .collect();
         card_content_clone.set(split);
         show_count_clone.set(1);
     });
@@ -172,13 +175,6 @@ fn get_due_card_id(db: &Database) -> CardId {
     get_due_card_id_except(CardId::ZERO, db)
 }
 
-fn get_card_content(id: CardId, db: &Database) -> String {
-    db.fetch_one("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
-        Ok(row.get(1)?)
-    })
-    .unwrap()
-}
-
 fn get_due_card_id_except(id: CardId, db: &Database) -> CardId {
     db.fetch_one(
         "
@@ -190,6 +186,13 @@ fn get_due_card_id_except(id: CardId, db: &Database) -> CardId {
         [id],
         |row| Ok(row.get(0)?),
     )
+    .unwrap()
+}
+
+fn get_card_content(id: CardId, db: &Database) -> String {
+    db.fetch_one("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
+        Ok(row.get(1)?)
+    })
     .unwrap()
 }
 
