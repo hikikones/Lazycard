@@ -3,13 +3,10 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 
-use database::CardId;
+use database::{use_database, CardId};
 use sqlite::params_from_iter;
 
-use crate::{
-    components::{MarkdownView, Tags},
-    hooks::use_database,
-};
+use crate::components::{MarkdownView, Tags};
 
 struct Card {
     id: CardId,
@@ -34,7 +31,6 @@ pub fn Cards(cx: Scope) -> Element {
         |(selected, tagless)| async move {
             let cards = if *tagless.current() {
                 db_clone
-                    .borrow()
                     .fetch_all(
                         "
                         SELECT * FROM cards c WHERE NOT EXISTS ( \
@@ -54,7 +50,6 @@ pub fn Cards(cx: Scope) -> Element {
                 let len = selected.read().len();
                 if len == 0 {
                     db_clone
-                        .borrow()
                         .fetch_all("SELECT id, content FROM cards", [], |row| {
                             Ok(Card {
                                 id: row.get(0)?,
@@ -64,7 +59,6 @@ pub fn Cards(cx: Scope) -> Element {
                         .unwrap()
                 } else {
                     db_clone
-                        .borrow()
                         .fetch_all(
                             &format!(
                                 "

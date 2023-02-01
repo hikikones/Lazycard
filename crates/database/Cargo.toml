@@ -5,4 +5,5 @@ edition.workspace = true
 
 [dependencies]
 sqlite = { workspace = true }
+dioxus = { workspace = true }
 seahash = "4.1"

@@ -8,10 +8,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use sqlite::{params, SqliteId};
 
-use crate::{
-    components::{MarkdownEditor, Tags},
-    hooks::use_database,
-};
+use crate::components::{MarkdownEditor, Tags};
 
 #[allow(non_snake_case)]
 pub fn AddCard(cx: Scope) -> Element {
@@ -34,8 +31,8 @@ pub fn AddCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                add_card(&content.current(), &selected_tags.read(), &db.borrow());
-                store_assets(&html, &db.borrow());
+                add_card(&content.current(), &selected_tags.read(), &db);
+                store_assets(&html, &db);
                 content.set(String::new());
             },
             "Add"
@@ -69,25 +66,23 @@ pub fn EditCard(cx: Scope) -> Element {
         CardId::from_raw(id)
     });
     let content = use_state(&cx, || {
-        db.borrow()
-            .fetch_one::<String>(
-                "SELECT id, content FROM cards WHERE id = ?",
-                [card_id],
-                |row| row.get(1),
-            )
-            .unwrap()
+        db.fetch_one::<String>(
+            "SELECT id, content FROM cards WHERE id = ?",
+            [card_id],
+            |row| row.get(1),
+        )
+        .unwrap()
     });
     let current_tags = use_ref(&cx, || {
         let mut tags = HashSet::<TagId>::new();
-        db.borrow()
-            .fetch_with(
-                "SELECT card_id, tag_id FROM card_tag WHERE card_id = ?",
-                [card_id],
-                |row| {
-                    tags.insert(row.get(1).unwrap());
-                },
-            )
-            .unwrap();
+        db.fetch_with(
+            "SELECT card_id, tag_id FROM card_tag WHERE card_id = ?",
+            [card_id],
+            |row| {
+                tags.insert(row.get(1).unwrap());
+            },
+        )
+        .unwrap();
         tags
     });
     let selected_tags = use_ref(&cx, || current_tags.read().clone());
@@ -107,8 +102,8 @@ pub fn EditCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db.borrow());
-                store_assets(&html, &db.borrow());
+                edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
+                store_assets(&html, &db);
                 router.pop_route();
             },
             "Save"

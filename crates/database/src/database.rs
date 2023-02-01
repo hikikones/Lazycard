@@ -1,18 +1,35 @@
-use std::{fmt::Display, num::ParseIntError, ops::Deref, path::Path, str::FromStr};
+use std::{
+    cell::RefCell, fmt::Display, num::ParseIntError, ops::Deref, path::Path, rc::Rc, str::FromStr,
+};
+
+use dioxus::prelude::ScopeState;
 
 use sqlite::*;
 
-pub struct Database(Option<Sqlite>);
+pub type DatabaseContext = Rc<Database>;
+
+pub fn provide_database(cx: &ScopeState) -> &DatabaseContext {
+    let db = DatabaseContext::new(Database::new());
+    &*cx.use_hook(|| cx.provide_context(db))
+}
+
+pub fn use_database(cx: &ScopeState) -> &DatabaseContext {
+    cx.use_hook(|| cx.consume_context::<DatabaseContext>().unwrap())
+}
+
+pub struct Database(RefCell<Option<Sqlite>>);
 
 impl Database {
     pub fn new() -> Self {
-        Self(None)
+        Self(RefCell::new(None))
     }
 
-    pub fn open(&mut self, path: impl AsRef<Path>) -> SqliteResult<()> {
+    pub fn open(&self, path: impl AsRef<Path>) -> SqliteResult<()> {
         let sqlite = Sqlite::open(path)?;
+
         migrate(&sqlite);
-        self.0 = Some(sqlite);
+
+        *self.0.borrow_mut() = Some(sqlite);
 
         Ok(())
     }
@@ -22,7 +39,7 @@ impl Deref for Database {
     type Target = Sqlite;
 
     fn deref(&self) -> &Self::Target {
-        &self.0.as_ref().unwrap()
+        unsafe { self.0.as_ptr().as_ref().unwrap().as_ref().unwrap() }
     }
 }
 

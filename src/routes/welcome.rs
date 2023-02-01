@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 
-use crate::hooks::{use_config, use_database};
+use config::use_config;
+use database::use_database;
 
 #[allow(non_snake_case)]
 pub fn Welcome(cx: Scope) -> Element {
@@ -14,7 +15,7 @@ pub fn Welcome(cx: Scope) -> Element {
         button {
             onclick: move |_| {
                 let path = "db.db";
-                db.borrow_mut().open(path).unwrap();
+                db.open(path).unwrap();
                 cfg.set_database_path(path);
                 router.push_route("/review", None, None);
             },

@@ -3,9 +3,8 @@ use std::path::Path;
 use dioxus::prelude::*;
 use dioxus_router::use_router;
 
-use database::Seahash;
-
-use crate::hooks::{use_config, use_database};
+use config::use_config;
+use database::{use_database, Seahash};
 
 #[allow(non_snake_case)]
 pub fn OpenDatabase(cx: Scope) -> Element {
@@ -21,7 +20,7 @@ pub fn OpenDatabase(cx: Scope) -> Element {
             button {
                 onclick: move |_| {
                     let path = "db.db";
-                    db.borrow_mut().open(path).unwrap();
+                    db.open(path).unwrap();
                     cfg.set_database_path(path);
                     router.push_route("/review", None, None);
                 },
@@ -30,14 +29,13 @@ pub fn OpenDatabase(cx: Scope) -> Element {
         });
     }
 
-    let Ok(_) = db.borrow_mut().open(path) else {
+    let Ok(_) = db.open(path) else {
         return cx.render(rsx! {
             h1 { "TODO: Could not open database" }
         });
     };
 
     let assets = db
-        .borrow()
         .fetch_all::<(Seahash, String)>("SELECT seahash, extension FROM assets", [], |row| {
             Ok((row.get(0).unwrap(), row.get(1).unwrap()))
         })
@@ -48,7 +46,6 @@ pub fn OpenDatabase(cx: Scope) -> Element {
         let asset_path = Path::new(&asset_file);
         if !asset_path.exists() {
             let bytes = db
-                .borrow()
                 .fetch_one::<Vec<u8>>(
                     "SELECT seahash, bytes FROM assets WHERE seahash = ?",
                     [hash],

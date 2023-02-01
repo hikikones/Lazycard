@@ -3,17 +3,14 @@ use std::ops::Sub;
 use dioxus::prelude::*;
 use sir::css;
 
-use database::{CardId, Database};
+use database::{use_database, CardId, Database};
 
-use crate::{
-    components::{Button, Icon, IconName, IconSize},
-    hooks::use_database,
-};
+use crate::components::{Button, Icon, IconName, IconSize};
 
 #[allow(non_snake_case)]
 pub fn Review(cx: Scope) -> Element {
     let db = use_database(&cx);
-    let total_cards = *cx.use_hook(|| get_due_count(&db.borrow()));
+    let total_cards = *cx.use_hook(|| get_due_count(&db));
 
     if total_cards == 0 {
         return cx.render(rsx! {
@@ -36,7 +33,7 @@ pub fn Review(cx: Scope) -> Element {
     let db_clone = db.clone();
     let card_id_clone = card_id.clone();
     use_effect(&cx, review_count, |_| async move {
-        let next_id = get_due_card_id(&db_clone.borrow());
+        let next_id = get_due_card_id(&db_clone);
         card_id_clone.set(next_id);
     });
 
@@ -48,7 +45,7 @@ pub fn Review(cx: Scope) -> Element {
             return;
         }
 
-        let content = get_card_content(*id, &db_clone.borrow());
+        let content = get_card_content(*id, &db_clone);
         let split = content
             .split("\n\n---\n\n")
             .map(|s| s.to_string())
@@ -87,7 +84,7 @@ pub fn Review(cx: Scope) -> Element {
         false => rsx! {
             Button {
                 onclick: move |_| {
-                    update_card_review(**card_id, true, &db.borrow());
+                    update_card_review(**card_id, true, &db);
                     *review_count.make_mut() += 1;
                 },
                 Icon {
@@ -97,7 +94,7 @@ pub fn Review(cx: Scope) -> Element {
             }
             Button {
                 onclick: move |_| {
-                    update_card_review(**card_id, false, &db.borrow());
+                    update_card_review(**card_id, false, &db);
                     *review_count.make_mut() += 1;
                 },
                 Icon {
@@ -149,7 +146,7 @@ pub fn Review(cx: Scope) -> Element {
 
                 Button {
                     onclick: move |_| {
-                        let next_id = get_due_card_id_except(**card_id, &db.borrow());
+                        let next_id = get_due_card_id_except(**card_id, &db);
                         card_id.set(next_id);
                     },
                     Icon {

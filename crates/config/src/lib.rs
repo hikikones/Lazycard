@@ -1,6 +1,22 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    rc::Rc,
+};
+
+use dioxus::prelude::ScopeState;
 
 use sqlite::*;
+
+pub type ConfigContext = Rc<Config>;
+
+pub fn provide_config(cx: &ScopeState) -> &ConfigContext {
+    let cfg = ConfigContext::new(Config::new());
+    &*cx.use_hook(|| cx.provide_context(cfg))
+}
+
+pub fn use_config(cx: &ScopeState) -> &ConfigContext {
+    cx.use_hook(|| cx.consume_context::<ConfigContext>().unwrap())
+}
 
 pub struct Config(Sqlite);
 
