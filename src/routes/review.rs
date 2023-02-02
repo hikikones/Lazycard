@@ -69,47 +69,28 @@ pub fn Review(cx: Scope) -> Element {
             }
         });
 
-    let icon_size = IconSize::Large;
-    let border = ButtonBorder::Circle;
-    let padding = ButtonPadding::Custom("1rem");
-
     let button_render = match **show_count < card_content.len() {
         true => rsx! {
-            Button {
-                border: border,
-                padding: padding,
+            ReviewButton {
+                icon: IconName::LockOpen,
                 onclick: move |_| {
                     *show_count.make_mut() += 1;
-                },
-                Icon {
-                    name: IconName::LockOpen,
-                    size: icon_size,
                 }
             }
         },
         false => rsx! {
-            Button {
-                border: border,
-                padding: padding,
+            ReviewButton {
+                icon: IconName::Done,
                 onclick: move |_| {
                     update_card_review(**card_id, true, &db);
                     *review_count.make_mut() += 1;
-                },
-                Icon {
-                    name: IconName::Done,
-                    size: icon_size,
                 }
             }
-            Button {
-                border: border,
-                padding: padding,
+            ReviewButton {
+                icon: IconName::Close,
                 onclick: move |_| {
                     update_card_review(**card_id, false, &db);
                     *review_count.make_mut() += 1;
-                },
-                Icon {
-                    name: IconName::Close,
-                    size: icon_size,
                 }
             }
         },
@@ -154,18 +135,35 @@ pub fn Review(cx: Scope) -> Element {
 
                 button_render,
 
-                Button {
-                    border: border,
-                    padding: padding,
+                ReviewButton {
+                    icon: IconName::DoubleArrow,
                     onclick: move |_| {
                         let next_id = get_due_card_id_except(**card_id, &db);
                         card_id.set(next_id);
-                    },
-                    Icon {
-                        name: IconName::DoubleArrow,
-                        size: icon_size,
                     }
                 }
+            }
+        }
+    })
+}
+
+#[allow(non_snake_case)]
+#[inline_props]
+fn ReviewButton<'a>(
+    cx: Scope,
+    onclick: EventHandler<'a, Event<MouseData>>,
+    icon: IconName,
+) -> Element {
+    cx.render(rsx! {
+        Button {
+            border: ButtonBorder::Circle,
+            padding: ButtonPadding::Custom("1rem"),
+            onclick: |event| {
+                onclick.call(event);
+            },
+            Icon {
+                name: *icon,
+                size: IconSize::Large,
             }
         }
     })
