@@ -106,16 +106,15 @@ fn NavLink<'a>(cx: Scope<'a, NavLinkProps<'a>>) -> Element {
             to: cx.props.to,
             class: css!("
                 display: flex;
-                &.active svg { fill: var(--primary-text-color); }
+                padding: 10px;
+                color: var(--primary-variant-color);
+                &:hover, &.active {
+                    color: var(--primary-text-color);
+                }
             "),
             Icon {
                 name: cx.props.icon,
                 size: IconSize::Custom(28),
-                class: css!("
-                    padding: 10px;
-                    &:hover { fill: var(--primary-text-color); }
-                "),
-                fill: "var(--primary-variant-color)",
             }
         }
     })

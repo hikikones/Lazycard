@@ -42,17 +42,14 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
             cursor: unset;
             opacity: 0.5;
         }
-
-        & > svg {
-            fill: var(--secondary-text-color);
-        }
-
-        & > svg + span {
-            margin-left: 0.25rem;
-        }
-
+        
         & > * {
+            margin-right: 0.25rem;
             pointer-events: none;   
+        }
+        
+        & > *:last-child {
+            margin-right: 0;
         }
     "
     );

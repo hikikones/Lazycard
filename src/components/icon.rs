@@ -33,7 +33,7 @@ pub struct IconProps<'a> {
     name: IconName,
     #[props(default)]
     size: IconSize,
-    #[props(default = "black")]
+    #[props(default = "currentColor")]
     fill: &'a str,
     #[props(default = "")]
     class: &'a str,
