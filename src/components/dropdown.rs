@@ -4,11 +4,15 @@ use sir::{css, global_css};
 
 use crate::components::Button;
 
+use super::TextSize;
+
 #[derive(Props)]
 pub struct DropdownProps<'a> {
     #[props(default)]
-    disabled: bool,
+    size: TextSize,
     #[props(default)]
+    disabled: bool,
+
     body: Element<'a>,
     children: Element<'a>,
 }
@@ -50,6 +54,7 @@ pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
             "),
 
             Button {
+                size: cx.props.size,
                 disabled: cx.props.disabled,
                 onclick: on_click,
                 &cx.props.body,

@@ -65,7 +65,7 @@ fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
                 height: 100vh;
                 min-width: 48px;
                 max-width: 48px;
-                background: var(--primary-color);
+                background-color: var(--primary-color);
             "),
 
             div {

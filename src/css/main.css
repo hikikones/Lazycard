@@ -1,4 +1,8 @@
 :root {
+    --text-small: 0.75rem;
+    --text-medium: 1.0rem;
+    --text-large: 1.25rem;
+
     --base-color: whitesmoke;
     --base-text-color: black;
 
