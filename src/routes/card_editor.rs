@@ -169,13 +169,13 @@ fn store_assets(html: &str, db: &Database) {
         };
 
         if db
-            // TODO: fetch_maybe
-            .fetch_one::<Seahash>(
+            .fetch_one_maybe::<Seahash>(
                 "SELECT seahash FROM assets WHERE seahash = ?",
                 [hash],
                 |row| row.get(0),
             )
-            .is_err()
+            .unwrap()
+            .is_none()
         {
             let bytes = std::fs::read(asset_path).unwrap();
             db.execute_one(
