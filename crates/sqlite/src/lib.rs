@@ -20,7 +20,7 @@ impl Sqlite {
         Ok(Self(connection))
     }
 
-    pub fn path(&self) -> Option<&Path> {
+    pub fn path(&self) -> Option<&str> {
         self.0.path()
     }
 

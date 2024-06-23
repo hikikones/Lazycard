@@ -15,14 +15,14 @@ sqlite = { path = "crates/sqlite" }
 config = { path = "crates/config" }
 database = { path = "crates/database" }
 markdown = { path = "crates/markdown" }
-dioxus = "0.3"
-dioxus-desktop = "0.3"
-dioxus-router = "0.3"
-sir = { version = "0.3", features = ["dioxus"] }
+dioxus = "0.4"
+dioxus-desktop = "0.4"
+dioxus-router = "0.4"
+sir = { version = "0.4", features = ["dioxus"] }
 uuid = { version = "1.2", features = ["v4", "fast-rng"] }
 chrono = "0.4"
 once_cell = "1.17"
-rfd = "0.10"
+rfd = "0.14"
 regex = "1.7"
 
 [dependencies]

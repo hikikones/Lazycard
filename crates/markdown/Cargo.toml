@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-pulldown-cmark = { version = "0.9", features = ["simd"] }
+pulldown-cmark = { version = "0.11", features = ["simd"] }
 config = { workspace = true }
 once_cell = { workspace = true }
 syntect = "5.0"

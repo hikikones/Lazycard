@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use dioxus_router::{Link, Redirect, Route, Router};
+use dioxus_router::prelude::*;
 use sir::{css, global_css};
 
 mod components;
@@ -20,35 +20,58 @@ fn main() {
     );
 }
 
+use routes::*;
+use sqlite::SqliteId;
+
+#[derive(Routable, Clone)]
+enum Route {
+    #[route("/")]
+    Redirect {},
+    #[route("/welcome")]
+    Welcome {},
+    #[route("/open_database")]
+    OpenDatabase {},
+
+    #[layout(Main)]
+    #[route("/review")]
+    Review {},
+    #[route("/add_card")]
+    AddCard {},
+    #[route("/edit_card/:id")]
+    EditCard { id: SqliteId },
+    #[route("/cards")]
+    Cards {},
+    #[route("/settings")]
+    Settings {},
+}
+
 pub fn app(cx: Scope) -> Element {
     database::provide_database(cx);
-    let cfg = config::provide_config(cx);
-
-    let initial_route = if cfg.get_database_path().is_some() {
-        "/open_database"
-    } else {
-        "/welcome"
-    };
+    config::provide_config(cx);
 
     cx.render(rsx! {
         sir::AppStyle {}
-
-        Router {
-            Route { to: "/welcome", routes::Welcome {} }
-            Route { to: "/open_database", routes::OpenDatabase {} }
-            Route { to: "/review", Main { routes::Review {} } }
-            Route { to: "/add_card", Main { routes::AddCard {} } }
-            Route { to: "/edit_card/:id", Main { routes::EditCard {} } }
-            Route { to: "/cards", Main { routes::Cards {} } }
-            Route { to: "/settings", Main { routes::Settings {} } }
-            Redirect { from: "", to: initial_route }
-        }
+        Router::<Route> {}
     })
+}
+
+#[component]
+fn Redirect(cx: Scope) -> Element {
+    let cfg = config::use_config(cx);
+    let nav = use_navigator(cx);
+
+    if cfg.get_database_path().is_some() {
+        nav.push(Route::OpenDatabase {});
+    } else {
+        nav.push(Route::Welcome {});
+    }
+
+    None
 }
 
 #[allow(non_snake_case)]
 #[inline_props]
-fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
+fn Main(cx: Scope) -> Element {
     global_css!(
         "
         #main {
@@ -94,7 +117,7 @@ fn Main<'a>(cx: Scope, children: Element<'a>) -> Element {
                 padding: 1rem;
             "),
 
-            children
+            Outlet::<Route> {}
         }
     })
 }

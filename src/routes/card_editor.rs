@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use dioxus::prelude::*;
-use dioxus_router::{use_route, use_router};
+use dioxus_router::prelude::*;
 
 use database::*;
 use once_cell::sync::Lazy;
@@ -56,15 +56,11 @@ fn add_card(content: &str, tags: &HashSet<TagId>, db: &Database) {
 }
 
 #[allow(non_snake_case)]
-pub fn EditCard(cx: Scope) -> Element {
+#[component]
+pub fn EditCard(cx: Scope, id: SqliteId) -> Element {
     let db = use_database(&cx);
-    let route = use_route(&cx);
-    let router = use_router(&cx);
-
-    let card_id = *cx.use_hook(|| {
-        let id = route.segment("id").unwrap().parse::<SqliteId>().unwrap();
-        CardId::from_raw(id)
-    });
+    let nav = use_navigator(cx);
+    let card_id = CardId::from_raw(*id);
     let content = use_state(&cx, || {
         db.fetch_one::<String>(
             "SELECT id, content FROM cards WHERE id = ?",
@@ -104,7 +100,7 @@ pub fn EditCard(cx: Scope) -> Element {
             onclick: move |_| {
                 edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
                 store_assets(&html, &db);
-                router.pop_route();
+                nav.go_back();
             },
             "Save"
         }

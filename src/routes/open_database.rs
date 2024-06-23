@@ -1,16 +1,18 @@
 use std::path::Path;
 
 use dioxus::prelude::*;
-use dioxus_router::use_router;
+use dioxus_router::prelude::*;
 
 use config::use_config;
 use database::{use_database, Seahash};
+
+use crate::Route;
 
 #[allow(non_snake_case)]
 pub fn OpenDatabase(cx: Scope) -> Element {
     let db = use_database(&cx);
     let cfg = use_config(&cx);
-    let router = use_router(&cx);
+    let nav = use_navigator(cx);
 
     let path = cfg.get_database_path().unwrap();
 
@@ -22,7 +24,7 @@ pub fn OpenDatabase(cx: Scope) -> Element {
                     let path = "db.db";
                     db.open(path).unwrap();
                     cfg.set_database_path(path);
-                    router.push_route("/review", None, None);
+                    nav.push(Route::Review {  });
                 },
                 "New database"
             }
@@ -56,7 +58,7 @@ pub fn OpenDatabase(cx: Scope) -> Element {
         }
     }
 
-    router.push_route("/review", None, None);
+    nav.push(Route::Review {});
 
     cx.render(rsx! {
         h1 { "Success" }

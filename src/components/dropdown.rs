@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use dioxus_desktop::use_eval;
 use sir::{css, global_css};
 
 use crate::components::Button;
@@ -35,7 +34,7 @@ pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
     );
 
     let on_click = move |_| {
-        eval(format!(
+        eval(&format!(
             r#"
             const dropdown = document.getElementById('{uuid}');
             const menu = dropdown.children[1];

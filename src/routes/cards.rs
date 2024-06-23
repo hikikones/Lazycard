@@ -1,12 +1,15 @@
 use std::collections::HashSet;
 
 use dioxus::prelude::*;
-use dioxus_router::use_router;
+use dioxus_router::prelude::*;
 
 use database::{use_database, CardId};
 use sqlite::params_from_iter;
 
-use crate::components::{MarkdownView, Tags};
+use crate::{
+    components::{MarkdownView, Tags},
+    Route,
+};
 
 struct Card {
     id: CardId,
@@ -16,7 +19,7 @@ struct Card {
 #[allow(non_snake_case)]
 pub fn Cards(cx: Scope) -> Element {
     let db = use_database(&cx);
-    let router = use_router(&cx);
+    let nav = use_navigator(cx);
 
     let cards = use_state(&cx, || Vec::new());
     let selected_tags = use_ref(&cx, || HashSet::new());
@@ -122,7 +125,7 @@ pub fn Cards(cx: Scope) -> Element {
                 }
                 button {
                     onclick: |_| {
-                        router.push_route(&format!("/edit_card/{}", c.id), None, None);
+                        nav.push(Route::EditCard { id: c.id.raw() });
                     },
                     "Edit"
                 }
