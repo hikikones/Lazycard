@@ -2,19 +2,18 @@ use std::{
     cell::RefCell, fmt::Display, num::ParseIntError, ops::Deref, path::Path, rc::Rc, str::FromStr,
 };
 
-use dioxus::prelude::ScopeState;
+use dioxus::prelude::*;
 
 use sqlite::*;
 
 pub type DatabaseContext = Rc<Database>;
 
-pub fn provide_database(cx: &ScopeState) -> &DatabaseContext {
-    let db = DatabaseContext::new(Database::new());
-    &*cx.use_hook(|| cx.provide_context(db))
+pub fn provide_database() -> DatabaseContext {
+    use_context_provider(|| DatabaseContext::new(Database::new()))
 }
 
-pub fn use_database(cx: &ScopeState) -> &DatabaseContext {
-    cx.use_hook(|| cx.consume_context::<DatabaseContext>().unwrap())
+pub fn use_database() -> DatabaseContext {
+    use_context::<DatabaseContext>()
 }
 
 pub struct Database(RefCell<Option<Sqlite>>);

@@ -7,74 +7,73 @@ use database::{use_database, CardId, Database};
 
 use crate::components::{Button, ButtonBorder, ButtonPadding, Icon, IconName, IconSize};
 
-#[allow(non_snake_case)]
-pub fn Review(cx: Scope) -> Element {
-    let db = use_database(&cx);
-    let total_cards = *cx.use_hook(|| get_due_count(&db));
+#[component]
+pub fn Review() -> Element {
+    let db = use_database();
+    let total_cards = use_hook(|| get_due_count(&db));
 
     if total_cards == 0 {
-        return cx.render(rsx! {
+        return rsx! {
             h1 { "No cards to review" }
-        });
+        };
     }
 
-    let review_count = use_state(&cx, || 0);
+    let mut review_count = use_signal(|| 0);
 
-    if **review_count == total_cards {
-        return cx.render(rsx! {
+    if review_count() == total_cards {
+        return rsx! {
             h1 { "Good job" }
-        });
+        };
     }
 
-    let card_id = use_state(&cx, || CardId::ZERO);
-    let card_content = use_state(&cx, || Vec::new());
-    let show_count = use_state(&cx, || 1);
+    let mut card_id = use_signal(|| CardId::ZERO);
+    let mut card_content = use_signal(|| Vec::new());
+    let mut show_count = use_signal(|| 1);
 
     let db_clone = db.clone();
-    let card_id_clone = card_id.clone();
-    use_effect(&cx, review_count, |_| async move {
+    use_effect(move || {
         let next_id = get_due_card_id(&db_clone);
-        card_id_clone.set(next_id);
+        card_id.set(next_id);
     });
 
     let db_clone = db.clone();
-    let card_content_clone = card_content.clone();
-    let show_count_clone = show_count.clone();
-    use_effect(&cx, card_id, |id| async move {
-        if id.raw() == 0 {
+    use_effect(move || {
+        if card_id().raw() == 0 {
             return;
         }
 
-        let content = get_card_content(*id, &db_clone);
+        let content = get_card_content(card_id(), &db_clone);
         let split = content
             .split("\n\n---\n\n")
             .map(|s| s.to_string())
             .collect();
-        card_content_clone.set(split);
-        show_count_clone.set(1);
+        card_content.set(split);
+        show_count.set(1);
     });
 
     let card_render = card_content
         .iter()
-        .take(**show_count)
+        .take(show_count())
         .enumerate()
         .map(|(i, s)| {
-            let last = i == **show_count - 1;
+            let last = i == show_count() - 1;
             rsx! {
                 div {
                     padding: "0 1rem",
-                    dangerous_inner_html: format_args!("{}", markdown::to_html(s)),
+                    dangerous_inner_html: format_args!("{}", markdown::to_html(s.as_str())),
                 },
-                (!last).then(|| rsx!(hr {}))
+                {(!last).then(|| rsx!(hr {}))}
             }
         });
 
-    let button_render = match **show_count < card_content.len() {
+    let db2 = db.clone();
+    let db3 = db.clone();
+    let button_render = match show_count() < card_content.len() {
         true => rsx! {
             ReviewButton {
                 icon: IconName::LockOpen,
                 onclick: move |_| {
-                    *show_count.make_mut() += 1;
+                    show_count += 1;
                 }
             }
         },
@@ -82,21 +81,23 @@ pub fn Review(cx: Scope) -> Element {
             ReviewButton {
                 icon: IconName::Done,
                 onclick: move |_| {
-                    update_card_review(**card_id, true, &db);
-                    *review_count.make_mut() += 1;
+                    update_card_review(card_id(), true, &db2);
+                    *review_count.write() += 1;
                 }
             }
             ReviewButton {
                 icon: IconName::Close,
                 onclick: move |_| {
-                    update_card_review(**card_id, false, &db);
-                    *review_count.make_mut() += 1;
+                    update_card_review(card_id(), false, &db3);
+                    *review_count.write() += 1;
                 }
             }
         },
     };
 
-    cx.render(rsx! {
+    let db4 = db.clone();
+
+    rsx! {
         div {
             class: css!("
                 display: flex;
@@ -123,7 +124,7 @@ pub fn Review(cx: Scope) -> Element {
                     background-color: var(--surface-color);
                     color: var(--surface-text-color);
                 "),
-                card_render
+                {card_render}
             }
 
             div {
@@ -133,40 +134,35 @@ pub fn Review(cx: Scope) -> Element {
                     }
                 "),
 
-                button_render,
+                {button_render},
 
                 ReviewButton {
                     icon: IconName::DoubleArrow,
                     onclick: move |_| {
-                        let next_id = get_due_card_id_except(**card_id, &db);
+                        let next_id = get_due_card_id_except(card_id(), &db4);
                         card_id.set(next_id);
                     }
                 }
             }
         }
-    })
+    }
 }
 
-#[allow(non_snake_case)]
-#[inline_props]
-fn ReviewButton<'a>(
-    cx: Scope,
-    onclick: EventHandler<'a, Event<MouseData>>,
-    icon: IconName,
-) -> Element {
-    cx.render(rsx! {
+#[component]
+fn ReviewButton(onclick: EventHandler<Event<MouseData>>, icon: IconName) -> Element {
+    rsx! {
         Button {
             border: ButtonBorder::Circle,
             padding: ButtonPadding::Custom("1rem"),
-            onclick: |event| {
+            onclick: move |event| {
                 onclick.call(event);
             },
             Icon {
-                name: *icon,
+                name: icon,
                 size: IconSize::Large,
             }
         }
-    })
+    }
 }
 
 fn get_due_count(db: &Database) -> u32 {

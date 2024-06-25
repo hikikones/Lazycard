@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 use sir::{css, global_css};
 
 mod components;
@@ -8,22 +7,27 @@ mod routes;
 use components::{Icon, IconName, IconSize};
 
 fn main() {
-    dioxus_desktop::launch_cfg(
-        app,
-        dioxus_desktop::Config::new().with_custom_head(format!(
-            r#"
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
-            <style>{}</style>
-        "#,
-            include_str!("css/main.css"),
-        ))
+    let custom_head = format!(
+        r#"
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+        <style>{}</style>
+    "#,
+        include_str!("css/main.css"),
     );
+
+    LaunchBuilder::desktop()
+        .with_cfg(
+            dioxus::desktop::Config::new()
+                .with_menu(None)
+                .with_custom_head(custom_head),
+        )
+        .launch(app);
 }
 
 use routes::*;
 use sqlite::SqliteId;
 
-#[derive(Routable, Clone)]
+#[derive(Routable, PartialEq, Clone)]
 enum Route {
     #[route("/")]
     Redirect {},
@@ -45,20 +49,20 @@ enum Route {
     Settings {},
 }
 
-pub fn app(cx: Scope) -> Element {
-    database::provide_database(cx);
-    config::provide_config(cx);
+pub fn app() -> Element {
+    database::provide_database();
+    config::provide_config();
 
-    cx.render(rsx! {
+    rsx! {
         sir::AppStyle {}
         Router::<Route> {}
-    })
+    }
 }
 
 #[component]
-fn Redirect(cx: Scope) -> Element {
-    let cfg = config::use_config(cx);
-    let nav = use_navigator(cx);
+fn Redirect() -> Element {
+    let cfg = config::use_config();
+    let nav = use_navigator();
 
     if cfg.get_database_path().is_some() {
         nav.push(Route::OpenDatabase {});
@@ -70,8 +74,7 @@ fn Redirect(cx: Scope) -> Element {
 }
 
 #[allow(non_snake_case)]
-#[inline_props]
-fn Main(cx: Scope) -> Element {
+fn Main() -> Element {
     global_css!(
         "
         #main {
@@ -80,7 +83,7 @@ fn Main(cx: Scope) -> Element {
     "
     );
 
-    cx.render(rsx! {
+    rsx! {
         nav {
             class: css!("
                 position: sticky;
@@ -119,14 +122,15 @@ fn Main(cx: Scope) -> Element {
 
             Outlet::<Route> {}
         }
-    })
+    }
 }
 
-#[allow(non_snake_case)]
-fn NavLink<'a>(cx: Scope<'a, NavLinkProps<'a>>) -> Element {
-    cx.render(rsx! {
+#[component]
+fn NavLink(props: NavLinkProps) -> Element {
+    rsx! {
         Link {
-            to: cx.props.to,
+            to: props.to,
+            active_class: "active",
             class: css!("
                 display: flex;
                 padding: 10px;
@@ -136,15 +140,15 @@ fn NavLink<'a>(cx: Scope<'a, NavLinkProps<'a>>) -> Element {
                 }
             "),
             Icon {
-                name: cx.props.icon,
+                name: props.icon,
                 size: IconSize::Custom(28),
             }
         }
-    })
+    }
 }
 
-#[derive(Props)]
-struct NavLinkProps<'a> {
-    to: &'a str,
+#[derive(Props, Clone, PartialEq)]
+struct NavLinkProps {
+    to: &'static str,
     icon: IconName,
 }

@@ -3,43 +3,43 @@ use sir::css;
 
 use super::TextSize;
 
-#[derive(Props)]
-pub struct ButtonProps<'a> {
-    onclick: EventHandler<'a, Event<MouseData>>,
+#[derive(Props, Clone, PartialEq)]
+pub struct ButtonProps {
+    onclick: EventHandler<Event<MouseData>>,
     #[props(default)]
     text_size: TextSize,
     #[props(default)]
-    border: ButtonBorder<'a>,
+    border: ButtonBorder,
     #[props(default)]
-    padding: ButtonPadding<'a>,
+    padding: ButtonPadding,
     #[props(default)]
     disabled: bool,
     #[props(default = "")]
-    class: &'a str,
-    children: Element<'a>,
+    class: &'static str,
+    children: Element,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum ButtonBorder<'a> {
+pub enum ButtonBorder {
     #[default]
     None,
     Rounded,
     Circle,
-    Custom(&'a str),
+    Custom(&'static str),
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum ButtonPadding<'a> {
+pub enum ButtonPadding {
     None,
     #[default]
     Small,
     Medium,
     Large,
-    Custom(&'a str),
+    Custom(&'static str),
 }
 
-#[allow(non_snake_case)]
-pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
+#[component]
+pub fn Button(props: ButtonProps) -> Element {
     let btn_css = css!(
         "
         display: inline-flex;
@@ -77,14 +77,14 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
     "
     );
 
-    let border_radius = match cx.props.border {
+    let border_radius = match props.border {
         ButtonBorder::None => "none",
         ButtonBorder::Rounded => "1.0rem",
         ButtonBorder::Circle => "100%",
         ButtonBorder::Custom(v) => v,
     };
 
-    let padding = match cx.props.padding {
+    let padding = match props.padding {
         ButtonPadding::None => "0",
         ButtonPadding::Small => "0.25rem 0.5rem",
         ButtonPadding::Medium => "0.5rem 1.0rem",
@@ -92,17 +92,17 @@ pub fn Button<'a>(cx: Scope<'a, ButtonProps<'a>>) -> Element {
         ButtonPadding::Custom(v) => v,
     };
 
-    cx.render(rsx! {
+    rsx! {
         button {
-            class: format_args!("{} {}", btn_css, cx.props.class),
+            class: format_args!("{} {}", btn_css, props.class),
             border_radius: border_radius,
             padding: padding,
-            font_size: cx.props.text_size.var(),
-            disabled: "{cx.props.disabled}",
-            onclick: |evt| {
-                cx.props.onclick.call(evt);
+            font_size: props.text_size.var(),
+            disabled: "{props.disabled}",
+            onclick: move |evt| {
+                props.onclick.call(evt);
             },
-            &cx.props.children
+            {props.children}
         }
-    })
+    }
 }

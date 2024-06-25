@@ -6,13 +6,13 @@ use database::use_database;
 
 use crate::Route;
 
-#[allow(non_snake_case)]
-pub fn Welcome(cx: Scope) -> Element {
-    let db = use_database(&cx);
-    let cfg = use_config(&cx);
-    let nav = use_navigator(cx);
+#[component]
+pub fn Welcome() -> Element {
+    let db = use_database();
+    let cfg = use_config();
+    let nav = use_navigator();
 
-    cx.render(rsx! {
+    rsx! {
         h1 { "Welcome" }
         button {
             onclick: move |_| {
@@ -23,5 +23,5 @@ pub fn Welcome(cx: Scope) -> Element {
             },
             "New database"
         }
-    })
+    }
 }

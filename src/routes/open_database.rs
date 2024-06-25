@@ -9,15 +9,15 @@ use database::{use_database, Seahash};
 use crate::Route;
 
 #[allow(non_snake_case)]
-pub fn OpenDatabase(cx: Scope) -> Element {
-    let db = use_database(&cx);
-    let cfg = use_config(&cx);
-    let nav = use_navigator(cx);
+pub fn OpenDatabase() -> Element {
+    let db = use_database();
+    let cfg = use_config();
+    let nav = use_navigator();
 
     let path = cfg.get_database_path().unwrap();
 
     if !path.exists() {
-        return cx.render(rsx! {
+        return rsx! {
             h1 { "Database not found" }
             button {
                 onclick: move |_| {
@@ -28,13 +28,13 @@ pub fn OpenDatabase(cx: Scope) -> Element {
                 },
                 "New database"
             }
-        });
+        };
     }
 
     let Ok(_) = db.open(path) else {
-        return cx.render(rsx! {
+        return rsx! {
             h1 { "TODO: Could not open database" }
-        });
+        };
     };
 
     let assets = db
@@ -60,7 +60,7 @@ pub fn OpenDatabase(cx: Scope) -> Element {
 
     nav.push(Route::Review {});
 
-    cx.render(rsx! {
+    rsx! {
         h1 { "Success" }
-    })
+    }
 }

@@ -1,7 +1,10 @@
-use std::{collections::HashSet, path::Path};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    collections::HashSet,
+    path::Path,
+};
 
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 
 use database::*;
 use once_cell::sync::Lazy;
@@ -10,15 +13,15 @@ use sqlite::{params, SqliteId};
 
 use crate::components::{MarkdownEditor, Tags};
 
-#[allow(non_snake_case)]
-pub fn AddCard(cx: Scope) -> Element {
-    let db = use_database(&cx);
-    let content = use_state(&cx, || String::new());
-    let selected_tags = use_ref(&cx, || HashSet::new());
+#[component]
+pub fn AddCard() -> Element {
+    let db = use_database();
+    let mut content = use_signal(|| String::new());
+    let selected_tags = use_signal(|| HashSet::new());
 
-    let html = markdown::to_html(&content);
+    let html = markdown::to_html(content.read().as_str());
 
-    cx.render(rsx! {
+    rsx! {
         h1 { "Add Card" }
         MarkdownEditor {
             text: content,
@@ -31,13 +34,13 @@ pub fn AddCard(cx: Scope) -> Element {
         }
         button {
             onclick: move |_| {
-                add_card(&content.current(), &selected_tags.read(), &db);
+                add_card(&content.read(), &selected_tags.read(), &db);
                 store_assets(&html, &db);
-                content.set(String::new());
+                content.borrow_mut().set(String::new());
             },
             "Add"
         }
-    })
+    }
 }
 
 fn add_card(content: &str, tags: &HashSet<TagId>, db: &Database) {
@@ -55,13 +58,12 @@ fn add_card(content: &str, tags: &HashSet<TagId>, db: &Database) {
     });
 }
 
-#[allow(non_snake_case)]
 #[component]
-pub fn EditCard(cx: Scope, id: SqliteId) -> Element {
-    let db = use_database(&cx);
-    let nav = use_navigator(cx);
-    let card_id = CardId::from_raw(*id);
-    let content = use_state(&cx, || {
+pub fn EditCard(id: SqliteId) -> Element {
+    let db = use_database();
+    let nav = use_navigator();
+    let card_id = CardId::from_raw(id);
+    let content = use_signal(|| {
         db.fetch_one::<String>(
             "SELECT id, content FROM cards WHERE id = ?",
             [card_id],
@@ -69,7 +71,7 @@ pub fn EditCard(cx: Scope, id: SqliteId) -> Element {
         )
         .unwrap()
     });
-    let current_tags = use_ref(&cx, || {
+    let current_tags = use_signal(|| {
         let mut tags = HashSet::<TagId>::new();
         db.fetch_with(
             "SELECT card_id, tag_id FROM card_tag WHERE card_id = ?",
@@ -81,11 +83,11 @@ pub fn EditCard(cx: Scope, id: SqliteId) -> Element {
         .unwrap();
         tags
     });
-    let selected_tags = use_ref(&cx, || current_tags.read().clone());
+    let selected_tags = use_signal(|| current_tags.read().clone());
 
-    let html = markdown::to_html(&content);
+    let html = markdown::to_html(&content.read());
 
-    cx.render(rsx! {
+    rsx! {
         h1 { "Edit Card ({card_id})" }
         MarkdownEditor {
             text: content,
@@ -98,13 +100,13 @@ pub fn EditCard(cx: Scope, id: SqliteId) -> Element {
         }
         button {
             onclick: move |_| {
-                edit_card(card_id, &content.current(), &current_tags.read(), &selected_tags.read(), &db);
+                edit_card(card_id, &content.read(), &current_tags.read(), &selected_tags.read(), &db);
                 store_assets(&html, &db);
                 nav.go_back();
             },
             "Save"
         }
-    })
+    }
 }
 
 fn edit_card(

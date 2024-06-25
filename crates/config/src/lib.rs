@@ -3,19 +3,17 @@ use std::{
     rc::Rc,
 };
 
-use dioxus::prelude::ScopeState;
-
+use dioxus::prelude::*;
 use sqlite::*;
 
 pub type ConfigContext = Rc<Config>;
 
-pub fn provide_config(cx: &ScopeState) -> &ConfigContext {
-    let cfg = ConfigContext::new(Config::new());
-    &*cx.use_hook(|| cx.provide_context(cfg))
+pub fn provide_config() -> ConfigContext {
+    use_context_provider(|| ConfigContext::new(Config::new()))
 }
 
-pub fn use_config(cx: &ScopeState) -> &ConfigContext {
-    cx.use_hook(|| cx.consume_context::<ConfigContext>().unwrap())
+pub fn use_config() -> ConfigContext {
+    use_context::<ConfigContext>()
 }
 
 pub struct Config(Sqlite);

@@ -10,10 +10,10 @@ struct Tag {
     name: String,
 }
 
-#[allow(non_snake_case)]
-pub fn Tags<'a>(cx: Scope<'a, TagsProps>) -> Element<'a> {
-    let db = use_database(&cx);
-    let tags = use_ref(&cx, || {
+#[component]
+pub fn Tags(selected: Signal<HashSet<TagId>>) -> Element {
+    let db = use_database();
+    let tags = use_signal(|| {
         db.fetch_all("SELECT id, name FROM tags", [], |row| {
             Ok(Tag {
                 id: row.get(0)?,
@@ -23,52 +23,47 @@ pub fn Tags<'a>(cx: Scope<'a, TagsProps>) -> Element<'a> {
         .unwrap()
     });
 
-    cx.render(rsx! {
+    rsx! {
         div {
-            tags.read().iter().cloned().map(|tag| {
+            {tags.read().iter().cloned().map(|tag| {
                 rsx! {
                     TagButton {
                         key: "{tag.id}",
                         name: tag.name,
-                        selected: cx.props.selected.read().contains(&tag.id),
+                        selected: selected.read().contains(&tag.id),
                         onclick: move |_| {
-                            if cx.props.selected.read().contains(&tag.id) {
-                                cx.props.selected.write().remove(&tag.id);
+                            if selected.read().contains(&tag.id) {
+                                selected.write().remove(&tag.id);
                             } else {
-                                cx.props.selected.write().insert(tag.id);
+                                selected.write().insert(tag.id);
                             }
                         },
                     }
                 }
-            })
+            })}
         }
-    })
-}
-
-#[derive(Props)]
-pub struct TagsProps<'a> {
-    selected: &'a UseRef<HashSet<TagId>>,
+    }
 }
 
 #[allow(non_snake_case)]
-fn TagButton<'a>(cx: Scope<'a, TagButtonProps>) -> Element<'a> {
-    let color = if cx.props.selected { "blue" } else { "black" };
+fn TagButton(props: TagButtonProps) -> Element {
+    let color = if props.selected { "blue" } else { "black" };
 
-    cx.render(rsx! {
+    rsx! {
         span {
             color: "{color}",
             padding: "5px",
-            onclick: |evt| {
-                cx.props.onclick.call(evt);
+            onclick: move |evt| {
+                props.onclick.call(evt);
             },
-            "{cx.props.name}"
+            "{props.name}"
         },
-    })
+    }
 }
 
-#[derive(Props)]
-struct TagButtonProps<'a> {
+#[derive(Props, PartialEq, Clone)]
+struct TagButtonProps {
     name: String,
     selected: bool,
-    onclick: EventHandler<'a, Event<MouseData>>,
+    onclick: EventHandler<Event<MouseData>>,
 }

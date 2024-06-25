@@ -5,25 +5,24 @@ use crate::components::Button;
 
 use super::{ButtonBorder, ButtonPadding, TextSize};
 
-#[derive(Props)]
-pub struct DropdownProps<'a> {
+#[derive(Props, PartialEq, Clone)]
+pub struct DropdownProps {
     #[props(default)]
     text_size: TextSize,
     #[props(default)]
-    border: ButtonBorder<'a>,
+    border: ButtonBorder,
     #[props(default)]
-    padding: ButtonPadding<'a>,
+    padding: ButtonPadding,
     #[props(default)]
     disabled: bool,
 
-    body: Element<'a>,
-    children: Element<'a>,
+    body: Element,
+    children: Element,
 }
 
 #[allow(non_snake_case)]
-pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
-    let eval = use_eval(&cx);
-    let uuid = *cx.use_hook(|| uuid::Uuid::new_v4());
+pub fn Dropdown<'a>(props: DropdownProps) -> Element {
+    let uuid = use_hook(|| uuid::Uuid::new_v4());
 
     global_css!(
         "
@@ -48,7 +47,7 @@ pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
         ));
     };
 
-    cx.render(rsx! {
+    rsx! {
         div {
             id: "{uuid}",
             class: css!("
@@ -57,12 +56,12 @@ pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
             "),
 
             Button {
-                text_size: cx.props.text_size,
-                border: cx.props.border,
-                padding: cx.props.padding,
-                disabled: cx.props.disabled,
+                text_size: props.text_size,
+                border: props.border,
+                padding: props.padding,
+                disabled: props.disabled,
                 onclick: on_click,
-                &cx.props.body,
+                {props.body}
             }
 
             div {
@@ -75,8 +74,8 @@ pub fn Dropdown<'a>(cx: Scope<'a, DropdownProps<'a>>) -> Element {
                     flex-direction: column;
                     background-color: var(--surface-color);
                 "),
-                &cx.props.children
+                {props.children}
             }
         }
-    })
+    }
 }

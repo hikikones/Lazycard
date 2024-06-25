@@ -28,20 +28,20 @@ pub enum IconSize {
     Custom(u32),
 }
 
-#[derive(Props, PartialEq)]
-pub struct IconProps<'a> {
+#[derive(Props, PartialEq, Clone)]
+pub struct IconProps {
     name: IconName,
     #[props(default)]
     size: IconSize,
     #[props(default = "currentColor")]
-    fill: &'a str,
+    fill: &'static str,
     #[props(default = "")]
-    class: &'a str,
+    class: &'static str,
 }
 
 #[allow(non_snake_case)]
-pub fn Icon<'a>(cx: Scope<'a, IconProps<'a>>) -> Element {
-    let size = match cx.props.size {
+pub fn Icon(props: IconProps) -> Element {
+    let size = match props.size {
         IconSize::Tiny => 16,
         IconSize::Small => 20,
         IconSize::Medium => 24,
@@ -50,19 +50,19 @@ pub fn Icon<'a>(cx: Scope<'a, IconProps<'a>>) -> Element {
         IconSize::Custom(v) => v,
     };
 
-    cx.render(rsx! {
+    rsx! {
         svg {
             width: "{size}",
             height: "{size}",
-            fill: "{cx.props.fill}",
-            class: "{cx.props.class}",
+            fill: "{props.fill}",
+            class: "{props.class}",
             view_box: "0 0 48 48",
 
             path {
-                d: cx.props.name.d(),
+                d: props.name.d(),
             }
         }
-    })
+    }
 }
 
 impl IconName {
