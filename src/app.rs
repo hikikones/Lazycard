@@ -1,15 +1,25 @@
-use super::*;
+use crossterm::event::{Event, KeyCode, KeyEventKind};
+use layout::Flex;
+use ratatui::{prelude::*, DefaultTerminal};
+
+use crate::{database::*, navigation::*};
 
 pub struct App {
     running: bool,
     route: Route,
+    db: Database,
 }
 
 impl App {
     pub fn new() -> Self {
+        let mut db = Database::new();
+        db.insert(CardId(1), Card::new("first card"));
+        db.insert(CardId(2), Card::new("second card"));
+
         Self {
             running: true,
             route: Route::Review,
+            db,
         }
     }
 

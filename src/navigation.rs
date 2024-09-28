@@ -1,6 +1,5 @@
-use crossterm::event::{KeyEvent, KeyModifiers};
-
-use super::*;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::{prelude::*, widgets::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
