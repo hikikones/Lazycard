@@ -1,4 +1,4 @@
-use crossterm::event::ModifierKeyCode;
+use crossterm::event::{KeyEvent, KeyModifiers};
 
 use super::*;
 
@@ -12,9 +12,6 @@ pub enum Route {
 pub struct Review;
 
 impl Review {
-    pub const TITLE: &str = "Review";
-    pub const FOOTER: &str = "'e' for edit";
-
     pub const fn new() -> Self {
         Self
     }
@@ -23,8 +20,8 @@ impl Review {
         Paragraph::new("review...").render(body, buf);
     }
 
-    pub fn input(&mut self, key: KeyCode) -> Option<Route> {
-        if let KeyCode::Char('e') = key {
+    pub fn input(&mut self, key: KeyEvent) -> Option<Route> {
+        if let KeyCode::Char('e') = key.code {
             return Some(Route::EditCard);
         }
 
@@ -32,68 +29,51 @@ impl Review {
     }
 }
 
-pub struct AddCard {
-    ctrl: bool,
-}
+pub struct AddCard;
 
 impl AddCard {
-    pub const TITLE: &str = "Add Card";
-    pub const FOOTER: &str = "'^s' for save";
-
     pub const fn new() -> Self {
-        Self { ctrl: false }
+        Self
     }
 
     pub fn render(&self, body: Rect, buf: &mut Buffer) {
         Paragraph::new("add card...").render(body, buf);
     }
 
-    pub fn input(&mut self, key: KeyCode) -> Option<Route> {
-        match key {
-            KeyCode::Char('s') | KeyCode::Char('c') => {
-                if self.ctrl {
-                    //todo
+    pub fn input(&mut self, key: KeyEvent) -> Option<Route> {
+        match key.code {
+            KeyCode::Char('s') => {
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
+                    // todo
                 }
             }
-            KeyCode::Modifier(ModifierKeyCode::LeftControl | ModifierKeyCode::RightControl) => {
-                self.ctrl = true;
-            }
-            _ => self.ctrl = false,
+            _ => {}
         }
 
         None
     }
 }
 
-pub struct EditCard {
-    ctrl: bool,
-}
+pub struct EditCard;
 
 impl EditCard {
-    pub const TITLE: &str = "Edit Card";
-    pub const FOOTER: &str = "'^s' for save, '^c' for cancel";
-
     pub const fn new() -> Self {
-        Self { ctrl: false }
+        Self
     }
 
     pub fn render(&self, body: Rect, buf: &mut Buffer) {
         Paragraph::new("edit card...").render(body, buf);
     }
 
-    pub fn input(&mut self, key: KeyCode) -> Option<Route> {
-        match key {
+    pub fn input(&mut self, key: KeyEvent) -> Option<Route> {
+        match key.code {
             KeyCode::Char('s') | KeyCode::Char('c') => {
-                if self.ctrl {
+                if key.modifiers.contains(KeyModifiers::CONTROL) {
                     // TODO: go back
                     return Some(Route::Review);
                 }
             }
-            KeyCode::Modifier(ModifierKeyCode::LeftControl | ModifierKeyCode::RightControl) => {
-                println!("oyoyoy");
-                self.ctrl = true;
-            }
-            _ => self.ctrl = false,
+            _ => {}
         }
 
         None

@@ -29,9 +29,9 @@ impl App {
                         },
                         _ => {
                             if let Some(route) = match current_route {
-                                Route::Review => Review::new().input(key.code),
-                                Route::AddCard => AddCard::new().input(key.code),
-                                Route::EditCard => EditCard::new().input(key.code),
+                                Route::Review => Review::new().input(key),
+                                Route::AddCard => AddCard::new().input(key),
+                                Route::EditCard => EditCard::new().input(key),
                             } {
                                 self.route = route;
                             }
