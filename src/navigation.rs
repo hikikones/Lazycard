@@ -1,8 +1,8 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 
 use crate::{
-    app::{InputEvent, Message},
+    app::{Areas, InputEvent, Message},
     database::*,
 };
 
@@ -53,40 +53,52 @@ impl Review {
         }
     }
 
-    pub fn render(&self, body: Rect, buf: &mut Buffer) {
+    pub fn render(&self, areas: &Areas, buf: &mut Buffer) {
+        Line::from("Lazycard — Review")
+            .centered()
+            .render(areas.header, buf);
+
         if self.text.is_empty() {
             Paragraph::new("no cards to review...")
                 .centered()
-                .render(body, buf);
-            return;
-        };
+                .render(areas.body, buf);
+        } else {
+            Paragraph::new(self.text.as_str()).render(areas.body, buf);
+        }
 
-        Paragraph::new(self.text.as_str()).render(body, buf);
+        Line::from(
+            "[esc]Quit  [tab]Menu  [e]Edit  [del]Delete  [space]Show  [↑]Yes  [↓]No  [→]Next",
+        )
+        .centered()
+        .render(areas.footer, buf);
     }
 
-    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Option<Message> {
+    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Message {
         if let InputEvent::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
+                    KeyCode::Esc => return Message::Quit,
+                    KeyCode::Tab => return Message::Route(Route::AddCard),
+                    KeyCode::Char('e') => return Message::Route(Route::EditCard),
+                    KeyCode::Delete => todo!("delete"),
                     KeyCode::Char(' ') => todo!("show answer"),
+                    KeyCode::Up => todo!("yes"),
+                    KeyCode::Down => todo!("no"),
                     KeyCode::Right => {
                         self.index = (self.index + 1) % self.due.len();
                         if let Some(id) = self.due.get(self.index) {
                             if let Some(card) = db.get(id) {
                                 self.text = card.0.clone();
-                                return Some(Message::Render);
+                                return Message::Render;
                             }
                         }
                     }
-                    KeyCode::Char('e') => return Some(Message::Route(Route::EditCard)),
-                    KeyCode::Tab => return Some(Message::Route(Route::AddCard)),
-                    KeyCode::Esc => return Some(Message::Quit),
                     _ => {}
                 }
             }
         }
 
-        None
+        Message::None
     }
 
     pub fn exit(&mut self) {
@@ -107,27 +119,35 @@ impl AddCard {
         //todo
     }
 
-    pub fn render(&self, body: Rect, buf: &mut Buffer) {
-        Paragraph::new("add card...").render(body, buf);
+    pub fn render(&self, areas: &Areas, buf: &mut Buffer) {
+        Line::from("Lazycard — Add Card")
+            .centered()
+            .render(areas.header, buf);
+
+        Paragraph::new("add card...").render(areas.body, buf);
+
+        Line::from("[esc]Quit  [tab]Menu  [ctrl-s]Save")
+            .centered()
+            .render(areas.footer, buf);
     }
 
-    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Option<Message> {
+    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Message {
         if let InputEvent::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
+                    KeyCode::Esc => return Message::Quit,
+                    KeyCode::Tab => return Message::Route(Route::Review),
                     KeyCode::Char('s') => {
                         if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            // todo
+                            todo!("save");
                         }
                     }
-                    KeyCode::Tab => return Some(Message::Route(Route::Review)),
-                    KeyCode::Esc => return Some(Message::Quit),
                     _ => {}
                 }
             }
         }
 
-        None
+        Message::None
     }
 
     pub fn exit(&mut self) {
@@ -146,27 +166,41 @@ impl EditCard {
         //todo
     }
 
-    pub fn render(&self, body: Rect, buf: &mut Buffer) {
-        Paragraph::new("edit card...").render(body, buf);
+    pub fn render(&self, areas: &Areas, buf: &mut Buffer) {
+        Line::from("Lazycard — Edit Card")
+            .centered()
+            .render(areas.header, buf);
+
+        Paragraph::new("edit card...").render(areas.body, buf);
+
+        Line::from("[esc]Quit  [ctrl-s]Save  [ctrl-c]Cancel")
+            .centered()
+            .render(areas.footer, buf);
     }
 
-    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Option<Message> {
+    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Message {
         if let InputEvent::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
-                    KeyCode::Char('s') | KeyCode::Char('c') => {
+                    KeyCode::Esc => return Message::Quit,
+                    KeyCode::Char('s') => {
                         if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            // todo: go back
-                            return Some(Message::Route(Route::Review));
+                            // todo: save and go back
+                            return Message::Route(Route::Review);
                         }
                     }
-                    KeyCode::Esc => return Some(Message::Quit),
+                    KeyCode::Char('c') => {
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            // todo: cancel and go back
+                            return Message::Route(Route::Review);
+                        }
+                    }
                     _ => {}
                 }
             }
         }
 
-        None
+        Message::None
     }
 
     pub fn exit(&mut self) {

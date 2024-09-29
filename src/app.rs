@@ -1,6 +1,6 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{Event, KeyEvent};
 use layout::Flex;
-use ratatui::{prelude::*, DefaultTerminal};
+use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
 
 use crate::{database::*, navigation::*};
 
@@ -12,6 +12,7 @@ pub struct App {
 }
 
 pub enum Message {
+    None,
     Render,
     Route(Route),
     Quit,
@@ -20,6 +21,12 @@ pub enum Message {
 pub enum InputEvent {
     Key(KeyEvent),
     Paste(String),
+}
+
+pub struct Areas {
+    pub header: Rect,
+    pub body: Rect,
+    pub footer: Rect,
 }
 
 impl App {
@@ -39,7 +46,7 @@ impl App {
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
         self.pages.review.enter(&self.db);
-        terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+        self.render(&mut terminal)?;
 
         while self.running {
             let message = match crossterm::event::read()? {
@@ -61,82 +68,66 @@ impl App {
                         Route::EditCard => self.pages.edit_card.input(ev, db),
                     }
                 }
-                Event::Resize(_, _) => Some(Message::Render), // todo: redraw
-                _ => None,
+                Event::Resize(_, _) => Message::Render,
+                _ => Message::None,
             };
 
-            if let Some(message) = message {
-                match message {
-                    Message::Render => {
-                        terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+            match message {
+                Message::None => {}
+                Message::Render => {
+                    self.render(&mut terminal)?;
+                }
+                Message::Route(route) => {
+                    match self.route {
+                        Route::Review => self.pages.review.exit(),
+                        Route::AddCard => self.pages.add_card.exit(),
+                        Route::EditCard => self.pages.edit_card.exit(),
                     }
-                    Message::Route(route) => {
-                        match self.route {
-                            Route::Review => self.pages.review.exit(),
-                            Route::AddCard => self.pages.add_card.exit(),
-                            Route::EditCard => self.pages.edit_card.exit(),
-                        }
 
-                        self.route = route;
+                    self.route = route;
 
-                        match route {
-                            Route::Review => self.pages.review.enter(&self.db),
-                            Route::AddCard => self.pages.add_card.enter(&self.db),
-                            Route::EditCard => self.pages.edit_card.enter(&self.db),
-                        }
-
-                        terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+                    match route {
+                        Route::Review => self.pages.review.enter(&self.db),
+                        Route::AddCard => self.pages.add_card.enter(&self.db),
+                        Route::EditCard => self.pages.edit_card.enter(&self.db),
                     }
-                    Message::Quit => {
-                        self.running = false;
-                    }
+
+                    self.render(&mut terminal)?;
+                }
+                Message::Quit => {
+                    self.running = false;
                 }
             }
         }
 
         Ok(())
     }
-}
 
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let [header, body, footer] = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Min(0),
-            Constraint::Length(1),
-        ])
-        .areas(area);
-        let body = center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
+    fn render<'a>(&'a self, terminal: &'a mut DefaultTerminal) -> std::io::Result<CompletedFrame> {
+        terminal.draw(|frame| {
+            let area = frame.area();
+            let buf = frame.buffer_mut();
 
-        match self.route {
-            Route::Review => {
-                Line::from("Lazycard — Review")
-                    .centered()
-                    .render(header, buf);
-                self.pages.review.render(body, buf);
-                Line::from("ESC to quit  TAB to menu  'e' to edit")
-                    .centered()
-                    .render(footer, buf);
+            let [header, body, footer] = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Min(0),
+                Constraint::Length(1),
+            ])
+            .areas(area);
+            let body = center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
+
+            let areas = Areas {
+                header,
+                body,
+                footer,
+            };
+
+            match self.route {
+                Route::Review => self.pages.review.render(&areas, buf),
+                Route::AddCard => self.pages.add_card.render(&areas, buf),
+                Route::EditCard => self.pages.edit_card.render(&areas, buf),
             }
-            Route::AddCard => {
-                Line::from("Lazycard — Add Card")
-                    .centered()
-                    .render(header, buf);
-                self.pages.add_card.render(body, buf);
-                Line::from("ESC to quit  TAB to menu  '^s' to save")
-                    .centered()
-                    .render(footer, buf);
-            }
-            Route::EditCard => {
-                Line::from("Lazycard — Edit Card")
-                    .centered()
-                    .render(header, buf);
-                self.pages.edit_card.render(body, buf);
-                Line::from("ESC to quit  '^s' to save '^c' to cancel")
-                    .centered()
-                    .render(footer, buf);
-            }
-        }
+        })
     }
 }
 
