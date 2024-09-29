@@ -7,6 +7,7 @@ use crate::{database::*, navigation::*};
 pub struct App {
     running: bool,
     route: Route,
+    pages: Pages,
     db: Database,
 }
 
@@ -19,11 +20,14 @@ impl App {
         Self {
             running: true,
             route: Route::Review,
+            pages: Pages::new(),
             db,
         }
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
+        self.pages.review.enter(&self.db);
+
         while self.running {
             terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
 
@@ -39,9 +43,9 @@ impl App {
                         },
                         _ => {
                             if let Some(route) = match current_route {
-                                Route::Review => Review::new().input(key),
-                                Route::AddCard => AddCard::new().input(key),
-                                Route::EditCard => EditCard::new().input(key),
+                                Route::Review => self.pages.review.input(key, &mut self.db),
+                                Route::AddCard => self.pages.add_card.input(key, &mut self.db),
+                                Route::EditCard => self.pages.edit_card.input(key, &mut self.db),
                             } {
                                 self.route = route;
                             }
@@ -50,8 +54,18 @@ impl App {
                 }
             }
 
-            if self.route != current_route {
-                //todo
+            if current_route != self.route {
+                match current_route {
+                    Route::Review => self.pages.review.exit(),
+                    Route::AddCard => self.pages.add_card.exit(),
+                    Route::EditCard => self.pages.edit_card.exit(),
+                }
+
+                match self.route {
+                    Route::Review => self.pages.review.enter(&self.db),
+                    Route::AddCard => self.pages.add_card.enter(&self.db),
+                    Route::EditCard => self.pages.edit_card.enter(&self.db),
+                }
             }
         }
 
@@ -74,7 +88,7 @@ impl Widget for &App {
                 Line::from("Lazycard — Review")
                     .centered()
                     .render(header, buf);
-                Review::new().render(body, buf);
+                self.pages.review.render(body, buf);
                 Line::from("ESC to quit  TAB to menu  'e' to edit")
                     .centered()
                     .render(footer, buf);
@@ -83,7 +97,7 @@ impl Widget for &App {
                 Line::from("Lazycard — Add Card")
                     .centered()
                     .render(header, buf);
-                AddCard::new().render(body, buf);
+                self.pages.add_card.render(body, buf);
                 Line::from("ESC to quit  TAB to menu  '^s' to save")
                     .centered()
                     .render(footer, buf);
@@ -92,7 +106,7 @@ impl Widget for &App {
                 Line::from("Lazycard — Edit Card")
                     .centered()
                     .render(header, buf);
-                EditCard::new().render(body, buf);
+                self.pages.edit_card.render(body, buf);
                 Line::from("ESC to quit  '^s' to save '^c' to cancel")
                     .centered()
                     .render(footer, buf);
