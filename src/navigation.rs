@@ -1,7 +1,10 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 
-use crate::database::*;
+use crate::{
+    app::{InputEvent, Message},
+    database::*,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -27,46 +30,68 @@ impl Pages {
 }
 
 pub struct Review {
-    current: CardId,
-    card: Option<Card>,
+    due: Vec<CardId>,
+    index: usize,
+    text: String,
 }
 
 impl Review {
     pub const fn new() -> Self {
         Self {
-            current: CardId(0),
-            card: None,
+            due: Vec::new(),
+            index: 0,
+            text: String::new(),
         }
     }
 
     pub fn enter(&mut self, db: &Database) {
-        if let Some((id, card)) = db.iter().filter(|(id, _)| id.0 != self.current.0).next() {
-            self.current = *id;
-            self.card = Some(card.clone())
+        self.due.extend(db.iter().map(|(id, _)| id));
+        if let Some(id) = self.due.get(self.index) {
+            if let Some(card) = db.get(id) {
+                self.text = card.0.clone();
+            }
         }
     }
 
     pub fn render(&self, body: Rect, buf: &mut Buffer) {
-        let text = match self.card.as_ref() {
-            Some(card) => &card.0,
-            None => "no cards to review...",
+        if self.text.is_empty() {
+            Paragraph::new("no cards to review...")
+                .centered()
+                .render(body, buf);
+            return;
         };
-        Paragraph::new(text).render(body, buf);
+
+        Paragraph::new(self.text.as_str()).render(body, buf);
     }
 
-    pub fn input(&mut self, key: KeyEvent, db: &mut Database) -> Option<Route> {
-        match key.code {
-            KeyCode::Null => todo!(),
-            KeyCode::Right => self.enter(db),
-            KeyCode::Char('e') => return Some(Route::EditCard),
-            _ => {}
+    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Option<Message> {
+        if let InputEvent::Key(key) = event {
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char(' ') => todo!("show answer"),
+                    KeyCode::Right => {
+                        self.index = (self.index + 1) % self.due.len();
+                        if let Some(id) = self.due.get(self.index) {
+                            if let Some(card) = db.get(id) {
+                                self.text = card.0.clone();
+                            }
+                        }
+                    }
+                    KeyCode::Char('e') => return Some(Message::Route(Route::EditCard)),
+                    KeyCode::Tab => return Some(Message::Route(Route::AddCard)),
+                    KeyCode::Esc => return Some(Message::Quit),
+                    _ => {}
+                }
+            }
         }
 
         None
     }
 
     pub fn exit(&mut self) {
-        self.card = None;
+        self.due.clear();
+        self.index = 0;
+        self.text.clear();
     }
 }
 
@@ -85,14 +110,20 @@ impl AddCard {
         Paragraph::new("add card...").render(body, buf);
     }
 
-    pub fn input(&mut self, key: KeyEvent, db: &mut Database) -> Option<Route> {
-        match key.code {
-            KeyCode::Char('s') => {
-                if key.modifiers.contains(KeyModifiers::CONTROL) {
-                    // todo
+    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Option<Message> {
+        if let InputEvent::Key(key) = event {
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char('s') => {
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            // todo
+                        }
+                    }
+                    KeyCode::Tab => return Some(Message::Route(Route::Review)),
+                    KeyCode::Esc => return Some(Message::Quit),
+                    _ => {}
                 }
             }
-            _ => {}
         }
 
         None
@@ -118,15 +149,20 @@ impl EditCard {
         Paragraph::new("edit card...").render(body, buf);
     }
 
-    pub fn input(&mut self, key: KeyEvent, db: &mut Database) -> Option<Route> {
-        match key.code {
-            KeyCode::Char('s') | KeyCode::Char('c') => {
-                if key.modifiers.contains(KeyModifiers::CONTROL) {
-                    // TODO: go back
-                    return Some(Route::Review);
+    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Option<Message> {
+        if let InputEvent::Key(key) = event {
+            if key.kind == KeyEventKind::Press {
+                match key.code {
+                    KeyCode::Char('s') | KeyCode::Char('c') => {
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            // todo: go back
+                            return Some(Message::Route(Route::Review));
+                        }
+                    }
+                    KeyCode::Esc => return Some(Message::Quit),
+                    _ => {}
                 }
             }
-            _ => {}
         }
 
         None

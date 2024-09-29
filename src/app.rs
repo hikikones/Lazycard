@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use layout::Flex;
 use ratatui::{prelude::*, DefaultTerminal};
 
@@ -11,11 +11,22 @@ pub struct App {
     db: Database,
 }
 
+pub enum Message {
+    Route(Route),
+    Quit,
+}
+
+pub enum InputEvent {
+    Key(KeyEvent),
+    Paste(String),
+}
+
 impl App {
     pub fn new() -> Self {
         let mut db = Database::new();
         db.insert(CardId(1), Card::new("first card"));
         db.insert(CardId(2), Card::new("second card"));
+        db.insert(CardId(3), Card::new("third card"));
 
         Self {
             running: true,
@@ -31,40 +42,49 @@ impl App {
         while self.running {
             terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
 
-            let current_route = self.route;
-            if let Event::Key(key) = crossterm::event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Esc | KeyCode::Char('q') => self.running = false,
-                        KeyCode::Tab => match current_route {
-                            Route::Review => self.route = Route::AddCard,
-                            Route::AddCard => self.route = Route::Review,
-                            Route::EditCard => {}
-                        },
-                        _ => {
-                            if let Some(route) = match current_route {
-                                Route::Review => self.pages.review.input(key, &mut self.db),
-                                Route::AddCard => self.pages.add_card.input(key, &mut self.db),
-                                Route::EditCard => self.pages.edit_card.input(key, &mut self.db),
-                            } {
-                                self.route = route;
-                            }
-                        }
+            let message = match crossterm::event::read()? {
+                Event::Key(key) => {
+                    let ev = InputEvent::Key(key);
+                    let db = &mut self.db;
+                    match self.route {
+                        Route::Review => self.pages.review.input(ev, db),
+                        Route::AddCard => self.pages.add_card.input(ev, db),
+                        Route::EditCard => self.pages.edit_card.input(ev, db),
                     }
                 }
-            }
-
-            if current_route != self.route {
-                match current_route {
-                    Route::Review => self.pages.review.exit(),
-                    Route::AddCard => self.pages.add_card.exit(),
-                    Route::EditCard => self.pages.edit_card.exit(),
+                Event::Paste(s) => {
+                    let ev = InputEvent::Paste(s);
+                    let db = &mut self.db;
+                    match self.route {
+                        Route::Review => self.pages.review.input(ev, db),
+                        Route::AddCard => self.pages.add_card.input(ev, db),
+                        Route::EditCard => self.pages.edit_card.input(ev, db),
+                    }
                 }
+                Event::Resize(_, _) => None, // todo: redraw
+                _ => None,
+            };
 
-                match self.route {
-                    Route::Review => self.pages.review.enter(&self.db),
-                    Route::AddCard => self.pages.add_card.enter(&self.db),
-                    Route::EditCard => self.pages.edit_card.enter(&self.db),
+            if let Some(message) = message {
+                match message {
+                    Message::Route(route) => {
+                        match self.route {
+                            Route::Review => self.pages.review.exit(),
+                            Route::AddCard => self.pages.add_card.exit(),
+                            Route::EditCard => self.pages.edit_card.exit(),
+                        }
+
+                        self.route = route;
+
+                        match route {
+                            Route::Review => self.pages.review.enter(&self.db),
+                            Route::AddCard => self.pages.add_card.enter(&self.db),
+                            Route::EditCard => self.pages.edit_card.enter(&self.db),
+                        }
+                    }
+                    Message::Quit => {
+                        self.running = false;
+                    }
                 }
             }
         }
@@ -115,8 +135,8 @@ impl Widget for &App {
     }
 }
 
-fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
-    center_vertical(center_horizontal(area, horizontal), vertical)
+fn _center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
+    _center_vertical(center_horizontal(area, horizontal), vertical)
 }
 
 fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {
@@ -126,7 +146,7 @@ fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {
     area
 }
 
-fn center_vertical(area: Rect, constraint: Constraint) -> Rect {
+fn _center_vertical(area: Rect, constraint: Constraint) -> Rect {
     let [area] = Layout::vertical([constraint])
         .flex(Flex::Center)
         .areas(area);
