@@ -11,6 +11,11 @@ impl Database {
             btree: Default::default(),
         }
     }
+
+    pub fn add(&mut self, card: Card) {
+        let last_id = self.keys().last().copied().unwrap_or_default().0;
+        self.insert(CardId(last_id + 1), card);
+    }
 }
 
 impl std::ops::Deref for Database {
@@ -27,10 +32,10 @@ impl std::ops::DerefMut for Database {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CardId(pub u64);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Card(pub String);
 
 impl Card {

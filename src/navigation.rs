@@ -1,5 +1,6 @@
 use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
+use tui_textarea::TextArea;
 
 use crate::{
     app::{Areas, InputEvent, Message},
@@ -48,7 +49,7 @@ impl Review {
         self.due.extend(db.iter().map(|(id, _)| id));
         if let Some(id) = self.due.get(self.index) {
             if let Some(card) = db.get(id) {
-                self.text = card.0.clone();
+                self.text.push_str(card.0.as_str());
             }
         }
     }
@@ -82,13 +83,14 @@ impl Review {
                     KeyCode::Char('e') => return Message::Route(Route::EditCard),
                     KeyCode::Delete => todo!("delete"),
                     KeyCode::Char(' ') => todo!("show answer"),
-                    KeyCode::Up => todo!("yes"),
-                    KeyCode::Down => todo!("no"),
+                    KeyCode::Up => todo!("yes"), // fixme: activates when scrolling with touchpad?
+                    KeyCode::Down => todo!("no"), // fixme: activates when scrolling with touchpad?
                     KeyCode::Right => {
                         self.index = (self.index + 1) % self.due.len();
                         if let Some(id) = self.due.get(self.index) {
                             if let Some(card) = db.get(id) {
-                                self.text = card.0.clone();
+                                self.text.clear();
+                                self.text.push_str(card.0.as_str());
                                 return Message::Render;
                             }
                         }
@@ -108,11 +110,15 @@ impl Review {
     }
 }
 
-pub struct AddCard;
+pub struct AddCard {
+    editor: TextArea<'static>,
+}
 
 impl AddCard {
-    pub const fn new() -> Self {
-        Self
+    pub fn new() -> Self {
+        Self {
+            editor: TextArea::default(),
+        }
     }
 
     pub fn enter(&mut self, db: &Database) {
@@ -124,9 +130,9 @@ impl AddCard {
             .centered()
             .render(areas.header, buf);
 
-        Paragraph::new("add card...").render(areas.body, buf);
+        self.editor.render(areas.body, buf);
 
-        Line::from("[esc]Quit  [tab]Menu  [ctrl-s]Save")
+        Line::from("[esc]Quit  [tab]Menu  [ctrl-s]Save  [ctrl-p]Preview")
             .centered()
             .render(areas.footer, buf);
     }
@@ -139,10 +145,27 @@ impl AddCard {
                     KeyCode::Tab => return Message::Route(Route::Review),
                     KeyCode::Char('s') => {
                         if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            todo!("save");
+                            let content = self.editor.lines().join("\n");
+                            self.editor = TextArea::default();
+                            db.add(Card::new(content));
+                            return Message::Render;
+                        } else {
+                            self.editor.input(key);
+                            return Message::Render;
                         }
                     }
-                    _ => {}
+                    KeyCode::Char('p') => {
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            todo!("preview");
+                        } else {
+                            self.editor.input(key);
+                            return Message::Render;
+                        }
+                    }
+                    _ => {
+                        self.editor.input(key);
+                        return Message::Render;
+                    }
                 }
             }
         }

@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 crossterm = "0.28"
 ratatui = "0.28"
+tui-textarea = "0.6"
