@@ -74,6 +74,7 @@ impl Review {
                         if let Some(id) = self.due.get(self.index) {
                             if let Some(card) = db.get(id) {
                                 self.text = card.0.clone();
+                                return Some(Message::Render);
                             }
                         }
                     }

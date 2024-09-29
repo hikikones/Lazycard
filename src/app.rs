@@ -12,6 +12,7 @@ pub struct App {
 }
 
 pub enum Message {
+    Render,
     Route(Route),
     Quit,
 }
@@ -38,10 +39,9 @@ impl App {
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
         self.pages.review.enter(&self.db);
+        terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
 
         while self.running {
-            terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
-
             let message = match crossterm::event::read()? {
                 Event::Key(key) => {
                     let ev = InputEvent::Key(key);
@@ -61,12 +61,15 @@ impl App {
                         Route::EditCard => self.pages.edit_card.input(ev, db),
                     }
                 }
-                Event::Resize(_, _) => None, // todo: redraw
+                Event::Resize(_, _) => Some(Message::Render), // todo: redraw
                 _ => None,
             };
 
             if let Some(message) = message {
                 match message {
+                    Message::Render => {
+                        terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
+                    }
                     Message::Route(route) => {
                         match self.route {
                             Route::Review => self.pages.review.exit(),
@@ -81,6 +84,8 @@ impl App {
                             Route::AddCard => self.pages.add_card.enter(&self.db),
                             Route::EditCard => self.pages.edit_card.enter(&self.db),
                         }
+
+                        terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
                     }
                     Message::Quit => {
                         self.running = false;
