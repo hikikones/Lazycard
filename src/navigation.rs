@@ -64,7 +64,9 @@ impl Review {
                 .centered()
                 .render(areas.body, buf);
         } else {
-            Paragraph::new(self.text.as_str()).render(areas.body, buf);
+            Paragraph::new(self.text.as_str())
+                .wrap(Wrap { trim: false })
+                .render(areas.body, buf);
         }
 
         Line::from(
