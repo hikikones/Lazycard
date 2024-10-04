@@ -1,6 +1,6 @@
 mod app;
 mod database;
-mod navigation;
+mod pages;
 
 fn main() -> std::io::Result<()> {
     app::App::new().run(ratatui::init())?;

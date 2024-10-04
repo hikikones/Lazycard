@@ -2,7 +2,7 @@ use crossterm::event::{Event, KeyEvent};
 use layout::Flex;
 use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
 
-use crate::{database::*, navigation::*};
+use crate::{database::*, pages::*};
 
 pub struct App {
     running: bool,
@@ -45,7 +45,7 @@ impl App {
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
-        self.pages.review.enter(&self.db);
+        self.pages.review.on_enter(&self.db);
         self.render(&mut terminal)?;
 
         while self.running {
@@ -54,18 +54,18 @@ impl App {
                     let ev = InputEvent::Key(key);
                     let db = &mut self.db;
                     match self.route {
-                        Route::Review => self.pages.review.input(ev, db),
-                        Route::AddCard => self.pages.add_card.input(ev, db),
-                        Route::EditCard => self.pages.edit_card.input(ev, db),
+                        Route::Review => self.pages.review.on_input(ev, db),
+                        Route::AddCard => self.pages.add_card.on_input(ev, db),
+                        Route::EditCard => self.pages.edit_card.on_input(ev, db),
                     }
                 }
                 Event::Paste(s) => {
                     let ev = InputEvent::Paste(s);
                     let db = &mut self.db;
                     match self.route {
-                        Route::Review => self.pages.review.input(ev, db),
-                        Route::AddCard => self.pages.add_card.input(ev, db),
-                        Route::EditCard => self.pages.edit_card.input(ev, db),
+                        Route::Review => self.pages.review.on_input(ev, db),
+                        Route::AddCard => self.pages.add_card.on_input(ev, db),
+                        Route::EditCard => self.pages.edit_card.on_input(ev, db),
                     }
                 }
                 Event::Resize(_, _) => Message::Render,
@@ -79,17 +79,17 @@ impl App {
                 }
                 Message::Route(route) => {
                     match self.route {
-                        Route::Review => self.pages.review.exit(),
-                        Route::AddCard => self.pages.add_card.exit(),
-                        Route::EditCard => self.pages.edit_card.exit(),
+                        Route::Review => self.pages.review.on_exit(),
+                        Route::AddCard => self.pages.add_card.on_exit(),
+                        Route::EditCard => self.pages.edit_card.on_exit(),
                     }
 
                     self.route = route;
 
                     match route {
-                        Route::Review => self.pages.review.enter(&self.db),
-                        Route::AddCard => self.pages.add_card.enter(&self.db),
-                        Route::EditCard => self.pages.edit_card.enter(&self.db),
+                        Route::Review => self.pages.review.on_enter(&self.db),
+                        Route::AddCard => self.pages.add_card.on_enter(&self.db),
+                        Route::EditCard => self.pages.edit_card.on_enter(&self.db),
                     }
 
                     self.render(&mut terminal)?;
@@ -123,9 +123,9 @@ impl App {
             };
 
             match self.route {
-                Route::Review => self.pages.review.render(&areas, buf),
-                Route::AddCard => self.pages.add_card.render(&areas, buf),
-                Route::EditCard => self.pages.edit_card.render(&areas, buf),
+                Route::Review => self.pages.review.on_render(&areas, buf),
+                Route::AddCard => self.pages.add_card.on_render(&areas, buf),
+                Route::EditCard => self.pages.edit_card.on_render(&areas, buf),
             }
         })
     }

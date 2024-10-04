@@ -45,7 +45,7 @@ impl Review {
         }
     }
 
-    pub fn enter(&mut self, db: &Database) {
+    pub fn on_enter(&mut self, db: &Database) {
         self.due.extend(db.iter().map(|(id, _)| id));
         if let Some(id) = self.due.get(self.index) {
             if let Some(card) = db.get(id) {
@@ -54,7 +54,7 @@ impl Review {
         }
     }
 
-    pub fn render(&self, areas: &Areas, buf: &mut Buffer) {
+    pub fn on_render(&self, areas: &Areas, buf: &mut Buffer) {
         Line::from("Lazycard — Review")
             .centered()
             .render(areas.header, buf);
@@ -76,7 +76,7 @@ impl Review {
         .render(areas.footer, buf);
     }
 
-    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Message {
+    pub fn on_input(&mut self, event: InputEvent, db: &mut Database) -> Message {
         if let InputEvent::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
@@ -105,7 +105,7 @@ impl Review {
         Message::None
     }
 
-    pub fn exit(&mut self) {
+    pub fn on_exit(&mut self) {
         self.due.clear();
         self.index = 0;
         self.text.clear();
@@ -123,11 +123,11 @@ impl AddCard {
         }
     }
 
-    pub fn enter(&mut self, db: &Database) {
+    pub fn on_enter(&mut self, db: &Database) {
         //todo
     }
 
-    pub fn render(&self, areas: &Areas, buf: &mut Buffer) {
+    pub fn on_render(&self, areas: &Areas, buf: &mut Buffer) {
         Line::from("Lazycard — Add Card")
             .centered()
             .render(areas.header, buf);
@@ -139,7 +139,7 @@ impl AddCard {
             .render(areas.footer, buf);
     }
 
-    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Message {
+    pub fn on_input(&mut self, event: InputEvent, db: &mut Database) -> Message {
         if let InputEvent::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
@@ -175,7 +175,7 @@ impl AddCard {
         Message::None
     }
 
-    pub fn exit(&mut self) {
+    pub fn on_exit(&mut self) {
         //todo
     }
 }
@@ -187,11 +187,11 @@ impl EditCard {
         Self
     }
 
-    pub fn enter(&mut self, db: &Database) {
+    pub fn on_enter(&mut self, db: &Database) {
         //todo
     }
 
-    pub fn render(&self, areas: &Areas, buf: &mut Buffer) {
+    pub fn on_render(&self, areas: &Areas, buf: &mut Buffer) {
         Line::from("Lazycard — Edit Card")
             .centered()
             .render(areas.header, buf);
@@ -203,7 +203,7 @@ impl EditCard {
             .render(areas.footer, buf);
     }
 
-    pub fn input(&mut self, event: InputEvent, db: &mut Database) -> Message {
+    pub fn on_input(&mut self, event: InputEvent, db: &mut Database) -> Message {
         if let InputEvent::Key(key) = event {
             if key.kind == KeyEventKind::Press {
                 match key.code {
@@ -228,7 +228,7 @@ impl EditCard {
         Message::None
     }
 
-    pub fn exit(&mut self) {
+    pub fn on_exit(&mut self) {
         //todo
     }
 }
