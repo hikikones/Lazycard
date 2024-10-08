@@ -36,10 +36,23 @@ impl std::ops::DerefMut for Database {
 pub struct CardId(pub u64);
 
 #[derive(Debug, Default, Clone)]
-pub struct Card(pub String);
+pub struct Card {
+    pub content: String,
+    pub kind: CardKind,
+}
 
 impl Card {
-    pub fn new(content: impl Into<String>) -> Self {
-        Self(content.into())
+    pub fn new(kind: CardKind, content: impl Into<String>) -> Self {
+        Self {
+            content: content.into(),
+            kind,
+        }
     }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum CardKind {
+    #[default]
+    Text,
+    Typst,
 }

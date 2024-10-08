@@ -35,6 +35,7 @@ pub struct Review {
     due: Vec<CardId>,
     index: usize,
     text: String,
+    kind: CardKind,
 }
 
 impl Review {
@@ -43,6 +44,7 @@ impl Review {
             due: Vec::new(),
             index: 0,
             text: String::new(),
+            kind: CardKind::Text,
         }
     }
 
@@ -50,7 +52,8 @@ impl Review {
         self.due.extend(db.iter().map(|(id, _)| id));
         if let Some(id) = self.due.get(self.index) {
             if let Some(card) = db.get(id) {
-                self.text.push_str(card.0.as_str());
+                self.text.push_str(card.content.as_str());
+                self.kind = card.kind;
             }
         }
     }
@@ -60,27 +63,46 @@ impl Review {
             .centered()
             .render(areas.header, buf);
 
-        // if self.text.is_empty() {
-        //     Paragraph::new("no cards to review...")
-        //         .centered()
-        //         .render(areas.body, buf);
-        // } else {
-        //     Paragraph::new(self.text.as_str())
-        //         .wrap(Wrap { trim: false })
-        //         .render(areas.body, buf);
-        // }
-
-        let dyn_img = image::ImageReader::open("glacier.jpg")
-            .unwrap()
-            .decode()
-            .unwrap();
-        let image = StatefulImage::new(None);
-        // let mut picker = Picker::new((8, 12));
-        let mut picker = Picker::from_termios().unwrap_or(Picker::new((8, 12)));
-        picker.guess_protocol();
-        let mut image2 = picker.new_resize_protocol(dyn_img);
-        // image2.render(areas.body, buf);
-        image.render(areas.body, buf, &mut image2);
+        if self.text.is_empty() {
+            Paragraph::new("no cards to review...")
+                .centered()
+                .render(areas.body, buf);
+        } else {
+            match self.kind {
+                CardKind::Text => {
+                    // Render pure text
+                    Paragraph::new(self.text.as_str())
+                        .wrap(Wrap { trim: false })
+                        .render(areas.body, buf);
+                }
+                CardKind::Typst => {
+                    // Render image
+                    let png = super::typst::to_png(self.text.as_str());
+                    let dyn_img = image::load_from_memory_with_format(
+                        png.as_slice(),
+                        image::ImageFormat::Png,
+                    )
+                    .unwrap();
+                    // let dyn_img = image::ImageReader::open("glacier.jpg")
+                    //     .unwrap()
+                    //     .decode()
+                    //     .unwrap();
+                    let image = StatefulImage::new(None);
+                    // // let mut picker = Picker::new((8, 12));
+                    let mut picker = Picker::from_termios().unwrap_or(Picker::new((8, 12)));
+                    picker.guess_protocol();
+                    // let image2 = picker
+                    // .new_protocol(dyn_img, areas.body, ratatui_image::Resize::Crop(None))
+                    // .unwrap();
+                    let mut image2 = picker.new_resize_protocol(dyn_img);
+                    // // image2.render(areas.body, buf);
+                    image.render(areas.body, buf, &mut image2);
+                    // image2.render(areas.body, buf);
+                    // let img = ratatui_image::Image::new(image2.as_ref());
+                    // img.render(areas.body, buf);
+                }
+            }
+        }
 
         Line::from(
             "[esc]Quit  [tab]Menu  [e]Edit  [del]Delete  [space]Show  [↑]Yes  [↓]No  [→]Next",
@@ -105,7 +127,8 @@ impl Review {
                         if let Some(id) = self.due.get(self.index) {
                             if let Some(card) = db.get(id) {
                                 self.text.clear();
-                                self.text.push_str(card.0.as_str());
+                                self.text.push_str(card.content.as_str());
+                                self.kind = card.kind;
                                 return Message::Render;
                             }
                         }
@@ -162,7 +185,7 @@ impl AddCard {
                         if key.modifiers.contains(KeyModifiers::CONTROL) {
                             let content = self.editor.lines().join("\n");
                             self.editor = TextArea::default();
-                            db.add(Card::new(content));
+                            db.add(Card::new(CardKind::Text, content));
                             return Message::Render;
                         } else {
                             self.editor.input(key);

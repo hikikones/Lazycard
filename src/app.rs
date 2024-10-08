@@ -34,9 +34,12 @@ pub struct Areas {
 impl App {
     pub fn new() -> Self {
         let mut db = Database::new();
-        db.insert(CardId(1), Card::new("first card"));
-        db.insert(CardId(2), Card::new("second card"));
-        db.insert(CardId(3), Card::new("third card"));
+        db.insert(CardId(1), Card::new(CardKind::Text, "first card"));
+        db.insert(CardId(2), Card::new(CardKind::Text, "second card"));
+        db.insert(
+            CardId(3),
+            Card::new(CardKind::Typst, include_str!("../card.typst")),
+        );
 
         // let mut picker = Picker::from_termios().unwrap();
         let mut picker = Picker::new((8, 12));
@@ -110,10 +113,7 @@ impl App {
         Ok(())
     }
 
-    fn render<'a>(
-        &'a mut self,
-        terminal: &'a mut DefaultTerminal,
-    ) -> std::io::Result<CompletedFrame> {
+    fn render<'a>(&'a self, terminal: &'a mut DefaultTerminal) -> std::io::Result<CompletedFrame> {
         terminal.draw(|frame| {
             let area = frame.area();
             let [header, body, footer] = Layout::vertical([
