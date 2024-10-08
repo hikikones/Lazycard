@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use comemo::Prehashed;
 use typst::diag::{eco_format, FileError, FileResult, PackageError, PackageResult};
 use typst::eval::Tracer;
-use typst::foundations::{Bytes, Datetime, Smart};
+use typst::foundations::{Bytes, Datetime};
 use typst::layout::Abs;
 use typst::syntax::package::PackageSpec;
 use typst::syntax::{FileId, Source};
@@ -18,7 +18,7 @@ pub fn to_png(content: &str) -> Vec<u8> {
     let mut tracer = Tracer::default();
     let document = typst::compile(&world, &mut tracer).expect("compiling typst");
 
-    let px = typst_render::render_merged(&document, 2.0, Color::WHITE, Abs::pt(0.0), Color::WHITE);
+    let px = typst_render::render_merged(&document, 3.0, Color::WHITE, Abs::pt(0.0), Color::WHITE);
     let png = px.encode_png().expect("encoding pixmap to png");
     png
 }

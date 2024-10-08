@@ -1,4 +1,4 @@
-#set page(width: 300pt, height: auto, margin: 0cm, fill: none)
+#set page(width: 300pt, height: auto, margin: 1cm, fill: none)
 
 = Introduction
 In this report, we will explore the

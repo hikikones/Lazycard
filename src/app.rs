@@ -1,7 +1,7 @@
 use crossterm::event::{Event, KeyEvent};
 use layout::Flex;
 use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
-use ratatui_image::{picker::Picker, StatefulImage};
+use ratatui_image::picker::Picker;
 
 use crate::{database::*, pages::*};
 
@@ -10,7 +10,6 @@ pub struct App {
     route: Route,
     pages: Pages,
     db: Database,
-    picker: Picker,
 }
 
 pub enum Message {
@@ -41,16 +40,11 @@ impl App {
             Card::new(CardKind::Typst, include_str!("../card.typst")),
         );
 
-        // let mut picker = Picker::from_termios().unwrap();
-        let mut picker = Picker::new((8, 12));
-        picker.guess_protocol();
-
         Self {
             running: true,
             route: Route::Review,
             pages: Pages::new(),
             db,
-            picker,
         }
     }
 
