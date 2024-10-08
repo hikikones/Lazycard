@@ -1,5 +1,6 @@
 use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
+use ratatui_image::{picker::Picker, StatefulImage};
 use tui_textarea::TextArea;
 
 use crate::{
@@ -59,15 +60,27 @@ impl Review {
             .centered()
             .render(areas.header, buf);
 
-        if self.text.is_empty() {
-            Paragraph::new("no cards to review...")
-                .centered()
-                .render(areas.body, buf);
-        } else {
-            Paragraph::new(self.text.as_str())
-                .wrap(Wrap { trim: false })
-                .render(areas.body, buf);
-        }
+        // if self.text.is_empty() {
+        //     Paragraph::new("no cards to review...")
+        //         .centered()
+        //         .render(areas.body, buf);
+        // } else {
+        //     Paragraph::new(self.text.as_str())
+        //         .wrap(Wrap { trim: false })
+        //         .render(areas.body, buf);
+        // }
+
+        let dyn_img = image::ImageReader::open("glacier.jpg")
+            .unwrap()
+            .decode()
+            .unwrap();
+        let image = StatefulImage::new(None);
+        // let mut picker = Picker::new((8, 12));
+        let mut picker = Picker::from_termios().unwrap_or(Picker::new((8, 12)));
+        picker.guess_protocol();
+        let mut image2 = picker.new_resize_protocol(dyn_img);
+        // image2.render(areas.body, buf);
+        image.render(areas.body, buf, &mut image2);
 
         Line::from(
             "[esc]Quit  [tab]Menu  [e]Edit  [del]Delete  [space]Show  [↑]Yes  [↓]No  [→]Next",

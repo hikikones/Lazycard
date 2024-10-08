@@ -1,6 +1,7 @@
 use crossterm::event::{Event, KeyEvent};
 use layout::Flex;
 use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
+use ratatui_image::{picker::Picker, StatefulImage};
 
 use crate::{database::*, pages::*};
 
@@ -9,6 +10,7 @@ pub struct App {
     route: Route,
     pages: Pages,
     db: Database,
+    picker: Picker,
 }
 
 pub enum Message {
@@ -36,11 +38,16 @@ impl App {
         db.insert(CardId(2), Card::new("second card"));
         db.insert(CardId(3), Card::new("third card"));
 
+        // let mut picker = Picker::from_termios().unwrap();
+        let mut picker = Picker::new((8, 12));
+        picker.guess_protocol();
+
         Self {
             running: true,
             route: Route::Review,
             pages: Pages::new(),
             db,
+            picker,
         }
     }
 
@@ -103,11 +110,12 @@ impl App {
         Ok(())
     }
 
-    fn render<'a>(&'a self, terminal: &'a mut DefaultTerminal) -> std::io::Result<CompletedFrame> {
+    fn render<'a>(
+        &'a mut self,
+        terminal: &'a mut DefaultTerminal,
+    ) -> std::io::Result<CompletedFrame> {
         terminal.draw(|frame| {
             let area = frame.area();
-            let buf = frame.buffer_mut();
-
             let [header, body, footer] = Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Min(0),
@@ -122,6 +130,15 @@ impl App {
                 footer,
             };
 
+            // let dyn_img = image::ImageReader::open("glacier.jpg")
+            //     .unwrap()
+            //     .decode()
+            //     .unwrap();
+            // let image = StatefulImage::new(None);
+            // let mut image2 = self.picker.new_resize_protocol(dyn_img);
+            // frame.render_stateful_widget(image, body, &mut image2);
+
+            let buf = frame.buffer_mut();
             match self.route {
                 Route::Review => self.pages.review.on_render(&areas, buf),
                 Route::AddCard => self.pages.add_card.on_render(&areas, buf),
