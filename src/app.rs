@@ -31,16 +31,11 @@ pub struct Areas {
 
 impl App {
     pub fn new() -> Self {
-        let mut db = Database::new();
-        db.insert(CardId(1), Card::new("first card"));
-        db.insert(CardId(2), Card::new("second card"));
-        db.insert(CardId(3), Card::new("third card"));
-
         Self {
             running: true,
             route: Route::Review,
             pages: Pages::new(),
-            db,
+            db: Database::new(),
         }
     }
 

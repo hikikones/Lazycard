@@ -7,9 +7,10 @@ pub struct Database {
 
 impl Database {
     pub fn new() -> Self {
-        Self {
-            btree: Default::default(),
-        }
+        let mut btree = BTreeMap::new();
+        add_test_data(&mut btree);
+
+        Self { btree }
     }
 
     pub fn add(&mut self, card: Card) {
@@ -42,4 +43,32 @@ impl Card {
     pub fn new(content: impl Into<String>) -> Self {
         Self(content.into())
     }
+}
+
+fn add_test_data(db: &mut BTreeMap<CardId, Card>) {
+    db.insert(
+        CardId(1),
+        Card::new(
+            r#"
+left paragraph with **bold** and __cursive__ text that should wrap when line becomes too long...
+
+> right paragraph
+
+| center paragraph
+"#,
+        ),
+    );
+
+    db.insert(
+        CardId(2),
+        Card::new(
+            r#"
+```rust
+fn main() {
+    println!("Hello, world!");
+}
+```
+"#,
+        ),
+    );
 }
