@@ -1,13 +1,136 @@
+use std::{iter::Peekable, str::CharIndices};
+
+use ratatui::layout::Alignment;
+
 #[derive(Debug)]
 pub enum BlockElement<'a> {
-    Paragraph {
-        spans: Vec<InlineElement<'a>>,
-        alignment: Alignment,
-    },
-    Code {
-        language: &'a str,
-        text: &'a str,
-    },
+    Paragraph { alignment: Alignment, text: &'a str },
+    Code { language: &'a str, text: &'a str },
+}
+
+pub struct BlockParser<'a> {
+    input: &'a str,
+    chars: Peekable<CharIndices<'a>>,
+}
+
+impl<'a> BlockParser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            input,
+            chars: input.char_indices().peekable(),
+        }
+    }
+}
+
+impl<'a> Iterator for BlockParser<'a> {
+    type Item = BlockElement<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((i, c)) = self.chars.next() {
+            match c {
+                '\n' | ' ' | '\t' => {
+                    continue;
+                }
+                '`' => {
+                    let ticks = 1 + count_ticks(&mut self.chars);
+                    if ticks < 3 {
+                        return Some(parse_paragraph(i, c, self.input, &mut self.chars));
+                    }
+                    return Some(parse_code_block(i, ticks, self.input, &mut self.chars));
+                }
+                _ => {
+                    return Some(parse_paragraph(i, c, self.input, &mut self.chars));
+                }
+            }
+        }
+
+        None
+    }
+}
+
+fn parse_paragraph<'a>(
+    i: usize,
+    c: char,
+    input: &'a str,
+    chars: &mut Peekable<CharIndices<'a>>,
+) -> BlockElement<'a> {
+    let (alignment, offset) = {
+        if c == '>' {
+            (Alignment::Right, 1)
+        } else if c == '|' {
+            (Alignment::Center, 1)
+        } else {
+            (Alignment::Left, 0)
+        }
+    };
+
+    let paragraph_start = i + offset;
+    loop {
+        if chars.find(|&(_, c)| c == '\n').is_none() {
+            return BlockElement::Paragraph {
+                alignment,
+                text: input[paragraph_start..].trim(),
+            };
+        };
+
+        if let Some((ni, '\n')) = chars.next() {
+            return BlockElement::Paragraph {
+                alignment,
+                text: input[paragraph_start..ni - 1].trim(),
+            };
+        }
+    }
+}
+
+fn parse_code_block<'a>(
+    i: usize,
+    ticks: usize,
+    input: &'a str,
+    chars: &mut Peekable<CharIndices<'a>>,
+) -> BlockElement<'a> {
+    let lang_start = i + ticks;
+    let Some((i, _)) = chars.find(|(_, c)| *c == '\n') else {
+        return BlockElement::Code {
+            language: input[lang_start..].trim(),
+            text: "",
+        };
+    };
+
+    let language = input[lang_start..i].trim();
+    let code_start = i + 1;
+    loop {
+        let Some((end, _)) = chars.find(|(_, c)| *c == '\n') else {
+            return BlockElement::Code {
+                language,
+                text: &input[code_start..],
+            };
+        };
+
+        let end_ticks = count_ticks(chars);
+        if end_ticks == ticks {
+            let Some((_, c)) = chars.next() else {
+                return BlockElement::Code {
+                    language,
+                    text: &input[code_start..end],
+                };
+            };
+
+            if c == '\n' {
+                return BlockElement::Code {
+                    language,
+                    text: &input[code_start..end],
+                };
+            }
+        }
+    }
+}
+
+fn count_ticks(chars: &mut Peekable<CharIndices>) -> usize {
+    let mut count = 0;
+    while chars.next_if(|(_, c)| *c == '`').is_some() {
+        count += 1;
+    }
+    count
 }
 
 #[derive(Debug)]
@@ -17,228 +140,115 @@ pub enum InlineElement<'a> {
     Cursive(&'a str),
 }
 
-#[derive(Debug)]
-pub enum Alignment {
-    Left,
-    Center,
-    Right,
+#[derive(Debug, Clone, Copy)]
+enum InlineTag {
+    Text,
+    Bold,
+    Cursive,
 }
 
-pub fn parse<'a>(input: &'a str) -> Vec<BlockElement<'a>> {
-    let mut input = input.trim();
-    let mut chars = input.char_indices();
-    let mut blocks = Vec::new();
+pub struct InlineParser<'a> {
+    input: &'a str,
+    chars: CharIndices<'a>,
+    tag: InlineTag,
+    start: usize,
+}
 
-    while let Some((i, c)) = chars.next() {
-        match c {
-            '\n' | ' ' | '\t' => {
-                continue;
-            }
-            '>' => {
-                input = &input[i + 1..];
-                blocks.push(parse_paragraph(&mut input, Alignment::Right));
-                chars = input.char_indices();
-            }
-            '|' => {
-                input = &input[i + 1..];
-                blocks.push(parse_paragraph(&mut input, Alignment::Center));
-                chars = input.char_indices();
-            }
-            '`' => {
-                let Some((_, '`')) = chars.next() else {
-                    input = &input[i..];
-                    blocks.push(parse_paragraph(&mut input, Alignment::Left));
-                    chars = input.char_indices();
-                    continue;
-                };
-
-                let Some((_, '`')) = chars.next() else {
-                    input = &input[i..];
-                    blocks.push(parse_paragraph(&mut input, Alignment::Left));
-                    chars = input.char_indices();
-                    continue;
-                };
-
-                input = &input[i + 3..];
-                blocks.push(parse_code_block(&mut input));
-                chars = input.char_indices();
-                continue;
-            }
-            _ => {
-                input = &input[i..];
-                blocks.push(parse_paragraph(&mut input, Alignment::Left));
-                chars = input.char_indices();
-            }
+impl<'a> InlineParser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            input,
+            chars: input.char_indices(),
+            tag: InlineTag::Text,
+            start: 0,
         }
     }
 
-    blocks
-}
-
-fn parse_paragraph<'a>(input: &mut &'a str, alignment: Alignment) -> BlockElement<'a> {
-    let Some(end) = input.find("\n\n") else {
-        let text = input.trim();
-        *input = "";
-        return BlockElement::Paragraph {
-            spans: parse_spans(text),
-            alignment,
-        };
-    };
-
-    let text = input[..end].trim();
-    *input = &input[end + 2..];
-    BlockElement::Paragraph {
-        spans: parse_spans(text),
-        alignment,
+    pub fn continue_with(&mut self, input: &'a str) {
+        self.input = input;
+        self.chars = input.char_indices();
+        self.start = 0;
     }
 }
 
-fn parse_code_block<'a>(input: &mut &'a str) -> BlockElement<'a> {
-    let mut chars = input.char_indices();
-    let mut start_ticks = 3;
-    let mut i = 0;
-    let mut c = '`';
+impl<'a> Iterator for InlineParser<'a> {
+    type Item = InlineElement<'a>;
 
-    loop {
-        let Some((ni, nc)) = chars.next() else {
-            return BlockElement::Code {
-                language: "",
-                text: "",
-            };
-        };
-
-        if nc == '`' {
-            start_ticks += 1;
-            continue;
-        }
-
-        i = ni;
-        c = nc;
-
-        break;
-    }
-
-    let language = {
-        if c == '\n' {
-            i += 1;
-            ""
-        } else {
-            match chars.find(|&(_, c)| c == '\n') {
-                Some((ni, _)) => {
-                    let lang = &input[i..ni];
-                    i = ni + 1;
-                    lang.trim()
-                }
-                None => {
-                    let lang = &input[i..];
-                    *input = "";
-                    return BlockElement::Code {
-                        language: lang.trim(),
-                        text: "",
-                    };
-                }
-            }
-        }
-    };
-
-    loop {
-        let Some((mut end, _)) = chars.find(|&(_, c)| c == '\n') else {
-            let text = &input[i..];
-            *input = "";
-            return BlockElement::Code { language, text };
-        };
-
-        let mut end_ticks = 0;
+    fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let Some((ni, nc)) = chars.next() else {
-                let text = &input[i..];
-                *input = "";
-                return BlockElement::Code { language, text };
+            let Some((_, c)) = self.chars.next() else {
+                let text = &self.input[self.start..];
+
+                if text.is_empty() {
+                    return None;
+                }
+
+                self.start = self.input.len();
+                let element = match self.tag {
+                    InlineTag::Text => InlineElement::Text(text),
+                    InlineTag::Bold => InlineElement::Bold(text),
+                    InlineTag::Cursive => InlineElement::Cursive(text),
+                };
+                return Some(element);
             };
 
-            if nc == '`' {
-                end_ticks += 1;
-                if end_ticks == start_ticks {
-                    let text = &input[i..end];
-                    *input = &input[end + 1 + end_ticks..];
-                    return BlockElement::Code { language, text };
+            match self.tag {
+                InlineTag::Text => match c {
+                    '*' => {
+                        if let Some((ni, '*')) = self.chars.next() {
+                            self.tag = InlineTag::Bold;
+                            let text = &self.input[self.start..ni - 1];
+                            self.start = ni + 1;
+
+                            if !text.is_empty() {
+                                return Some(InlineElement::Text(text));
+                            }
+                        };
+                    }
+                    '_' => {
+                        if let Some((ni, '_')) = self.chars.next() {
+                            self.tag = InlineTag::Cursive;
+                            let text = &self.input[self.start..ni - 1];
+                            self.start = ni + 1;
+
+                            if !text.is_empty() {
+                                return Some(InlineElement::Text(text));
+                            }
+                        };
+                    }
+                    _ => {}
+                },
+                InlineTag::Bold => {
+                    let bold_start = self.start;
+                    loop {
+                        if self.chars.find(|&(_, c)| c == '*').is_none() {
+                            break;
+                        };
+
+                        if let Some((ni, '*')) = self.chars.next() {
+                            self.tag = InlineTag::Text;
+                            self.start = ni + 1;
+                            return Some(InlineElement::Bold(&self.input[bold_start..ni - 1]));
+                        }
+                    }
                 }
-                continue;
-            } else if nc == '\n' {
-                end = ni;
-                end_ticks = 0;
-                continue;
-            }
-
-            break;
-        }
-    }
-}
-
-fn parse_spans<'a>(input: &'a str) -> Vec<InlineElement<'a>> {
-    let mut chars = input.char_indices();
-    let mut spans = Vec::new();
-
-    let mut text_start = 0;
-    loop {
-        let Some((i, c)) = chars.next() else {
-            let text = &input[text_start..];
-            if !text.is_empty() {
-                spans.push(InlineElement::Text(text));
-            }
-            break;
-        };
-
-        match c {
-            '_' => {
-                if let Some((ni, '_')) = chars.next() {
-                    let text = &input[text_start..ni - 1];
-                    if !text.is_empty() {
-                        spans.push(InlineElement::Text(text));
-                    }
-
-                    let cursive_start = ni + 1;
+                InlineTag::Cursive => {
+                    let cursive_start = self.start;
                     loop {
-                        if chars.find(|&(_, c)| c == '_').is_none() {
-                            spans.push(InlineElement::Cursive(&input[cursive_start..]));
-                            text_start = input.len();
+                        if self.chars.find(|&(_, c)| c == '_').is_none() {
                             break;
                         };
 
-                        if let Some((ni, '_')) = chars.next() {
-                            text_start = ni + 1;
-                            spans.push(InlineElement::Cursive(&input[cursive_start..ni - 1]));
-                            break;
+                        if let Some((ni, '_')) = self.chars.next() {
+                            self.tag = InlineTag::Text;
+                            self.start = ni + 1;
+                            return Some(InlineElement::Cursive(
+                                &self.input[cursive_start..ni - 1],
+                            ));
                         }
                     }
-                };
+                }
             }
-            '*' => {
-                if let Some((ni, '*')) = chars.next() {
-                    let text = &input[text_start..ni - 1];
-                    if !text.is_empty() {
-                        spans.push(InlineElement::Text(text));
-                    }
-
-                    let cursive_start = ni + 1;
-                    loop {
-                        if chars.find(|&(_, c)| c == '*').is_none() {
-                            spans.push(InlineElement::Bold(&input[cursive_start..]));
-                            text_start = input.len();
-                            break;
-                        };
-
-                        if let Some((ni, '*')) = chars.next() {
-                            text_start = ni + 1;
-                            spans.push(InlineElement::Bold(&input[cursive_start..ni - 1]));
-                            break;
-                        }
-                    }
-                };
-            }
-            _ => {}
         }
     }
-
-    spans
 }
