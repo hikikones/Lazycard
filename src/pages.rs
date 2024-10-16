@@ -5,6 +5,7 @@ use tui_textarea::TextArea;
 use crate::{
     app::{Areas, InputEvent, Message},
     database::*,
+    markup::*,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,14 +60,37 @@ impl Review {
             .centered()
             .render(areas.header, buf);
 
-        if self.text.is_empty() {
-            Paragraph::new("no cards to review...")
-                .centered()
-                .render(areas.body, buf);
-        } else {
-            Paragraph::new(self.text.as_str())
-                .wrap(Wrap { trim: false })
-                .render(areas.body, buf);
+        let mut body = areas.body;
+        let width = body.width;
+
+        for block in BlockParser::new(&self.text) {
+            match block {
+                BlockElement::Paragraph { alignment, text } => {
+                    let wraps = textwrap::wrap(text, textwrap::Options::new(width as usize));
+                    let mut inline_parser = InlineParser::new("");
+                    for wrapped_line in wraps.iter() {
+                        let mut line = Line::default();
+                        inline_parser.continue_with(&wrapped_line);
+                        for element in &mut inline_parser {
+                            const NONE: Style = Style::new();
+                            const BOLD: Style = NONE.add_modifier(Modifier::BOLD);
+                            const CURSIVE: Style = NONE.add_modifier(Modifier::ITALIC);
+                            let (span, style) = match element {
+                                InlineElement::Text(s) => (s, NONE),
+                                InlineElement::Bold(s) => (s, BOLD),
+                                InlineElement::Cursive(s) => (s, CURSIVE),
+                            };
+                            line.push_span(Span::styled(span, style));
+                        }
+                        line.alignment(alignment).render(body, buf);
+                        body.y += 1;
+                    }
+                    body.y += 1;
+                }
+                BlockElement::Code { language, text } => {
+                    Text::raw(text).render(areas.body, buf);
+                }
+            }
         }
 
         Line::from(
