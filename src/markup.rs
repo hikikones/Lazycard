@@ -142,7 +142,7 @@ pub enum InlineTag {
 
 pub struct InlineParser<'a> {
     input: &'a str,
-    chars: CharIndices<'a>,
+    chars: Peekable<CharIndices<'a>>,
     start: usize,
     tag: InlineTag,
 }
@@ -151,7 +151,7 @@ impl<'a> InlineParser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             input,
-            chars: input.char_indices(),
+            chars: input.char_indices().peekable(),
             start: 0,
             tag: InlineTag::Text,
         }
@@ -159,7 +159,7 @@ impl<'a> InlineParser<'a> {
 
     pub fn continue_with(&mut self, input: &'a str) {
         self.input = input;
-        self.chars = input.char_indices();
+        self.chars = input.char_indices().peekable();
         self.start = 0;
     }
 
@@ -190,72 +190,73 @@ impl<'a> Iterator for InlineParser<'a> {
     type Item = (InlineTag, &'a str);
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.start == self.input.len() {
+            return None;
+        }
+
         loop {
-            let Some((_, c)) = self.chars.next() else {
-                let text = &self.input[self.start..];
-
-                if text.is_empty() {
-                    return None;
-                }
-
-                self.start = self.input.len();
-                return Some((self.tag, text));
-            };
-
             match self.tag {
-                InlineTag::Text => match c {
-                    '*' => {
-                        if let Some((ni, '*')) = self.chars.next() {
-                            self.tag = InlineTag::Bold;
-                            let text = &self.input[self.start..ni - 1];
-                            self.start = ni + 1;
+                InlineTag::Text => loop {
+                    let Some((_, c)) = self.chars.next() else {
+                        let text = &self.input[self.start..];
+                        self.start = self.input.len();
+                        return Some((InlineTag::Text, text));
+                    };
 
-                            if !text.is_empty() {
+                    match c {
+                        '*' => {
+                            if let Some((i, _)) = self.chars.next_if(|&(_, c)| c == '*') {
+                                self.tag = InlineTag::Bold;
+                                let text = &self.input[self.start..i - 1];
+                                self.start = i + 1;
+                                if text.is_empty() {
+                                    break;
+                                }
                                 return Some((InlineTag::Text, text));
                             }
-                        };
-                    }
-                    '_' => {
-                        if let Some((ni, '_')) = self.chars.next() {
-                            self.tag = InlineTag::Italic;
-                            let text = &self.input[self.start..ni - 1];
-                            self.start = ni + 1;
-
-                            if !text.is_empty() {
+                        }
+                        '_' => {
+                            if let Some((i, _)) = self.chars.next_if(|&(_, c)| c == '_') {
+                                self.tag = InlineTag::Italic;
+                                let text = &self.input[self.start..i - 1];
+                                self.start = i + 1;
+                                if text.is_empty() {
+                                    break;
+                                }
                                 return Some((InlineTag::Text, text));
                             }
-                        };
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 },
-                InlineTag::Bold => {
-                    let bold_start = self.start;
-                    loop {
-                        if self.chars.find(|&(_, c)| c == '*').is_none() {
-                            break;
-                        };
+                InlineTag::Bold => loop {
+                    if self.chars.find(|&(_, c)| c == '*').is_none() {
+                        let text = &self.input[self.start..];
+                        self.start = self.input.len();
+                        return Some((InlineTag::Bold, text));
+                    };
 
-                        if let Some((ni, '*')) = self.chars.next() {
-                            self.tag = InlineTag::Text;
-                            self.start = ni + 1;
-                            return Some((InlineTag::Bold, &self.input[bold_start..ni - 1]));
-                        }
+                    if let Some((i, '*')) = self.chars.next() {
+                        self.tag = InlineTag::Text;
+                        let text = &self.input[self.start..i - 1];
+                        self.start = i + 1;
+                        return Some((InlineTag::Bold, text));
                     }
-                }
-                InlineTag::Italic => {
-                    let italic_start = self.start;
-                    loop {
-                        if self.chars.find(|&(_, c)| c == '_').is_none() {
-                            break;
-                        };
+                },
+                InlineTag::Italic => loop {
+                    if self.chars.find(|&(_, c)| c == '_').is_none() {
+                        let text = &self.input[self.start..];
+                        self.start = self.input.len();
+                        return Some((InlineTag::Bold, text));
+                    };
 
-                        if let Some((ni, '_')) = self.chars.next() {
-                            self.tag = InlineTag::Text;
-                            self.start = ni + 1;
-                            return Some((InlineTag::Italic, &self.input[italic_start..ni - 1]));
-                        }
+                    if let Some((i, '_')) = self.chars.next() {
+                        self.tag = InlineTag::Text;
+                        let text = &self.input[self.start..i - 1];
+                        self.start = i + 1;
+                        return Some((InlineTag::Italic, text));
                     }
-                }
+                },
             }
         }
     }
@@ -296,14 +297,15 @@ impl<'a> Iterator for AnsiParser<'a> {
     type Item = (AnsiTag, &'a str);
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.start == self.input.len() {
+            return None;
+        }
+
         loop {
             match self.tag {
                 AnsiTag::Text => {
                     let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
                         let text = &self.input[self.start..];
-                        if text.is_empty() {
-                            return None;
-                        }
                         self.start = self.input.len();
                         return Some((self.tag, text));
                     };
@@ -341,9 +343,6 @@ impl<'a> Iterator for AnsiParser<'a> {
                 AnsiTag::Bold | AnsiTag::Italic => {
                     let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
                         let text = &self.input[self.start..];
-                        if text.is_empty() {
-                            return None;
-                        }
                         self.start = self.input.len();
                         return Some((self.tag, text));
                     };
@@ -362,10 +361,7 @@ impl<'a> Iterator for AnsiParser<'a> {
                     let text = &self.input[self.start..end];
                     self.start = i + 1;
                     self.tag = AnsiTag::Text;
-
-                    if !text.is_empty() {
-                        return Some((tag, text));
-                    }
+                    return Some((tag, text));
                 }
             }
         }
