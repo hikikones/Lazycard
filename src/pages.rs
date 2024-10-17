@@ -69,31 +69,27 @@ impl Review {
             .render(areas.header, buf);
 
         let mut body = areas.body;
-        let width = body.width;
+        let width = body.width as usize;
 
         for block in BlockParser::new(&self.text) {
             match block {
                 BlockElement::Paragraph { alignment, text } => {
-                    let wraps = textwrap::wrap(text, textwrap::Options::new(width as usize));
-                    let mut inline_parser = InlineParser::new("");
-                    for wrapped_line in wraps.iter() {
+                    let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
+                    let mut ansi_parser = AnsiParser::new("");
+                    for wrapped_line in textwrap::fill(&ansi_markup, width).lines() {
                         let mut line = Line::default();
-                        inline_parser.continue_with(&wrapped_line);
-                        for element in &mut inline_parser {
-                            const NONE: Style = Style::new();
-                            const BOLD: Style = NONE.add_modifier(Modifier::BOLD);
-                            const CURSIVE: Style = NONE.add_modifier(Modifier::ITALIC);
-                            let (span, style) = match element {
-                                InlineElement::Text(s) => (s, NONE),
-                                InlineElement::Bold(s) => (s, BOLD),
-                                InlineElement::Cursive(s) => (s, CURSIVE),
+                        ansi_parser.continue_with(wrapped_line);
+                        for (tag, span) in &mut ansi_parser {
+                            let style = match tag {
+                                AnsiTag::Text => Style::new(),
+                                AnsiTag::Bold => Style::new().bold(),
+                                AnsiTag::Cursive => Style::new().italic(),
                             };
                             line.push_span(Span::styled(span, style));
                         }
                         line.alignment(alignment).render(body, buf);
                         body.y += 1;
                     }
-                    body.y += 1;
                 }
                 BlockElement::Code { language, text } => {
                     static SYNTAX_SET: LazyLock<SyntaxSet> =
@@ -101,9 +97,13 @@ impl Review {
                     static THEME_SET: LazyLock<ThemeSet> =
                         LazyLock::new(|| ThemeSet::load_defaults());
 
-                    let syntax = SYNTAX_SET
-                        .find_syntax_by_extension(language)
-                        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+                    let syntax = if language.is_empty() {
+                        SYNTAX_SET.find_syntax_plain_text()
+                    } else {
+                        SYNTAX_SET
+                            .find_syntax_by_token(language)
+                            .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
+                    };
                     let mut highlighter =
                         HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
 
@@ -143,6 +143,7 @@ impl Review {
                     }
                 }
             }
+            body.y += 1;
         }
 
         Line::from(

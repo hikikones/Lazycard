@@ -150,8 +150,8 @@ enum InlineTag {
 pub struct InlineParser<'a> {
     input: &'a str,
     chars: CharIndices<'a>,
-    tag: InlineTag,
     start: usize,
+    tag: InlineTag,
 }
 
 impl<'a> InlineParser<'a> {
@@ -159,8 +159,8 @@ impl<'a> InlineParser<'a> {
         Self {
             input,
             chars: input.char_indices(),
-            tag: InlineTag::Text,
             start: 0,
+            tag: InlineTag::Text,
         }
     }
 
@@ -168,6 +168,28 @@ impl<'a> InlineParser<'a> {
         self.input = input;
         self.chars = input.char_indices();
         self.start = 0;
+    }
+
+    pub fn into_ansi(self) -> String {
+        const ANSI_BOLD: &str = "\u{1b}[1m";
+        const ANSI_CURSIVE: &str = "\u{1b}[3m";
+        const ANSI_RESET: &str = "\u{1b}[0m";
+
+        let mut ansi = String::with_capacity(self.input.len());
+        for inline in self {
+            match inline {
+                InlineElement::Text(s) => {
+                    ansi.push_str(s);
+                }
+                InlineElement::Bold(s) => {
+                    ansi.extend([ANSI_BOLD, s, ANSI_RESET]);
+                }
+                InlineElement::Cursive(s) => {
+                    ansi.extend([ANSI_CURSIVE, s, ANSI_RESET]);
+                }
+            }
+        }
+        ansi
     }
 }
 
@@ -246,6 +268,117 @@ impl<'a> Iterator for InlineParser<'a> {
                                 &self.input[cursive_start..ni - 1],
                             ));
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AnsiTag {
+    Text,
+    Bold,
+    Cursive,
+}
+
+pub struct AnsiParser<'a> {
+    input: &'a str,
+    chars: Peekable<CharIndices<'a>>,
+    start: usize,
+    tag: AnsiTag,
+}
+
+impl<'a> AnsiParser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            input,
+            chars: input.char_indices().peekable(),
+            start: 0,
+            tag: AnsiTag::Text,
+        }
+    }
+
+    pub fn continue_with(&mut self, input: &'a str) {
+        self.input = input;
+        self.chars = input.char_indices().peekable();
+        self.start = 0;
+    }
+}
+
+impl<'a> Iterator for AnsiParser<'a> {
+    type Item = (AnsiTag, &'a str);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.tag {
+                AnsiTag::Text => {
+                    let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
+                        let text = &self.input[self.start..];
+                        if text.is_empty() {
+                            return None;
+                        }
+                        self.start = self.input.len();
+                        return Some((self.tag, text));
+                    };
+
+                    if self.chars.next_if(|(_, c)| *c == '[').is_none() {
+                        continue;
+                    }
+
+                    let Some(tag) =
+                        self.chars
+                            .next_if(|&(_, c)| c == '1' || c == '3')
+                            .map(|(_, c)| {
+                                if c == '1' {
+                                    AnsiTag::Bold
+                                } else {
+                                    AnsiTag::Cursive
+                                }
+                            })
+                    else {
+                        continue;
+                    };
+
+                    let Some((i, _)) = self.chars.next_if(|(_, c)| *c == 'm') else {
+                        continue;
+                    };
+
+                    let text = &self.input[self.start..end];
+                    self.start = i + 1;
+                    self.tag = tag;
+
+                    if !text.is_empty() {
+                        return Some((AnsiTag::Text, text));
+                    }
+                }
+                AnsiTag::Bold | AnsiTag::Cursive => {
+                    let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
+                        let text = &self.input[self.start..];
+                        if text.is_empty() {
+                            return None;
+                        }
+                        self.start = self.input.len();
+                        return Some((self.tag, text));
+                    };
+
+                    if self.chars.next_if(|(_, c)| *c == '[').is_none() {
+                        continue;
+                    }
+                    if self.chars.next_if(|(_, c)| *c == '0').is_none() {
+                        continue;
+                    }
+                    let Some((i, _)) = self.chars.next_if(|(_, c)| *c == 'm') else {
+                        continue;
+                    };
+
+                    let tag = self.tag;
+                    let text = &self.input[self.start..end];
+                    self.start = i + 1;
+                    self.tag = AnsiTag::Text;
+
+                    if !text.is_empty() {
+                        return Some((tag, text));
                     }
                 }
             }
