@@ -133,18 +133,11 @@ fn count_ticks(chars: &mut Peekable<CharIndices>) -> usize {
     count
 }
 
-#[derive(Debug)]
-pub enum InlineElement<'a> {
-    Text(&'a str),
-    Bold(&'a str),
-    Cursive(&'a str),
-}
-
 #[derive(Debug, Clone, Copy)]
-enum InlineTag {
+pub enum InlineTag {
     Text,
     Bold,
-    Cursive,
+    Italic,
 }
 
 pub struct InlineParser<'a> {
@@ -172,20 +165,20 @@ impl<'a> InlineParser<'a> {
 
     pub fn into_ansi(self) -> String {
         const ANSI_BOLD: &str = "\u{1b}[1m";
-        const ANSI_CURSIVE: &str = "\u{1b}[3m";
+        const ANSI_ITALIC: &str = "\u{1b}[3m";
         const ANSI_RESET: &str = "\u{1b}[0m";
 
         let mut ansi = String::with_capacity(self.input.len());
-        for inline in self {
-            match inline {
-                InlineElement::Text(s) => {
-                    ansi.push_str(s);
+        for (tag, span) in self {
+            match tag {
+                InlineTag::Text => {
+                    ansi.push_str(span);
                 }
-                InlineElement::Bold(s) => {
-                    ansi.extend([ANSI_BOLD, s, ANSI_RESET]);
+                InlineTag::Bold => {
+                    ansi.extend([ANSI_BOLD, span, ANSI_RESET]);
                 }
-                InlineElement::Cursive(s) => {
-                    ansi.extend([ANSI_CURSIVE, s, ANSI_RESET]);
+                InlineTag::Italic => {
+                    ansi.extend([ANSI_ITALIC, span, ANSI_RESET]);
                 }
             }
         }
@@ -194,7 +187,7 @@ impl<'a> InlineParser<'a> {
 }
 
 impl<'a> Iterator for InlineParser<'a> {
-    type Item = InlineElement<'a>;
+    type Item = (InlineTag, &'a str);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -206,12 +199,7 @@ impl<'a> Iterator for InlineParser<'a> {
                 }
 
                 self.start = self.input.len();
-                let element = match self.tag {
-                    InlineTag::Text => InlineElement::Text(text),
-                    InlineTag::Bold => InlineElement::Bold(text),
-                    InlineTag::Cursive => InlineElement::Cursive(text),
-                };
-                return Some(element);
+                return Some((self.tag, text));
             };
 
             match self.tag {
@@ -223,18 +211,18 @@ impl<'a> Iterator for InlineParser<'a> {
                             self.start = ni + 1;
 
                             if !text.is_empty() {
-                                return Some(InlineElement::Text(text));
+                                return Some((InlineTag::Text, text));
                             }
                         };
                     }
                     '_' => {
                         if let Some((ni, '_')) = self.chars.next() {
-                            self.tag = InlineTag::Cursive;
+                            self.tag = InlineTag::Italic;
                             let text = &self.input[self.start..ni - 1];
                             self.start = ni + 1;
 
                             if !text.is_empty() {
-                                return Some(InlineElement::Text(text));
+                                return Some((InlineTag::Text, text));
                             }
                         };
                     }
@@ -250,12 +238,12 @@ impl<'a> Iterator for InlineParser<'a> {
                         if let Some((ni, '*')) = self.chars.next() {
                             self.tag = InlineTag::Text;
                             self.start = ni + 1;
-                            return Some(InlineElement::Bold(&self.input[bold_start..ni - 1]));
+                            return Some((InlineTag::Bold, &self.input[bold_start..ni - 1]));
                         }
                     }
                 }
-                InlineTag::Cursive => {
-                    let cursive_start = self.start;
+                InlineTag::Italic => {
+                    let italic_start = self.start;
                     loop {
                         if self.chars.find(|&(_, c)| c == '_').is_none() {
                             break;
@@ -264,9 +252,7 @@ impl<'a> Iterator for InlineParser<'a> {
                         if let Some((ni, '_')) = self.chars.next() {
                             self.tag = InlineTag::Text;
                             self.start = ni + 1;
-                            return Some(InlineElement::Cursive(
-                                &self.input[cursive_start..ni - 1],
-                            ));
+                            return Some((InlineTag::Italic, &self.input[italic_start..ni - 1]));
                         }
                     }
                 }
@@ -279,7 +265,7 @@ impl<'a> Iterator for InlineParser<'a> {
 pub enum AnsiTag {
     Text,
     Bold,
-    Cursive,
+    Italic,
 }
 
 pub struct AnsiParser<'a> {
@@ -333,7 +319,7 @@ impl<'a> Iterator for AnsiParser<'a> {
                                 if c == '1' {
                                     AnsiTag::Bold
                                 } else {
-                                    AnsiTag::Cursive
+                                    AnsiTag::Italic
                                 }
                             })
                     else {
@@ -352,7 +338,7 @@ impl<'a> Iterator for AnsiParser<'a> {
                         return Some((AnsiTag::Text, text));
                     }
                 }
-                AnsiTag::Bold | AnsiTag::Cursive => {
+                AnsiTag::Bold | AnsiTag::Italic => {
                     let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
                         let text = &self.input[self.start..];
                         if text.is_empty() {

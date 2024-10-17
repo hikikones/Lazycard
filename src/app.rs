@@ -1,8 +1,7 @@
-use crossterm::event::{Event, KeyEvent};
-use layout::Flex;
+use crossterm::event::Event;
 use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
 
-use crate::{database::*, pages::*};
+use crate::{database::*, pages::*, utils::*};
 
 pub struct App {
     running: bool,
@@ -11,22 +10,11 @@ pub struct App {
     db: Database,
 }
 
-pub enum Message {
+pub enum Action {
     None,
     Render,
     Route(Route),
     Quit,
-}
-
-pub enum InputEvent {
-    Key(KeyEvent),
-    Paste(String),
-}
-
-pub struct Areas {
-    pub header: Rect,
-    pub body: Rect,
-    pub footer: Rect,
 }
 
 impl App {
@@ -44,35 +32,27 @@ impl App {
         self.render(&mut terminal)?;
 
         while self.running {
-            let message = match crossterm::event::read()? {
-                Event::Key(key) => {
-                    let ev = InputEvent::Key(key);
-                    let db = &mut self.db;
-                    match self.route {
-                        Route::Review => self.pages.review.on_input(ev, db),
-                        Route::AddCard => self.pages.add_card.on_input(ev, db),
-                        Route::EditCard => self.pages.edit_card.on_input(ev, db),
-                    }
-                }
-                Event::Paste(s) => {
-                    let ev = InputEvent::Paste(s);
-                    let db = &mut self.db;
-                    match self.route {
-                        Route::Review => self.pages.review.on_input(ev, db),
-                        Route::AddCard => self.pages.add_card.on_input(ev, db),
-                        Route::EditCard => self.pages.edit_card.on_input(ev, db),
-                    }
-                }
-                Event::Resize(_, _) => Message::Render,
-                _ => Message::None,
+            let action = match crossterm::event::read()? {
+                Event::Key(key) => match self.route {
+                    Route::Review => self.pages.review.on_input(key, &mut self.db),
+                    Route::AddCard => self.pages.add_card.on_input(key, &mut self.db),
+                    Route::EditCard => self.pages.edit_card.on_input(key, &mut self.db),
+                },
+                Event::Paste(s) => match self.route {
+                    Route::AddCard => self.pages.add_card.on_paste(s),
+                    Route::EditCard => self.pages.edit_card.on_paste(s),
+                    _ => Action::None,
+                },
+                Event::Resize(_, _) => Action::Render,
+                _ => Action::None,
             };
 
-            match message {
-                Message::None => {}
-                Message::Render => {
+            match action {
+                Action::None => {}
+                Action::Render => {
                     self.render(&mut terminal)?;
                 }
-                Message::Route(route) => {
+                Action::Route(route) => {
                     match self.route {
                         Route::Review => self.pages.review.on_exit(),
                         Route::AddCard => self.pages.add_card.on_exit(),
@@ -89,7 +69,7 @@ impl App {
 
                     self.render(&mut terminal)?;
                 }
-                Message::Quit => {
+                Action::Quit => {
                     self.running = false;
                 }
             }
@@ -109,37 +89,40 @@ impl App {
                 Constraint::Length(1),
             ])
             .areas(area);
-            let body = center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
 
-            let areas = Areas {
-                header,
-                body,
-                footer,
+            // Header
+            Line::raw(format!("Lazycard: {}", self.route.title()))
+                .alignment(Alignment::Center)
+                .render(header, buf);
+
+            // Body
+            let body =
+                layout_center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
+            let shortcuts = match self.route {
+                Route::Review => {
+                    self.pages.review.on_render(body, buf);
+                    self.pages.review.shortcuts()
+                }
+                Route::AddCard => {
+                    self.pages.add_card.on_render(body, buf);
+                    self.pages.add_card.shortcuts()
+                }
+                Route::EditCard => {
+                    self.pages.edit_card.on_render(body, buf);
+                    self.pages.edit_card.shortcuts()
+                }
             };
 
-            match self.route {
-                Route::Review => self.pages.review.on_render(&areas, buf),
-                Route::AddCard => self.pages.add_card.on_render(&areas, buf),
-                Route::EditCard => self.pages.edit_card.on_render(&areas, buf),
+            // Footer
+            let mut footer_line = Line::default();
+            footer_line.push_span("  ");
+            for &Shortcut { name, key } in shortcuts {
+                footer_line.push_span(Span::styled(key, STYLE_LABEL));
+                footer_line.push_span(" ");
+                footer_line.push_span(Span::raw(name));
+                footer_line.push_span("  ");
             }
+            footer_line.alignment(Alignment::Center).render(footer, buf);
         })
     }
-}
-
-fn _center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
-    _center_vertical(center_horizontal(area, horizontal), vertical)
-}
-
-fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {
-    let [area] = Layout::horizontal([constraint])
-        .flex(Flex::Center)
-        .areas(area);
-    area
-}
-
-fn _center_vertical(area: Rect, constraint: Constraint) -> Rect {
-    let [area] = Layout::vertical([constraint])
-        .flex(Flex::Center)
-        .areas(area);
-    area
 }

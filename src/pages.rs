@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
 use syntect::{
     easy::HighlightLines,
@@ -10,17 +10,23 @@ use syntect::{
 };
 use tui_textarea::TextArea;
 
-use crate::{
-    app::{Areas, InputEvent, Message},
-    database::*,
-    markup::*,
-};
+use crate::{app::Action, database::*, markup::*, utils::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
     Review,
     AddCard,
     EditCard,
+}
+
+impl Route {
+    pub const fn title(self) -> &'static str {
+        match self {
+            Route::Review => "Review",
+            Route::AddCard => "Add Card",
+            Route::EditCard => "Edit Card",
+        }
+    }
 }
 
 pub struct Pages {
@@ -63,14 +69,8 @@ impl Review {
         }
     }
 
-    pub fn on_render(&self, areas: &Areas, buf: &mut Buffer) {
-        Line::from("Lazycard — Review")
-            .centered()
-            .render(areas.header, buf);
-
-        let mut body = areas.body;
-        let width = body.width as usize;
-
+    pub fn on_render(&self, mut area: Rect, buf: &mut Buffer) {
+        let width = area.width as usize;
         for block in BlockParser::new(&self.text) {
             match block {
                 BlockElement::Paragraph { alignment, text } => {
@@ -83,12 +83,12 @@ impl Review {
                             let style = match tag {
                                 AnsiTag::Text => Style::new(),
                                 AnsiTag::Bold => Style::new().bold(),
-                                AnsiTag::Cursive => Style::new().italic(),
+                                AnsiTag::Italic => Style::new().italic(),
                             };
                             line.push_span(Span::styled(span, style));
                         }
-                        line.alignment(alignment).render(body, buf);
-                        body.y += 1;
+                        line.alignment(alignment).render(area, buf);
+                        area.y += 1;
                     }
                 }
                 BlockElement::Code { language, text } => {
@@ -132,60 +132,66 @@ impl Review {
                                         Style::new().add_modifier(modifiers).fg(fg),
                                     ));
                                 }
-                                line.render(body, buf);
-                                body.y += 1;
+                                line.render(area, buf);
+                                area.y += 1;
                             }
                             Err(_) => {
-                                Line::raw(code_line).render(body, buf);
-                                body.y += 1;
+                                Line::raw(code_line).render(area, buf);
+                                area.y += 1;
                             }
                         }
                     }
                 }
             }
-            body.y += 1;
+            area.y += 1;
         }
-
-        Line::from(
-            "[esc]Quit  [tab]Menu  [e]Edit  [del]Delete  [space]Show  [↑]Yes  [↓]No  [→]Next",
-        )
-        .centered()
-        .render(areas.footer, buf);
     }
 
-    pub fn on_input(&mut self, event: InputEvent, db: &mut Database) -> Message {
-        if let InputEvent::Key(key) = event {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Esc => return Message::Quit,
-                    KeyCode::Tab => return Message::Route(Route::AddCard),
-                    KeyCode::Char('e') => return Message::Route(Route::EditCard),
-                    KeyCode::Delete => todo!("delete"),
-                    KeyCode::Char(' ') => todo!("show answer"),
-                    KeyCode::Up => todo!("yes"), // fixme: activates when scrolling with touchpad?
-                    KeyCode::Down => todo!("no"), // fixme: activates when scrolling with touchpad?
-                    KeyCode::Right => {
-                        self.index = (self.index + 1) % self.due.len();
-                        if let Some(id) = self.due.get(self.index) {
-                            if let Some(card) = db.get(id) {
-                                self.text.clear();
-                                self.text.push_str(card.0.as_str());
-                                return Message::Render;
-                            }
+    pub fn on_input(&mut self, key: KeyEvent, db: &mut Database) -> Action {
+        if key.kind == KeyEventKind::Press {
+            match key.code {
+                KeyCode::Esc => return Action::Quit,
+                KeyCode::Tab => return Action::Route(Route::AddCard),
+                KeyCode::Char('e') => return Action::Route(Route::EditCard),
+                KeyCode::Delete => {
+                    // todo: delete card
+                }
+                KeyCode::Char(' ') => {
+                    // todo: show answer
+                }
+                KeyCode::Up => {
+                    // todo: successful recall
+                    // fixme: activates when scrolling with touchpad?
+                }
+                KeyCode::Down => {
+                    // todo: unsuccessful recall
+                    // fixme: activates when scrolling with touchpad?
+                }
+                KeyCode::Right => {
+                    self.index = (self.index + 1) % self.due.len();
+                    if let Some(id) = self.due.get(self.index) {
+                        if let Some(card) = db.get(id) {
+                            self.text.clear();
+                            self.text.push_str(card.0.as_str());
+                            return Action::Render;
                         }
                     }
-                    _ => {}
                 }
+                _ => {}
             }
         }
 
-        Message::None
+        Action::None
     }
 
     pub fn on_exit(&mut self) {
         self.due.clear();
         self.index = 0;
         self.text.clear();
+    }
+
+    pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
+        &[SHORTCUT_EDIT, SHORTCUT_DELETE, SHORTCUT_MENU, SHORTCUT_QUIT]
     }
 }
 
@@ -204,56 +210,60 @@ impl AddCard {
         //todo
     }
 
-    pub fn on_render(&self, areas: &Areas, buf: &mut Buffer) {
-        Line::from("Lazycard — Add Card")
-            .centered()
-            .render(areas.header, buf);
-
-        self.editor.render(areas.body, buf);
-
-        Line::from("[esc]Quit  [tab]Menu  [ctrl-s]Save  [ctrl-p]Preview")
-            .centered()
-            .render(areas.footer, buf);
+    pub fn on_render(&self, area: Rect, buf: &mut Buffer) {
+        self.editor.render(area, buf);
     }
 
-    pub fn on_input(&mut self, event: InputEvent, db: &mut Database) -> Message {
-        if let InputEvent::Key(key) = event {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Esc => return Message::Quit,
-                    KeyCode::Tab => return Message::Route(Route::Review),
-                    KeyCode::Char('s') => {
-                        if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            let content = self.editor.lines().join("\n");
-                            self.editor = TextArea::default();
-                            db.add(Card::new(content));
-                            return Message::Render;
-                        } else {
-                            self.editor.input(key);
-                            return Message::Render;
-                        }
-                    }
-                    KeyCode::Char('p') => {
-                        if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            todo!("preview");
-                        } else {
-                            self.editor.input(key);
-                            return Message::Render;
-                        }
-                    }
-                    _ => {
+    pub fn on_input(&mut self, key: KeyEvent, db: &mut Database) -> Action {
+        if key.kind == KeyEventKind::Press {
+            match key.code {
+                KeyCode::Esc => return Action::Quit,
+                KeyCode::Tab => return Action::Route(Route::Review),
+                KeyCode::Char('s') => {
+                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                        let content = self.editor.lines().join("\n");
+                        self.editor = TextArea::default();
+                        db.add(Card::new(content));
+                        return Action::Render;
+                    } else {
                         self.editor.input(key);
-                        return Message::Render;
+                        return Action::Render;
                     }
+                }
+                KeyCode::Char('p') => {
+                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                        // todo: toggle preview
+                    } else {
+                        self.editor.input(key);
+                        return Action::Render;
+                    }
+                }
+                _ => {
+                    self.editor.input(key);
+                    return Action::Render;
                 }
             }
         }
 
-        Message::None
+        Action::None
+    }
+
+    pub fn on_paste(&mut self, s: String) -> Action {
+        //todo
+        Action::None
     }
 
     pub fn on_exit(&mut self) {
         //todo
+    }
+
+    pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
+        &[
+            SHORTCUT_SAVE,
+            SHORTCUT_PREVIEW,
+            SHORTCUT_MENU,
+            SHORTCUT_QUIT,
+        ]
     }
 }
 
@@ -268,44 +278,43 @@ impl EditCard {
         //todo
     }
 
-    pub fn on_render(&self, areas: &Areas, buf: &mut Buffer) {
-        Line::from("Lazycard — Edit Card")
-            .centered()
-            .render(areas.header, buf);
-
-        Paragraph::new("edit card...").render(areas.body, buf);
-
-        Line::from("[esc]Quit  [ctrl-s]Save  [ctrl-c]Cancel")
-            .centered()
-            .render(areas.footer, buf);
+    pub fn on_render(&self, area: Rect, buf: &mut Buffer) {
+        Paragraph::new("todo: edit card...").render(area, buf);
     }
 
-    pub fn on_input(&mut self, event: InputEvent, db: &mut Database) -> Message {
-        if let InputEvent::Key(key) = event {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Esc => return Message::Quit,
-                    KeyCode::Char('s') => {
-                        if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            // todo: save and go back
-                            return Message::Route(Route::Review);
-                        }
+    pub fn on_input(&mut self, key: KeyEvent, db: &mut Database) -> Action {
+        if key.kind == KeyEventKind::Press {
+            match key.code {
+                KeyCode::Esc => return Action::Quit,
+                KeyCode::Char('s') => {
+                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                        // todo: save and go back
+                        return Action::Route(Route::Review);
                     }
-                    KeyCode::Char('c') => {
-                        if key.modifiers.contains(KeyModifiers::CONTROL) {
-                            // todo: cancel and go back
-                            return Message::Route(Route::Review);
-                        }
-                    }
-                    _ => {}
                 }
+                KeyCode::Char('c') => {
+                    if key.modifiers.contains(KeyModifiers::CONTROL) {
+                        // todo: cancel and go back
+                        return Action::Route(Route::Review);
+                    }
+                }
+                _ => {}
             }
         }
 
-        Message::None
+        Action::None
+    }
+
+    pub fn on_paste(&mut self, s: String) -> Action {
+        //todo
+        Action::None
     }
 
     pub fn on_exit(&mut self) {
         //todo
+    }
+
+    pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
+        &[SHORTCUT_SAVE, SHORTCUT_CANCEL, SHORTCUT_QUIT]
     }
 }

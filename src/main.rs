@@ -2,6 +2,7 @@ mod app;
 mod database;
 mod markup;
 mod pages;
+mod utils;
 
 fn main() -> std::io::Result<()> {
     let terminal = ratatui::init();
