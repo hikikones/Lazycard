@@ -1,5 +1,13 @@
+use std::sync::LazyLock;
+
 use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
+use syntect::{
+    easy::HighlightLines,
+    highlighting::{FontStyle, ThemeSet},
+    parsing::SyntaxSet,
+    util::LinesWithEndings,
+};
 use tui_textarea::TextArea;
 
 use crate::{
@@ -88,7 +96,51 @@ impl Review {
                     body.y += 1;
                 }
                 BlockElement::Code { language, text } => {
-                    Text::raw(text).render(areas.body, buf);
+                    static SYNTAX_SET: LazyLock<SyntaxSet> =
+                        LazyLock::new(|| SyntaxSet::load_defaults_newlines());
+                    static THEME_SET: LazyLock<ThemeSet> =
+                        LazyLock::new(|| ThemeSet::load_defaults());
+
+                    let syntax = SYNTAX_SET
+                        .find_syntax_by_extension(language)
+                        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+                    let mut highlighter =
+                        HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
+
+                    for code_line in LinesWithEndings::from(text) {
+                        match highlighter.highlight_line(code_line, &SYNTAX_SET) {
+                            Ok(spans) => {
+                                let mut line: Line<'_> = Line::default();
+                                for (style, span) in spans {
+                                    let mut modifiers = Modifier::empty();
+                                    if style.font_style.contains(FontStyle::BOLD) {
+                                        modifiers.insert(Modifier::BOLD);
+                                    }
+                                    if style.font_style.contains(FontStyle::ITALIC) {
+                                        modifiers.insert(Modifier::ITALIC);
+                                    }
+                                    if style.font_style.contains(FontStyle::UNDERLINE) {
+                                        modifiers.insert(Modifier::UNDERLINED);
+                                    }
+                                    let fg = Color::Rgb(
+                                        style.foreground.r,
+                                        style.foreground.g,
+                                        style.foreground.b,
+                                    );
+                                    line.push_span(Span::styled(
+                                        span,
+                                        Style::new().add_modifier(modifiers).fg(fg),
+                                    ));
+                                }
+                                line.render(body, buf);
+                                body.y += 1;
+                            }
+                            Err(_) => {
+                                Line::raw(code_line).render(body, buf);
+                                body.y += 1;
+                            }
+                        }
+                    }
                 }
             }
         }

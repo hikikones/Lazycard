@@ -63,7 +63,7 @@ left paragraph with **bold** and __cursive__ text that should wrap when line bec
         CardId(2),
         Card::new(
             r#"
-```rust
+```rs
 fn main() {
     println!("Hello, world!");
 }
