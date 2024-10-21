@@ -1,13 +1,5 @@
-use std::sync::LazyLock;
-
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{prelude::*, widgets::*};
-use syntect::{
-    easy::HighlightLines,
-    highlighting::{FontStyle, ThemeSet},
-    parsing::SyntaxSet,
-    util::LinesWithEndings,
-};
 use tui_textarea::TextArea;
 
 use crate::{app::Action, database::*, markup::*, utils::*};
@@ -69,82 +61,8 @@ impl Review {
         }
     }
 
-    pub fn on_render(&self, mut area: Rect, buf: &mut Buffer) {
-        let width = area.width as usize;
-        for block in BlockParser::new(&self.text) {
-            match block {
-                BlockElement::Paragraph { alignment, text } => {
-                    let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
-                    let mut ansi_parser = AnsiParser::new("");
-                    for wrapped_line in textwrap::fill(&ansi_markup, width).lines() {
-                        let mut line = Line::default();
-                        ansi_parser.continue_with(wrapped_line);
-                        for (tag, span) in &mut ansi_parser {
-                            let style = match tag {
-                                AnsiTag::Text => Style::new(),
-                                AnsiTag::Bold => Style::new().bold(),
-                                AnsiTag::Italic => Style::new().italic(),
-                            };
-                            line.push_span(Span::styled(span, style));
-                        }
-                        line.alignment(alignment).render(area, buf);
-                        area.y += 1;
-                    }
-                }
-                BlockElement::Code { language, text } => {
-                    static SYNTAX_SET: LazyLock<SyntaxSet> =
-                        LazyLock::new(|| SyntaxSet::load_defaults_newlines());
-                    static THEME_SET: LazyLock<ThemeSet> =
-                        LazyLock::new(|| ThemeSet::load_defaults());
-
-                    let syntax = if language.is_empty() {
-                        SYNTAX_SET.find_syntax_plain_text()
-                    } else {
-                        SYNTAX_SET
-                            .find_syntax_by_token(language)
-                            .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
-                    };
-                    let mut highlighter =
-                        HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
-
-                    for code_line in LinesWithEndings::from(text) {
-                        match highlighter.highlight_line(code_line, &SYNTAX_SET) {
-                            Ok(spans) => {
-                                let mut line: Line<'_> = Line::default();
-                                for (style, span) in spans {
-                                    let mut modifiers = Modifier::empty();
-                                    if style.font_style.contains(FontStyle::BOLD) {
-                                        modifiers.insert(Modifier::BOLD);
-                                    }
-                                    if style.font_style.contains(FontStyle::ITALIC) {
-                                        modifiers.insert(Modifier::ITALIC);
-                                    }
-                                    if style.font_style.contains(FontStyle::UNDERLINE) {
-                                        modifiers.insert(Modifier::UNDERLINED);
-                                    }
-                                    let fg = Color::Rgb(
-                                        style.foreground.r,
-                                        style.foreground.g,
-                                        style.foreground.b,
-                                    );
-                                    line.push_span(Span::styled(
-                                        span,
-                                        Style::new().add_modifier(modifiers).fg(fg),
-                                    ));
-                                }
-                                line.render(area, buf);
-                                area.y += 1;
-                            }
-                            Err(_) => {
-                                Line::raw(code_line).render(area, buf);
-                                area.y += 1;
-                            }
-                        }
-                    }
-                }
-            }
-            area.y += 1;
-        }
+    pub fn on_render(&self, area: Rect, buf: &mut Buffer) {
+        Markup::new(&self.text).render(area, buf);
     }
 
     pub fn on_input(&mut self, key: KeyEvent, db: &mut Database) -> Action {

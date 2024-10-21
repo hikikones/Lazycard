@@ -1,20 +1,121 @@
-use std::{iter::Peekable, str::CharIndices};
+use std::{iter::Peekable, str::CharIndices, sync::LazyLock};
 
-use ratatui::layout::Alignment;
+use ratatui::prelude::*;
+use syntect::{
+    easy::HighlightLines,
+    highlighting::{FontStyle, ThemeSet},
+    parsing::SyntaxSet,
+    util::LinesWithEndings,
+};
+
+#[derive(Debug, Default)]
+pub struct Markup<'a> {
+    text: &'a str,
+}
+
+impl<'a> Markup<'a> {
+    pub const fn new(text: &'a str) -> Self {
+        Self { text }
+    }
+}
+
+impl<'a> Widget for Markup<'a> {
+    fn render(self, mut area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        let width = area.width as usize;
+
+        for block in BlockParser::new(&self.text) {
+            match block {
+                BlockElement::Paragraph { alignment, text } => {
+                    let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
+                    let mut ansi_parser = AnsiParser::new("");
+                    for wrapped_line in textwrap::fill(&ansi_markup, width).lines() {
+                        let mut line = Line::default();
+                        ansi_parser.continue_with(wrapped_line);
+                        for (tag, span) in &mut ansi_parser {
+                            let style = match tag {
+                                AnsiTag::Text => Style::new(),
+                                AnsiTag::Bold => Style::new().bold(),
+                                AnsiTag::Italic => Style::new().italic(),
+                            };
+                            line.push_span(Span::styled(span, style));
+                        }
+                        line.alignment(alignment).render(area, buf);
+                        area.y += 1;
+                    }
+                }
+                BlockElement::Code { language, text } => {
+                    static SYNTAX_SET: LazyLock<SyntaxSet> =
+                        LazyLock::new(|| SyntaxSet::load_defaults_newlines());
+                    static THEME_SET: LazyLock<ThemeSet> =
+                        LazyLock::new(|| ThemeSet::load_defaults());
+
+                    let syntax = if language.is_empty() {
+                        SYNTAX_SET.find_syntax_plain_text()
+                    } else {
+                        SYNTAX_SET
+                            .find_syntax_by_token(language)
+                            .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
+                    };
+                    let mut highlighter =
+                        HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
+
+                    for code_line in LinesWithEndings::from(text) {
+                        match highlighter.highlight_line(code_line, &SYNTAX_SET) {
+                            Ok(spans) => {
+                                let mut line: Line<'_> = Line::default();
+                                for (style, span) in spans {
+                                    let mut modifiers = Modifier::empty();
+                                    if style.font_style.contains(FontStyle::BOLD) {
+                                        modifiers.insert(Modifier::BOLD);
+                                    }
+                                    if style.font_style.contains(FontStyle::ITALIC) {
+                                        modifiers.insert(Modifier::ITALIC);
+                                    }
+                                    if style.font_style.contains(FontStyle::UNDERLINE) {
+                                        modifiers.insert(Modifier::UNDERLINED);
+                                    }
+                                    let fg = Color::Rgb(
+                                        style.foreground.r,
+                                        style.foreground.g,
+                                        style.foreground.b,
+                                    );
+                                    line.push_span(Span::styled(
+                                        span,
+                                        Style::new().add_modifier(modifiers).fg(fg),
+                                    ));
+                                }
+                                line.render(area, buf);
+                                area.y += 1;
+                            }
+                            Err(_) => {
+                                Line::raw(code_line).render(area, buf);
+                                area.y += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            area.y += 1;
+        }
+    }
+}
 
 #[derive(Debug)]
-pub enum BlockElement<'a> {
+enum BlockElement<'a> {
     Paragraph { alignment: Alignment, text: &'a str },
     Code { language: &'a str, text: &'a str },
 }
 
-pub struct BlockParser<'a> {
+struct BlockParser<'a> {
     input: &'a str,
     chars: Peekable<CharIndices<'a>>,
 }
 
 impl<'a> BlockParser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    fn new(input: &'a str) -> Self {
         Self {
             input,
             chars: input.char_indices().peekable(),
@@ -134,13 +235,13 @@ fn count_ticks(chars: &mut Peekable<CharIndices>) -> usize {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum InlineTag {
+enum InlineTag {
     Text,
     Bold,
     Italic,
 }
 
-pub struct InlineParser<'a> {
+struct InlineParser<'a> {
     input: &'a str,
     chars: Peekable<CharIndices<'a>>,
     start: usize,
@@ -148,7 +249,7 @@ pub struct InlineParser<'a> {
 }
 
 impl<'a> InlineParser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    fn new(input: &'a str) -> Self {
         Self {
             input,
             chars: input.char_indices().peekable(),
@@ -157,13 +258,13 @@ impl<'a> InlineParser<'a> {
         }
     }
 
-    pub fn continue_with(&mut self, input: &'a str) {
+    fn continue_with(&mut self, input: &'a str) {
         self.input = input;
         self.chars = input.char_indices().peekable();
         self.start = 0;
     }
 
-    pub fn into_ansi(self) -> String {
+    fn into_ansi(self) -> String {
         const ANSI_BOLD: &str = "\u{1b}[1m";
         const ANSI_ITALIC: &str = "\u{1b}[3m";
         const ANSI_RESET: &str = "\u{1b}[0m";
@@ -263,13 +364,13 @@ impl<'a> Iterator for InlineParser<'a> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum AnsiTag {
+enum AnsiTag {
     Text,
     Bold,
     Italic,
 }
 
-pub struct AnsiParser<'a> {
+struct AnsiParser<'a> {
     input: &'a str,
     chars: Peekable<CharIndices<'a>>,
     start: usize,
@@ -277,7 +378,7 @@ pub struct AnsiParser<'a> {
 }
 
 impl<'a> AnsiParser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    fn new(input: &'a str) -> Self {
         Self {
             input,
             chars: input.char_indices().peekable(),
@@ -286,7 +387,7 @@ impl<'a> AnsiParser<'a> {
         }
     }
 
-    pub fn continue_with(&mut self, input: &'a str) {
+    fn continue_with(&mut self, input: &'a str) {
         self.input = input;
         self.chars = input.char_indices().peekable();
         self.start = 0;
