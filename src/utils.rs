@@ -12,6 +12,7 @@ pub const SHORTCUT_DELETE: Shortcut = Shortcut::new("Delete", "Del");
 pub const SHORTCUT_SAVE: Shortcut = Shortcut::new("Save", "^s");
 pub const SHORTCUT_CANCEL: Shortcut = Shortcut::new("Cancel", "^c");
 pub const SHORTCUT_PREVIEW: Shortcut = Shortcut::new("Preview", "^p");
+pub const SHORTCUT_SCROLL: Shortcut = Shortcut::new("Scroll", "⇅");
 
 pub struct Shortcut<'a> {
     pub name: &'a str,

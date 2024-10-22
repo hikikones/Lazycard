@@ -78,7 +78,10 @@ impl App {
         Ok(())
     }
 
-    fn render<'a>(&'a self, terminal: &'a mut DefaultTerminal) -> std::io::Result<CompletedFrame> {
+    fn render<'a>(
+        &'a mut self,
+        terminal: &'a mut DefaultTerminal,
+    ) -> std::io::Result<CompletedFrame> {
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();

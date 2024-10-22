@@ -41,6 +41,7 @@ pub struct Review {
     due: Vec<CardId>,
     index: usize,
     text: String,
+    scroll: usize,
 }
 
 impl Review {
@@ -49,6 +50,7 @@ impl Review {
             due: Vec::new(),
             index: 0,
             text: String::new(),
+            scroll: 0,
         }
     }
 
@@ -61,8 +63,8 @@ impl Review {
         }
     }
 
-    pub fn on_render(&self, area: Rect, buf: &mut Buffer) {
-        Markup::new(&self.text).render(area, buf);
+    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer) {
+        Markup::new(&self.text).render(area, buf, &mut self.scroll);
     }
 
     pub fn on_input(&mut self, key: KeyEvent, db: &mut Database) -> Action {
@@ -80,10 +82,14 @@ impl Review {
                 KeyCode::Up => {
                     // todo: successful recall
                     // fixme: activates when scrolling with touchpad?
+                    self.scroll = self.scroll.saturating_sub(1);
+                    return Action::Render;
                 }
                 KeyCode::Down => {
                     // todo: unsuccessful recall
                     // fixme: activates when scrolling with touchpad?
+                    self.scroll = self.scroll.saturating_add(1);
+                    return Action::Render;
                 }
                 KeyCode::Right => {
                     self.index = (self.index + 1) % self.due.len();
@@ -106,10 +112,17 @@ impl Review {
         self.due.clear();
         self.index = 0;
         self.text.clear();
+        self.scroll = 0;
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
-        &[SHORTCUT_EDIT, SHORTCUT_DELETE, SHORTCUT_MENU, SHORTCUT_QUIT]
+        &[
+            SHORTCUT_SCROLL,
+            SHORTCUT_EDIT,
+            SHORTCUT_DELETE,
+            SHORTCUT_MENU,
+            SHORTCUT_QUIT,
+        ]
     }
 }
 

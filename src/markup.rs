@@ -8,7 +8,7 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Markup<'a> {
     text: &'a str,
 }
@@ -19,12 +19,13 @@ impl<'a> Markup<'a> {
     }
 }
 
-impl<'a> Widget for Markup<'a> {
-    fn render(self, mut area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+impl<'a> StatefulWidget for &mut Markup<'a> {
+    type State = usize;
+
+    fn render(self, mut area: Rect, buf: &mut Buffer, scroll: &mut Self::State) {
         let width = area.width as usize;
+        let height = area.height as usize;
+        let mut lines: Vec<Line> = Vec::new();
 
         for block in BlockParser::new(&self.text) {
             match block {
@@ -32,7 +33,7 @@ impl<'a> Widget for Markup<'a> {
                     let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
                     let mut ansi_parser = AnsiParser::new("");
                     for wrapped_line in textwrap::fill(&ansi_markup, width).lines() {
-                        let mut line = Line::default();
+                        let mut line = Line::default().alignment(alignment);
                         ansi_parser.continue_with(wrapped_line);
                         for (tag, span) in &mut ansi_parser {
                             let style = match tag {
@@ -40,10 +41,9 @@ impl<'a> Widget for Markup<'a> {
                                 AnsiTag::Bold => Style::new().bold(),
                                 AnsiTag::Italic => Style::new().italic(),
                             };
-                            line.push_span(Span::styled(span, style));
+                            line.push_span(Span::styled(span.to_owned(), style));
                         }
-                        line.alignment(alignment).render(area, buf);
-                        area.y += 1;
+                        lines.push(line);
                     }
                 }
                 BlockElement::Code { language, text } => {
@@ -87,19 +87,35 @@ impl<'a> Widget for Markup<'a> {
                                         Style::new().add_modifier(modifiers).fg(fg),
                                     ));
                                 }
-                                line.render(area, buf);
-                                area.y += 1;
+                                lines.push(line);
                             }
                             Err(_) => {
-                                Line::raw(code_line).render(area, buf);
-                                area.y += 1;
+                                lines.push(Line::raw(code_line));
                             }
                         }
                     }
                 }
             }
-            area.y += 1;
+            lines.push(Line::default());
         }
+
+        lines.pop();
+
+        let skip_count = if lines.len() <= height {
+            0
+        } else {
+            (*scroll).min(lines.len() - height)
+        };
+        *scroll = skip_count;
+
+        lines
+            .into_iter()
+            .skip(skip_count)
+            .take(height)
+            .for_each(|line| {
+                line.render(area, buf);
+                area.y += 1;
+            });
     }
 }
 
@@ -258,7 +274,7 @@ impl<'a> InlineParser<'a> {
         }
     }
 
-    fn continue_with(&mut self, input: &'a str) {
+    fn _continue_with(&mut self, input: &'a str) {
         self.input = input;
         self.chars = input.char_indices().peekable();
         self.start = 0;
