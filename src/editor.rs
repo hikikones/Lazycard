@@ -24,6 +24,12 @@ pub enum CursorMove {
     End,
 }
 
+pub enum CursorDelete {
+    Forward,
+    Back,
+    Selection,
+}
+
 impl TextEditor {
     pub const fn new() -> Self {
         Self {
@@ -41,6 +47,53 @@ impl TextEditor {
 
     pub fn as_str(&self) -> &str {
         self.input.as_str()
+    }
+
+    pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) {
+        let shift = key_modifiers.contains(KeyModifiers::SHIFT);
+        let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
+        match key_pressed {
+            KeyCode::Right => {
+                self.move_cursor(CursorMove::Forward, shift);
+            }
+            KeyCode::Left => {
+                self.move_cursor(CursorMove::Back, shift);
+            }
+            KeyCode::Up => {
+                self.move_cursor(CursorMove::Up, shift);
+            }
+            KeyCode::Down => {
+                self.move_cursor(CursorMove::Down, shift);
+            }
+            KeyCode::Home => {
+                self.move_cursor(CursorMove::Start, shift);
+            }
+            KeyCode::End => {
+                self.move_cursor(CursorMove::End, shift);
+            }
+            KeyCode::Enter => {
+                self.push_char('\n');
+            }
+            KeyCode::Backspace => {
+                self.delete(CursorDelete::Back);
+            }
+            KeyCode::Delete => {
+                self.delete(CursorDelete::Forward);
+            }
+            KeyCode::Char(c) => match c {
+                'a' => {
+                    if ctrl {
+                        self.select_all();
+                    } else {
+                        self.push_char(c);
+                    }
+                }
+                _ => {
+                    self.push_char(c);
+                }
+            },
+            _ => {}
+        }
     }
 
     pub fn push_char(&mut self, c: char) {
@@ -113,24 +166,28 @@ impl TextEditor {
         self.cursor_index = self.input.len();
     }
 
-    pub fn delete_back(&mut self) {
-        match self.selection_start.take() {
-            Some(start) => self.delete_selection(start),
-            None => {
-                if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
-                    self.cursor_index -= c.len_utf8();
-                    self.input.remove(self.cursor_index);
+    pub fn delete(&mut self, cd: CursorDelete) {
+        match cd {
+            CursorDelete::Forward => match self.selection_start.take() {
+                Some(selector) => self.delete_selection(selector),
+                None => {
+                    if self.input[self.cursor_index..].chars().next().is_some() {
+                        self.input.remove(self.cursor_index);
+                    }
                 }
-            }
-        }
-    }
-
-    pub fn delete_forward(&mut self) {
-        match self.selection_start.take() {
-            Some(start) => self.delete_selection(start),
-            None => {
-                if self.input[self.cursor_index..].chars().next().is_some() {
-                    self.input.remove(self.cursor_index);
+            },
+            CursorDelete::Back => match self.selection_start.take() {
+                Some(selector) => self.delete_selection(selector),
+                None => {
+                    if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
+                        self.cursor_index -= c.len_utf8();
+                        self.input.remove(self.cursor_index);
+                    }
+                }
+            },
+            CursorDelete::Selection => {
+                if let Some(selector) = self.selection_start.take() {
+                    self.delete_selection(selector);
                 }
             }
         }
@@ -148,69 +205,14 @@ impl TextEditor {
         self.scroll = 0;
     }
 
-    pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) {
-        let shift = key_modifiers.contains(KeyModifiers::SHIFT);
-        let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
-        match key_pressed {
-            KeyCode::Right => {
-                self.move_cursor(CursorMove::Forward, shift);
-            }
-            KeyCode::Left => {
-                self.move_cursor(CursorMove::Back, shift);
-            }
-            KeyCode::Up => {
-                self.move_cursor(CursorMove::Up, shift);
-            }
-            KeyCode::Down => {
-                self.move_cursor(CursorMove::Down, shift);
-            }
-            KeyCode::Home => {
-                self.move_cursor(CursorMove::Start, shift);
-            }
-            KeyCode::End => {
-                self.move_cursor(CursorMove::End, shift);
-            }
-            KeyCode::Enter => {
-                self.push_char('\n');
-            }
-            KeyCode::Backspace => {
-                self.delete_back();
-            }
-            KeyCode::Delete => {
-                self.delete_forward();
-            }
-            KeyCode::Char(c) => match c {
-                'a' => {
-                    if ctrl {
-                        self.select_all();
-                    } else {
-                        self.push_char(c);
-                    }
-                }
-                _ => {
-                    self.push_char(c);
-                }
-            },
-            _ => {}
-        }
-    }
-
-    fn delete_selection(&mut self, selection_start: usize) {
-        if selection_start < self.cursor_index {
-            self.input
-                .replace_range(selection_start..self.cursor_index, "");
-            self.cursor_index = selection_start;
-        } else if self.cursor_index < selection_start {
-            if let Some(c) = self.input[self.cursor_index..].chars().next() {
-                let start = self.cursor_index + c.len_utf8();
-                let end = self.input[selection_start..]
-                    .chars()
-                    .next()
-                    .map(|c| selection_start + c.len_utf8())
-                    .unwrap_or(self.input.len());
-                self.input.replace_range(start..end, "");
-            }
-        }
+    fn delete_selection(&mut self, selector: usize) {
+        let (start, end) = if self.cursor_index < selector {
+            (self.cursor_index, selector)
+        } else {
+            (selector, self.cursor_index)
+        };
+        self.input.replace_range(start..end, "");
+        self.cursor_index = start;
     }
 
     fn jump_to_line(&mut self, i: usize) {
@@ -286,7 +288,7 @@ impl Widget for &mut TextEditor {
             };
 
             let is_cursor = i == self.cursor_index;
-            let is_selected = i >= selection_start && i <= selection_end;
+            let is_selected = i >= selection_start && i < selection_end;
 
             let style = if is_cursor {
                 self.cursor_line_index = line_index;
