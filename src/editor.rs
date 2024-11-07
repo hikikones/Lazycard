@@ -151,7 +151,6 @@ impl TextEditor {
     pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) {
         let shift = key_modifiers.contains(KeyModifiers::SHIFT);
         let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
-
         match key_pressed {
             KeyCode::Right => {
                 self.move_cursor(CursorMove::Forward, shift);
@@ -181,7 +180,6 @@ impl TextEditor {
                 self.delete_forward();
             }
             KeyCode::Char(c) => match c {
-                // TODO: whitespace/tabs
                 'a' => {
                     if ctrl {
                         self.select_all();
@@ -232,13 +230,17 @@ impl TextEditor {
                 break;
             };
 
-            // TODO: whitespace/tabs
-
             if c == '\n' {
                 break;
             }
 
-            column += unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
+            let char_width = if c.is_whitespace() {
+                1
+            } else {
+                unicode_width::UnicodeWidthChar::width(c).unwrap_or(1)
+            };
+
+            column += char_width;
             offset += c.len_utf8();
         }
 
@@ -296,25 +298,24 @@ impl Widget for &mut TextEditor {
                 STYLE_NONE
             };
 
-            let next_line = match c {
-                '\n' => {
-                    if is_cursor || (is_selected && i < input_len) {
-                        let span = Span::styled(" ", style);
-                        self.line_spans[line_index].push_span(span);
-                    }
-                    true
+            let is_next_line = if c == '\n' {
+                if is_cursor || (is_selected && i < input_len) {
+                    self.line_spans[line_index].push_span(Span::styled(" ", style));
                 }
-                // TODO: whitespace/tabs
-                _ => {
-                    let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
-                    let span = Span::styled(c.to_string(), style);
-                    self.line_spans[line_index].push_span(span);
-                    line_width += char_width;
-                    line_width >= area.width as usize
-                }
+                true
+            } else if c.is_whitespace() {
+                self.line_spans[line_index].push_span(Span::styled(" ", style));
+                line_width += 1;
+                line_width >= area.width as usize
+            } else {
+                let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
+                let span = Span::styled(c.to_string(), style);
+                self.line_spans[line_index].push_span(span);
+                line_width += char_width;
+                line_width >= area.width as usize
             };
 
-            if next_line {
+            if is_next_line {
                 line_width = 0;
                 line_index += 1;
                 self.line_spans.push(Line::default());
