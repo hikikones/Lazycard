@@ -1,6 +1,11 @@
-use std::{iter::Peekable, str::CharIndices, sync::LazyLock};
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    iter::Peekable,
+    str::CharIndices,
+    sync::LazyLock,
+};
 
-use ratatui::prelude::*;
+use ratatui::{prelude::*, widgets::WidgetRef};
 use syntect::{
     easy::HighlightLines,
     highlighting::{FontStyle, ThemeSet},
@@ -9,116 +14,172 @@ use syntect::{
 };
 
 #[derive(Debug)]
-pub struct Markup<'a> {
-    text: &'a str,
+pub struct Markup {
+    lines: Vec<Line<'static>>,
+    width: usize,
+    height: usize,
+    scroll: usize,
+    hash: u64,
 }
 
-impl<'a> Markup<'a> {
-    pub const fn new(text: &'a str) -> Self {
-        Self { text }
+pub enum ScrollMove {
+    Up,
+    Down,
+    Start,
+    _End,
+}
+
+impl Markup {
+    pub const fn new() -> Self {
+        Self {
+            lines: Vec::new(),
+            width: 0,
+            height: 0,
+            scroll: 0,
+            hash: 0,
+        }
     }
-}
 
-impl<'a> StatefulWidget for Markup<'a> {
-    type State = usize;
+    pub fn scroll(&mut self, sm: ScrollMove) -> bool {
+        let lines = self.lines.len();
+        let height = self.height;
 
-    fn render(self, mut area: Rect, buf: &mut Buffer, scroll: &mut Self::State) {
+        match sm {
+            ScrollMove::Up => self.set_scroll(self.scroll.saturating_sub(1), lines, height),
+            ScrollMove::Down => self.set_scroll(self.scroll.saturating_add(1), lines, height),
+            ScrollMove::Start => self.set_scroll(0, lines, height),
+            ScrollMove::_End => self.set_scroll(usize::MAX, lines, height),
+        }
+    }
+
+    fn set_scroll(&mut self, n: usize, lines: usize, height: usize) -> bool {
+        let current_scroll = self.scroll;
+
+        let new_scroll = if lines <= height {
+            0
+        } else {
+            usize::min(n, lines - height)
+        };
+        self.scroll = new_scroll;
+
+        current_scroll != new_scroll
+    }
+
+    pub fn render_markup(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
         let width = area.width as usize;
         let height = area.height as usize;
-        let mut lines = Vec::new();
 
-        for block in BlockParser::new(&self.text) {
-            match block {
-                BlockElement::Paragraph { alignment, text } => {
-                    let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
-                    let mut ansi_parser = AnsiParser::new("");
-                    let mut wrap_opts = textwrap::Options::new(width);
-                    wrap_opts.word_splitter = textwrap::WordSplitter::NoHyphenation;
-                    wrap_opts.wrap_algorithm = textwrap::WrapAlgorithm::FirstFit;
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        let hash = hasher.finish();
 
-                    for wrapped_line in textwrap::fill(&ansi_markup, wrap_opts).lines() {
-                        let mut line = Line::default().alignment(alignment);
-                        ansi_parser.continue_with(wrapped_line);
-                        for (tag, span) in &mut ansi_parser {
-                            let style = match tag {
-                                AnsiTag::Text => Style::new(),
-                                AnsiTag::Bold => Style::new().bold(),
-                                AnsiTag::Italic => Style::new().italic(),
-                            };
-                            line.push_span(Span::styled(span.to_owned(), style));
+        self.height = height;
+
+        if self.width != width || self.hash != hash {
+            self.lines.clear();
+            self.width = width;
+            self.hash = hash;
+
+            // Process markup
+            for block in BlockParser::new(text) {
+                match block {
+                    BlockElement::Paragraph { alignment, text } => {
+                        let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
+                        let mut ansi_parser = AnsiParser::new("");
+                        let mut wrap_opts = textwrap::Options::new(width);
+                        wrap_opts.word_splitter = textwrap::WordSplitter::NoHyphenation;
+                        wrap_opts.wrap_algorithm = textwrap::WrapAlgorithm::FirstFit;
+
+                        for wrapped_line in textwrap::fill(&ansi_markup, wrap_opts).lines() {
+                            let mut line = Line::default().alignment(alignment);
+                            ansi_parser.continue_with(wrapped_line);
+                            for (tag, span) in &mut ansi_parser {
+                                let style = match tag {
+                                    AnsiTag::Text => Style::new(),
+                                    AnsiTag::Bold => Style::new().bold(),
+                                    AnsiTag::Italic => Style::new().italic(),
+                                };
+                                line.push_span(Span::styled(span.to_owned(), style));
+                            }
+                            self.lines.push(line);
                         }
-                        lines.push(line);
                     }
-                }
-                BlockElement::Code { language, text } => {
-                    static SYNTAX_SET: LazyLock<SyntaxSet> =
-                        LazyLock::new(|| SyntaxSet::load_defaults_newlines());
-                    static THEME_SET: LazyLock<ThemeSet> =
-                        LazyLock::new(|| ThemeSet::load_defaults());
+                    BlockElement::Code { language, text } => {
+                        static SYNTAX_SET: LazyLock<SyntaxSet> =
+                            LazyLock::new(|| SyntaxSet::load_defaults_newlines());
+                        static THEME_SET: LazyLock<ThemeSet> =
+                            LazyLock::new(|| ThemeSet::load_defaults());
 
-                    let syntax = if language.is_empty() {
-                        SYNTAX_SET.find_syntax_plain_text()
-                    } else {
-                        SYNTAX_SET
-                            .find_syntax_by_token(language)
-                            .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
-                    };
-                    let mut highlighter =
-                        HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
+                        let syntax = if language.is_empty() {
+                            SYNTAX_SET.find_syntax_plain_text()
+                        } else {
+                            SYNTAX_SET
+                                .find_syntax_by_token(language)
+                                .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
+                        };
+                        let mut highlighter =
+                            HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
 
-                    for code_line in LinesWithEndings::from(text) {
-                        match highlighter.highlight_line(code_line, &SYNTAX_SET) {
-                            Ok(spans) => {
-                                let mut line = Line::default();
-                                for (style, span) in spans {
-                                    let mut modifiers = Modifier::empty();
-                                    if style.font_style.contains(FontStyle::BOLD) {
-                                        modifiers.insert(Modifier::BOLD);
+                        for code_line in LinesWithEndings::from(text) {
+                            match highlighter.highlight_line(code_line, &SYNTAX_SET) {
+                                Ok(spans) => {
+                                    let mut line = Line::default();
+                                    for (style, span) in spans {
+                                        let mut modifiers = Modifier::empty();
+                                        if style.font_style.contains(FontStyle::BOLD) {
+                                            modifiers.insert(Modifier::BOLD);
+                                        }
+                                        if style.font_style.contains(FontStyle::ITALIC) {
+                                            modifiers.insert(Modifier::ITALIC);
+                                        }
+                                        if style.font_style.contains(FontStyle::UNDERLINE) {
+                                            modifiers.insert(Modifier::UNDERLINED);
+                                        }
+                                        let fg = Color::Rgb(
+                                            style.foreground.r,
+                                            style.foreground.g,
+                                            style.foreground.b,
+                                        );
+                                        line.push_span(Span::styled(
+                                            span.to_owned(),
+                                            Style::new().add_modifier(modifiers).fg(fg),
+                                        ));
                                     }
-                                    if style.font_style.contains(FontStyle::ITALIC) {
-                                        modifiers.insert(Modifier::ITALIC);
-                                    }
-                                    if style.font_style.contains(FontStyle::UNDERLINE) {
-                                        modifiers.insert(Modifier::UNDERLINED);
-                                    }
-                                    let fg = Color::Rgb(
-                                        style.foreground.r,
-                                        style.foreground.g,
-                                        style.foreground.b,
-                                    );
-                                    line.push_span(Span::styled(
-                                        span,
-                                        Style::new().add_modifier(modifiers).fg(fg),
-                                    ));
+                                    self.lines.push(line);
                                 }
-                                lines.push(line);
-                            }
-                            Err(_) => {
-                                lines.push(Line::raw(code_line));
+                                Err(_) => {
+                                    self.lines.push(Line::raw(code_line.to_owned()));
+                                }
                             }
                         }
                     }
                 }
+                self.lines.push(Line::default());
             }
-            lines.push(Line::default());
+            self.lines.pop();
+
+            // Update scroll
+            self.set_scroll(self.scroll, self.lines.len(), height);
         }
 
-        lines.pop();
-
-        if lines.len() <= height {
-            *scroll = 0;
-        } else {
-            *scroll = usize::min(*scroll, lines.len() - height);
-        };
-
-        lines
-            .into_iter()
-            .skip(*scroll)
+        // Render lines
+        let mut line_area = Rect { height: 1, ..area };
+        self.lines
+            .iter()
+            .skip(self.scroll)
             .take(height)
             .for_each(|line| {
-                line.render(area, buf);
-                area.y += 1;
+                line.render_ref(line_area, buf);
+                line_area.y += 1;
             });
+    }
+
+    pub fn clear(&mut self) {
+        self.lines.clear();
+        self.scroll = 0;
+        self.width = 0;
+        self.height = 0;
+        self.hash = 0;
     }
 }
 

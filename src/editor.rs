@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::prelude::*;
+use ratatui::{prelude::*, widgets::WidgetRef};
 
 use crate::utils::{STYLE_CURSOR, STYLE_NONE, STYLE_SELECTED};
 
@@ -50,8 +50,9 @@ impl TextEditor {
     }
 
     pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) {
-        let shift = key_modifiers.contains(KeyModifiers::SHIFT);
         let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
+        let shift = key_modifiers.contains(KeyModifiers::SHIFT);
+
         match key_pressed {
             KeyCode::Right => {
                 self.move_cursor(CursorMove::Forward, shift);
@@ -256,6 +257,7 @@ impl Widget for &mut TextEditor {
     where
         Self: Sized,
     {
+        self.line_spans.clear();
         self.line_start_indexes.clear();
         self.cursor_column = 0;
         self.cursor_line_index = 0;
@@ -341,11 +343,11 @@ impl Widget for &mut TextEditor {
         line_area.height = 1;
 
         self.line_spans
-            .drain(..)
+            .iter()
             .skip(self.scroll)
             .take(height)
             .for_each(|line| {
-                line.render(line_area, buf);
+                line.render_ref(line_area, buf);
                 line_area.y += 1;
             });
     }

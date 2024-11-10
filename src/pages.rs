@@ -42,7 +42,6 @@ pub struct Review {
     progress: usize,
     state: ReviewState,
     text: String,
-    scroll: usize,
 }
 
 enum ReviewState {
@@ -59,7 +58,6 @@ impl Review {
             progress: 0,
             state: ReviewState::None,
             text: String::new(),
-            scroll: 0,
         }
     }
 
@@ -73,7 +71,7 @@ impl Review {
         }
     }
 
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer) {
+    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
         match self.state {
             ReviewState::None => {
                 Line::raw("no cards to review...")
@@ -81,7 +79,7 @@ impl Review {
                     .render(area, buf);
             }
             ReviewState::Review(_) => {
-                Markup::new(&self.text).render(area, buf, &mut self.scroll);
+                markup.render_markup(&self.text, area, buf);
             }
             ReviewState::Done => {
                 Line::raw("done")
@@ -95,6 +93,7 @@ impl Review {
         &mut self,
         key: KeyCode,
         _modifiers: KeyModifiers,
+        markup: &mut Markup,
         db: &mut Database,
     ) -> Action {
         match self.state {
@@ -121,14 +120,16 @@ impl Review {
                     KeyCode::Up => {
                         // todo: successful recall
                         // fixme: activates when scrolling with touchpad?
-                        self.scroll = self.scroll.saturating_sub(1);
-                        return Action::Render;
+                        if markup.scroll(ScrollMove::Up) {
+                            return Action::Render;
+                        }
                     }
                     KeyCode::Down => {
                         // todo: unsuccessful recall
                         // fixme: activates when scrolling with touchpad?
-                        self.scroll = self.scroll.saturating_add(1);
-                        return Action::Render;
+                        if markup.scroll(ScrollMove::Down) {
+                            return Action::Render;
+                        }
                     }
                     KeyCode::Right => {
                         if let Some(next_id) = self.due.pop() {
@@ -159,7 +160,6 @@ impl Review {
         self.progress = 0;
         self.state = ReviewState::None;
         self.text.clear();
-        self.scroll = 0;
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
@@ -192,7 +192,6 @@ impl Review {
 pub struct AddCard {
     editor: TextEditor,
     preview: bool,
-    scroll: usize,
 }
 
 impl AddCard {
@@ -200,7 +199,6 @@ impl AddCard {
         Self {
             editor: TextEditor::new(),
             preview: false,
-            scroll: 0,
         }
     }
 
@@ -208,25 +206,53 @@ impl AddCard {
         //todo
     }
 
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer) {
+    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
         if self.preview {
-            Markup::new(self.editor.as_str()).render(area, buf, &mut self.scroll);
+            markup.render_markup(self.editor.as_str(), area, buf);
         } else {
             self.editor.render(area, buf);
         }
     }
 
-    pub fn on_input(&mut self, key: KeyCode, modifiers: KeyModifiers, db: &mut Database) -> Action {
+    pub fn on_input(
+        &mut self,
+        key: KeyCode,
+        modifiers: KeyModifiers,
+        markup: &mut Markup,
+        db: &mut Database,
+    ) -> Action {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+        let shift = modifiers.contains(KeyModifiers::SHIFT);
+
         match key {
             KeyCode::Esc => return Action::Quit,
             KeyCode::Tab => return Action::Route(Route::Review),
+            KeyCode::Up => {
+                if self.preview {
+                    if markup.scroll(ScrollMove::Up) {
+                        return Action::Render;
+                    }
+                } else {
+                    self.editor.move_cursor(CursorMove::Up, shift);
+                    return Action::Render;
+                }
+            }
+            KeyCode::Down => {
+                if self.preview {
+                    if markup.scroll(ScrollMove::Down) {
+                        return Action::Render;
+                    }
+                } else {
+                    self.editor.move_cursor(CursorMove::Down, shift);
+                    return Action::Render;
+                }
+            }
             KeyCode::Char('s') => {
                 if ctrl {
                     db.add(Card::new(self.editor.as_str().to_owned()));
                     self.editor.clear();
                     self.preview = false;
-                    self.scroll = 0;
+                    markup.scroll(ScrollMove::Start);
                     return Action::Render;
                 } else if !self.preview {
                     self.editor.push_char('s');
@@ -254,7 +280,6 @@ impl AddCard {
 
     pub fn on_exit(&mut self) {
         self.preview = false;
-        self.scroll = 0;
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
@@ -271,7 +296,6 @@ pub struct EditCard {
     card_id: CardId,
     editor: TextEditor,
     preview: bool,
-    scroll: usize,
 }
 
 impl EditCard {
@@ -280,7 +304,6 @@ impl EditCard {
             card_id: CardId::default(),
             editor: TextEditor::new(),
             preview: false,
-            scroll: 0,
         }
     }
 
@@ -291,18 +314,46 @@ impl EditCard {
         self.editor.move_cursor(CursorMove::Start, false);
     }
 
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer) {
+    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
         if self.preview {
-            Markup::new(self.editor.as_str()).render(area, buf, &mut self.scroll);
+            markup.render_markup(self.editor.as_str(), area, buf);
         } else {
             self.editor.render(area, buf);
         }
     }
 
-    pub fn on_input(&mut self, key: KeyCode, modifiers: KeyModifiers, db: &mut Database) -> Action {
+    pub fn on_input(
+        &mut self,
+        key: KeyCode,
+        modifiers: KeyModifiers,
+        markup: &mut Markup,
+        db: &mut Database,
+    ) -> Action {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+        let shift = modifiers.contains(KeyModifiers::SHIFT);
+
         match key {
             KeyCode::Esc => return Action::Quit,
+            KeyCode::Up => {
+                if self.preview {
+                    if markup.scroll(ScrollMove::Up) {
+                        return Action::Render;
+                    }
+                } else {
+                    self.editor.move_cursor(CursorMove::Up, shift);
+                    return Action::Render;
+                }
+            }
+            KeyCode::Down => {
+                if self.preview {
+                    if markup.scroll(ScrollMove::Down) {
+                        return Action::Render;
+                    }
+                } else {
+                    self.editor.move_cursor(CursorMove::Down, shift);
+                    return Action::Render;
+                }
+            }
             KeyCode::Char('s') => {
                 if ctrl {
                     let card = db.get_mut(&self.card_id).unwrap();
@@ -343,7 +394,6 @@ impl EditCard {
     pub fn on_exit(&mut self) {
         self.editor.clear();
         self.preview = false;
-        self.scroll = 0;
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {

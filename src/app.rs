@@ -1,13 +1,14 @@
 use crossterm::event::{Event, KeyEventKind};
 use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
 
-use crate::{database::*, pages::*, utils::*};
+use crate::{database::*, markup::Markup, pages::*, utils::*};
 
 pub struct App {
     running: bool,
     route: Route,
     pages: Pages,
     db: Database,
+    markup: Markup,
 }
 
 pub enum Action {
@@ -24,6 +25,7 @@ impl App {
             route: Route::Review,
             pages: Pages::new(),
             db: Database::new(),
+            markup: Markup::new(),
         }
     }
 
@@ -36,21 +38,24 @@ impl App {
                 Event::Key(key) => {
                     if key.kind == KeyEventKind::Press {
                         match self.route {
-                            Route::Review => {
-                                self.pages
-                                    .review
-                                    .on_input(key.code, key.modifiers, &mut self.db)
-                            }
-                            Route::AddCard => {
-                                self.pages
-                                    .add_card
-                                    .on_input(key.code, key.modifiers, &mut self.db)
-                            }
-                            Route::EditCard(_) => {
-                                self.pages
-                                    .edit_card
-                                    .on_input(key.code, key.modifiers, &mut self.db)
-                            }
+                            Route::Review => self.pages.review.on_input(
+                                key.code,
+                                key.modifiers,
+                                &mut self.markup,
+                                &mut self.db,
+                            ),
+                            Route::AddCard => self.pages.add_card.on_input(
+                                key.code,
+                                key.modifiers,
+                                &mut self.markup,
+                                &mut self.db,
+                            ),
+                            Route::EditCard(_) => self.pages.edit_card.on_input(
+                                key.code,
+                                key.modifiers,
+                                &mut self.markup,
+                                &mut self.db,
+                            ),
                         }
                     } else {
                         Action::None
@@ -73,6 +78,7 @@ impl App {
                     }
 
                     self.route = route;
+                    self.markup.clear();
 
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.db),
@@ -116,15 +122,15 @@ impl App {
                 layout_center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
             let shortcuts = match self.route {
                 Route::Review => {
-                    self.pages.review.on_render(body, buf);
+                    self.pages.review.on_render(body, buf, &mut self.markup);
                     self.pages.review.shortcuts()
                 }
                 Route::AddCard => {
-                    self.pages.add_card.on_render(body, buf);
+                    self.pages.add_card.on_render(body, buf, &mut self.markup);
                     self.pages.add_card.shortcuts()
                 }
                 Route::EditCard(_) => {
-                    self.pages.edit_card.on_render(body, buf);
+                    self.pages.edit_card.on_render(body, buf, &mut self.markup);
                     self.pages.edit_card.shortcuts()
                 }
             };
