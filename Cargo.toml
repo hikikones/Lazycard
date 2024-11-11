@@ -7,5 +7,4 @@ edition = "2021"
 crossterm = "0.28"
 ratatui = { version = "0.29", features = ["unstable-widget-ref"] }
 syntect = "5.2"
-textwrap = "0.16"
 unicode-width = "0.2"

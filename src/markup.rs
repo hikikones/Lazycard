@@ -15,11 +15,11 @@ use syntect::{
 
 #[derive(Debug)]
 pub struct Markup {
-    lines: Vec<Line<'static>>,
     width: usize,
     height: usize,
-    scroll: usize,
     hash: u64,
+    scroll: usize,
+    lines: Vec<Line<'static>>,
 }
 
 pub enum ScrollMove {
@@ -32,11 +32,11 @@ pub enum ScrollMove {
 impl Markup {
     pub const fn new() -> Self {
         Self {
-            lines: Vec::new(),
             width: 0,
             height: 0,
-            scroll: 0,
             hash: 0,
+            scroll: 0,
+            lines: Vec::new(),
         }
     }
 
@@ -84,25 +84,31 @@ impl Markup {
             for block in BlockParser::new(text) {
                 match block {
                     BlockElement::Paragraph { alignment, text } => {
-                        let ansi_markup = InlineParser::new(text).into_ansi().replace('\n', " ");
-                        let mut ansi_parser = AnsiParser::new("");
-                        let mut wrap_opts = textwrap::Options::new(width);
-                        wrap_opts.word_splitter = textwrap::WordSplitter::NoHyphenation;
-                        wrap_opts.wrap_algorithm = textwrap::WrapAlgorithm::FirstFit;
+                        let mut line = Line::default().alignment(alignment);
+                        let mut column = 0;
 
-                        for wrapped_line in textwrap::fill(&ansi_markup, wrap_opts).lines() {
-                            let mut line = Line::default().alignment(alignment);
-                            ansi_parser.continue_with(wrapped_line);
-                            for (tag, span) in &mut ansi_parser {
-                                let style = match tag {
-                                    AnsiTag::Text => Style::new(),
-                                    AnsiTag::Bold => Style::new().bold(),
-                                    AnsiTag::Italic => Style::new().italic(),
-                                };
-                                line.push_span(Span::styled(span.to_owned(), style));
+                        for (tag, span) in InlineParser::new(text) {
+                            let style = match tag {
+                                InlineTag::Text => Style::new(),
+                                InlineTag::Bold => Style::new().bold(),
+                                InlineTag::Italic => Style::new().italic(),
+                            };
+
+                            for word in span.split_whitespace() {
+                                let word_width = unicode_width::UnicodeWidthStr::width(word);
+                                // todo: word_width > width
+                                if column + word_width > width {
+                                    self.lines.push(line);
+                                    line = Line::default().alignment(alignment);
+                                    column = 0;
+                                }
+
+                                line.push_span(Span::styled(word.to_owned(), style));
+                                line.push_span(Span::styled(" ", style));
+                                column += word_width + 1;
                             }
-                            self.lines.push(line);
                         }
+                        self.lines.push(line);
                     }
                     BlockElement::Code { language, text } => {
                         static SYNTAX_SET: LazyLock<SyntaxSet> =
@@ -120,7 +126,8 @@ impl Markup {
                         let mut highlighter =
                             HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
 
-                        for code_line in LinesWithEndings::from(text) {
+                        for code_line in LinesWithEndings::from(text.replace('\t', "    ").as_str())
+                        {
                             match highlighter.highlight_line(code_line, &SYNTAX_SET) {
                                 Ok(spans) => {
                                     let mut line = Line::default();
@@ -208,10 +215,11 @@ impl<'a> Iterator for BlockParser<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((i, c)) = self.chars.next() {
+            if c.is_whitespace() {
+                continue;
+            }
+
             match c {
-                '\n' | ' ' | '\t' => {
-                    continue;
-                }
                 '`' => {
                     let ticks = 1 + count_ticks(&mut self.chars);
                     if ticks < 3 {
@@ -344,7 +352,7 @@ impl<'a> InlineParser<'a> {
         self.start = 0;
     }
 
-    fn into_ansi(self) -> String {
+    fn _into_ansi(self) -> String {
         const ANSI_BOLD: &str = "\u{1b}[1m";
         const ANSI_ITALIC: &str = "\u{1b}[3m";
         const ANSI_RESET: &str = "\u{1b}[0m";
@@ -445,36 +453,36 @@ impl<'a> Iterator for InlineParser<'a> {
 
 #[derive(Debug, Clone, Copy)]
 enum AnsiTag {
-    Text,
-    Bold,
-    Italic,
+    _Text,
+    _Bold,
+    _Italic,
 }
 
-struct AnsiParser<'a> {
+struct _AnsiParser<'a> {
     input: &'a str,
     chars: Peekable<CharIndices<'a>>,
     start: usize,
     tag: AnsiTag,
 }
 
-impl<'a> AnsiParser<'a> {
-    fn new(input: &'a str) -> Self {
+impl<'a> _AnsiParser<'a> {
+    fn _new(input: &'a str) -> Self {
         Self {
             input,
             chars: input.char_indices().peekable(),
             start: 0,
-            tag: AnsiTag::Text,
+            tag: AnsiTag::_Text,
         }
     }
 
-    fn continue_with(&mut self, input: &'a str) {
+    fn _continue_with(&mut self, input: &'a str) {
         self.input = input;
         self.chars = input.char_indices().peekable();
         self.start = 0;
     }
 }
 
-impl<'a> Iterator for AnsiParser<'a> {
+impl<'a> Iterator for _AnsiParser<'a> {
     type Item = (AnsiTag, &'a str);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -484,7 +492,7 @@ impl<'a> Iterator for AnsiParser<'a> {
 
         loop {
             match self.tag {
-                AnsiTag::Text => {
+                AnsiTag::_Text => {
                     let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
                         let text = &self.input[self.start..];
                         self.start = self.input.len();
@@ -500,9 +508,9 @@ impl<'a> Iterator for AnsiParser<'a> {
                             .next_if(|&(_, c)| c == '1' || c == '3')
                             .map(|(_, c)| {
                                 if c == '1' {
-                                    AnsiTag::Bold
+                                    AnsiTag::_Bold
                                 } else {
-                                    AnsiTag::Italic
+                                    AnsiTag::_Italic
                                 }
                             })
                     else {
@@ -518,10 +526,10 @@ impl<'a> Iterator for AnsiParser<'a> {
                     self.tag = tag;
 
                     if !text.is_empty() {
-                        return Some((AnsiTag::Text, text));
+                        return Some((AnsiTag::_Text, text));
                     }
                 }
-                AnsiTag::Bold | AnsiTag::Italic => {
+                AnsiTag::_Bold | AnsiTag::_Italic => {
                     let Some((end, _)) = self.chars.find(|(_, c)| *c == '\x1b') else {
                         let text = &self.input[self.start..];
                         self.start = self.input.len();
@@ -541,7 +549,7 @@ impl<'a> Iterator for AnsiParser<'a> {
                     let tag = self.tag;
                     let text = &self.input[self.start..end];
                     self.start = i + 1;
-                    self.tag = AnsiTag::Text;
+                    self.tag = AnsiTag::_Text;
                     return Some((tag, text));
                 }
             }
