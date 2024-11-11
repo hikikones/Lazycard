@@ -44,13 +44,7 @@ impl App {
                                 &mut self.markup,
                                 &mut self.db,
                             ),
-                            Route::AddCard => self.pages.add_card.on_input(
-                                key.code,
-                                key.modifiers,
-                                &mut self.markup,
-                                &mut self.db,
-                            ),
-                            Route::EditCard(_) => self.pages.edit_card.on_input(
+                            Route::Editor(_) => self.pages.editor.on_input(
                                 key.code,
                                 key.modifiers,
                                 &mut self.markup,
@@ -73,8 +67,7 @@ impl App {
                 Action::Route(route) => {
                     match self.route {
                         Route::Review => self.pages.review.on_exit(),
-                        Route::AddCard => self.pages.add_card.on_exit(),
-                        Route::EditCard(_) => self.pages.edit_card.on_exit(),
+                        Route::Editor(_) => self.pages.editor.on_exit(),
                     }
 
                     self.route = route;
@@ -82,8 +75,7 @@ impl App {
 
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.db),
-                        Route::AddCard => self.pages.add_card.on_enter(&self.db),
-                        Route::EditCard(id) => self.pages.edit_card.on_enter(id, &self.db),
+                        Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
                     }
 
                     self.render(&mut terminal)?;
@@ -125,13 +117,9 @@ impl App {
                     self.pages.review.on_render(body, buf, &mut self.markup);
                     self.pages.review.shortcuts()
                 }
-                Route::AddCard => {
-                    self.pages.add_card.on_render(body, buf, &mut self.markup);
-                    self.pages.add_card.shortcuts()
-                }
-                Route::EditCard(_) => {
-                    self.pages.edit_card.on_render(body, buf, &mut self.markup);
-                    self.pages.edit_card.shortcuts()
+                Route::Editor(_) => {
+                    self.pages.editor.on_render(body, buf, &mut self.markup);
+                    self.pages.editor.shortcuts()
                 }
             };
 

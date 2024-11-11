@@ -6,32 +6,31 @@ use crate::{app::Action, database::*, editor::*, markup::*, utils::*};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
     Review,
-    AddCard,
-    EditCard(CardId),
+    Editor(Option<CardId>),
 }
 
 impl Route {
     pub const fn title(self) -> &'static str {
         match self {
             Route::Review => "Review",
-            Route::AddCard => "Add Card",
-            Route::EditCard(_) => "Edit Card",
+            Route::Editor(id) => match id {
+                Some(_) => "Edit Card",
+                None => "New Card",
+            },
         }
     }
 }
 
 pub struct Pages {
     pub review: Review,
-    pub add_card: AddCard,
-    pub edit_card: EditCard,
+    pub editor: CardEditor,
 }
 
 impl Pages {
     pub fn new() -> Self {
         Self {
             review: Review::new(),
-            add_card: AddCard::new(),
-            edit_card: EditCard::new(),
+            editor: CardEditor::new(),
         }
     }
 }
@@ -100,8 +99,8 @@ impl Review {
             ReviewState::Review(id) => {
                 match key {
                     KeyCode::Esc => return Action::Quit,
-                    KeyCode::Tab => return Action::Route(Route::AddCard),
-                    KeyCode::Char('e') => return Action::Route(Route::EditCard(id)),
+                    KeyCode::Tab => return Action::Route(Route::Editor(None)),
+                    KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                     KeyCode::Delete => {
                         db.remove(&id);
                         if let Some(next_id) = self.due.pop() {
@@ -146,7 +145,7 @@ impl Review {
             }
             ReviewState::None | ReviewState::Done => match key {
                 KeyCode::Esc => return Action::Quit,
-                KeyCode::Tab => return Action::Route(Route::AddCard),
+                KeyCode::Tab => return Action::Route(Route::Editor(None)),
                 _ => {}
             },
         }
@@ -189,21 +188,39 @@ impl Review {
     }
 }
 
-pub struct AddCard {
+pub struct CardEditor {
     editor: TextEditor,
+    state: CardEditorState,
     preview: bool,
 }
 
-impl AddCard {
+enum CardEditorState {
+    New,
+    Edit(CardId),
+}
+
+impl CardEditor {
     pub fn new() -> Self {
         Self {
             editor: TextEditor::new(),
+            state: CardEditorState::New,
             preview: false,
         }
     }
 
-    pub fn on_enter(&mut self, _db: &Database) {
-        //todo
+    pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
+        match id {
+            Some(id) => {
+                let card = db.get(&id).unwrap();
+                self.editor.clear();
+                self.editor.push_str(card.0.as_str());
+                self.editor.move_cursor(CursorMove::Start, false);
+                self.state = CardEditorState::Edit(id);
+            }
+            None => {
+                self.state = CardEditorState::New;
+            }
+        }
     }
 
     pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
@@ -226,7 +243,10 @@ impl AddCard {
 
         match key {
             KeyCode::Esc => return Action::Quit,
-            KeyCode::Tab => return Action::Route(Route::Review),
+            KeyCode::Tab => match self.state {
+                CardEditorState::New => return Action::Route(Route::Review),
+                CardEditorState::Edit(_) => return Action::Route(Route::Review), // todo: go back
+            },
             KeyCode::Up => {
                 if self.preview {
                     if markup.scroll(ScrollMove::Up) {
@@ -249,10 +269,19 @@ impl AddCard {
             }
             KeyCode::Char('s') => {
                 if ctrl {
-                    db.add(Card::new(self.editor.as_str().to_owned()));
+                    match self.state {
+                        CardEditorState::New => {
+                            let card = Card::new(self.editor.as_str().to_owned());
+                            db.add(card);
+                        }
+                        CardEditorState::Edit(id) => {
+                            let card = db.get_mut(&id).unwrap();
+                            card.0 = self.editor.as_str().to_owned();
+                        }
+                    }
                     self.editor.clear();
                     self.preview = false;
-                    markup.scroll(ScrollMove::Start);
+                    markup.clear();
                     return Action::Render;
                 } else if !self.preview {
                     self.editor.push_char('s');
@@ -280,6 +309,10 @@ impl AddCard {
 
     pub fn on_exit(&mut self) {
         self.preview = false;
+
+        if let CardEditorState::Edit(_) = self.state {
+            self.editor.clear();
+        }
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
@@ -287,120 +320,6 @@ impl AddCard {
             SHORTCUT_SAVE,
             SHORTCUT_PREVIEW,
             SHORTCUT_MENU,
-            SHORTCUT_QUIT,
-        ]
-    }
-}
-
-pub struct EditCard {
-    card_id: CardId,
-    editor: TextEditor,
-    preview: bool,
-}
-
-impl EditCard {
-    pub fn new() -> Self {
-        Self {
-            card_id: CardId::default(),
-            editor: TextEditor::new(),
-            preview: false,
-        }
-    }
-
-    pub fn on_enter(&mut self, card_id: CardId, db: &Database) {
-        let card = db.get(&card_id).unwrap();
-        self.card_id = card_id;
-        self.editor.push_str(card.0.as_str());
-        self.editor.move_cursor(CursorMove::Start, false);
-    }
-
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
-        if self.preview {
-            markup.render_markup(self.editor.as_str(), area, buf);
-        } else {
-            self.editor.render(area, buf);
-        }
-    }
-
-    pub fn on_input(
-        &mut self,
-        key: KeyCode,
-        modifiers: KeyModifiers,
-        markup: &mut Markup,
-        db: &mut Database,
-    ) -> Action {
-        let ctrl = modifiers.contains(KeyModifiers::CONTROL);
-        let shift = modifiers.contains(KeyModifiers::SHIFT);
-
-        match key {
-            KeyCode::Esc => return Action::Quit,
-            KeyCode::Up => {
-                if self.preview {
-                    if markup.scroll(ScrollMove::Up) {
-                        return Action::Render;
-                    }
-                } else {
-                    self.editor.move_cursor(CursorMove::Up, shift);
-                    return Action::Render;
-                }
-            }
-            KeyCode::Down => {
-                if self.preview {
-                    if markup.scroll(ScrollMove::Down) {
-                        return Action::Render;
-                    }
-                } else {
-                    self.editor.move_cursor(CursorMove::Down, shift);
-                    return Action::Render;
-                }
-            }
-            KeyCode::Char('s') => {
-                if ctrl {
-                    let card = db.get_mut(&self.card_id).unwrap();
-                    card.0 = self.editor.as_str().to_owned();
-                    return Action::Route(Route::Review); // todo: go back
-                } else if !self.preview {
-                    self.editor.push_char('s');
-                    return Action::Render;
-                }
-            }
-            KeyCode::Char('c') => {
-                if ctrl {
-                    return Action::Route(Route::Review); // todo: go back
-                } else if !self.preview {
-                    self.editor.push_char('c');
-                    return Action::Render;
-                }
-            }
-            KeyCode::Char('p') => {
-                if ctrl {
-                    self.preview = !self.preview;
-                } else if !self.preview {
-                    self.editor.push_char('p');
-                }
-                return Action::Render;
-            }
-            _ => {
-                if !self.preview {
-                    self.editor.input(key, modifiers);
-                    return Action::Render;
-                }
-            }
-        }
-
-        Action::None
-    }
-
-    pub fn on_exit(&mut self) {
-        self.editor.clear();
-        self.preview = false;
-    }
-
-    pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
-        &[
-            SHORTCUT_SAVE,
-            SHORTCUT_CANCEL,
-            SHORTCUT_PREVIEW,
             SHORTCUT_QUIT,
         ]
     }
