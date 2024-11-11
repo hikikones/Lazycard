@@ -253,8 +253,9 @@ impl CardEditor {
                         return Action::Render;
                     }
                 } else {
-                    self.editor.move_cursor(CursorMove::Up, shift);
-                    return Action::Render;
+                    if self.editor.move_cursor(CursorMove::Up, shift) {
+                        return Action::Render;
+                    }
                 }
             }
             KeyCode::Down => {
@@ -263,26 +264,30 @@ impl CardEditor {
                         return Action::Render;
                     }
                 } else {
-                    self.editor.move_cursor(CursorMove::Down, shift);
-                    return Action::Render;
+                    if self.editor.move_cursor(CursorMove::Down, shift) {
+                        return Action::Render;
+                    }
                 }
             }
             KeyCode::Char('s') => {
                 if ctrl {
+                    markup.clear();
+                    self.preview = false;
+
                     match self.state {
                         CardEditorState::New => {
                             let card = Card::new(self.editor.as_str().to_owned());
                             db.add(card);
+                            self.editor.clear();
+                            return Action::Render;
                         }
                         CardEditorState::Edit(id) => {
                             let card = db.get_mut(&id).unwrap();
                             card.0 = self.editor.as_str().to_owned();
+                            self.editor.clear();
+                            return Action::Route(Route::Review); // todo: go back
                         }
                     }
-                    self.editor.clear();
-                    self.preview = false;
-                    markup.clear();
-                    return Action::Render;
                 } else if !self.preview {
                     self.editor.push_char('s');
                     return Action::Render;
@@ -298,8 +303,9 @@ impl CardEditor {
             }
             _ => {
                 if !self.preview {
-                    self.editor.input(key, modifiers);
-                    return Action::Render;
+                    if self.editor.input(key, modifiers) {
+                        return Action::Render;
+                    }
                 }
             }
         }

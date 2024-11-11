@@ -53,27 +53,24 @@ impl Markup {
     }
 
     fn set_scroll(&mut self, n: usize, lines: usize, height: usize) -> bool {
-        let current_scroll = self.scroll;
+        let old_scroll = self.scroll;
 
-        let new_scroll = if lines <= height {
+        self.scroll = if lines <= height {
             0
         } else {
             usize::min(n, lines - height)
         };
-        self.scroll = new_scroll;
 
-        current_scroll != new_scroll
+        old_scroll != self.scroll
     }
 
     pub fn render_markup(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
         let width = area.width as usize;
-        let height = area.height as usize;
+        self.height = area.height as usize;
 
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
         let hash = hasher.finish();
-
-        self.height = height;
 
         if self.width != width || self.hash != hash {
             self.lines.clear();
@@ -166,7 +163,7 @@ impl Markup {
             self.lines.pop();
 
             // Update scroll
-            self.set_scroll(self.scroll, self.lines.len(), height);
+            self.set_scroll(self.scroll, self.lines.len(), self.height);
         }
 
         // Render lines
@@ -174,7 +171,7 @@ impl Markup {
         self.lines
             .iter()
             .skip(self.scroll)
-            .take(height)
+            .take(self.height)
             .for_each(|line| {
                 line.render_ref(line_area, buf);
                 line_area.y += 1;

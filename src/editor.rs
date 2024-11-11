@@ -12,7 +12,7 @@ pub struct TextEditor {
     line_start_indexes: Vec<usize>,
     selection_start: Option<usize>,
     scroll: usize,
-    line_spans: Vec<Line<'static>>,
+    lines: Vec<Line<'static>>,
 }
 
 pub enum CursorMove {
@@ -41,7 +41,7 @@ impl TextEditor {
             line_start_indexes: Vec::new(),
             selection_start: None,
             scroll: 0,
-            line_spans: Vec::new(),
+            lines: Vec::new(),
         }
     }
 
@@ -49,51 +49,38 @@ impl TextEditor {
         self.input.as_str()
     }
 
-    pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) {
+    pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
         let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
         let shift = key_modifiers.contains(KeyModifiers::SHIFT);
 
         match key_pressed {
-            KeyCode::Right => {
-                self.move_cursor(CursorMove::Forward, shift);
-            }
-            KeyCode::Left => {
-                self.move_cursor(CursorMove::Back, shift);
-            }
-            KeyCode::Up => {
-                self.move_cursor(CursorMove::Up, shift);
-            }
-            KeyCode::Down => {
-                self.move_cursor(CursorMove::Down, shift);
-            }
-            KeyCode::Home => {
-                self.move_cursor(CursorMove::Start, shift);
-            }
-            KeyCode::End => {
-                self.move_cursor(CursorMove::End, shift);
-            }
+            KeyCode::Right => self.move_cursor(CursorMove::Forward, shift),
+            KeyCode::Left => self.move_cursor(CursorMove::Back, shift),
+            KeyCode::Up => self.move_cursor(CursorMove::Up, shift),
+            KeyCode::Down => self.move_cursor(CursorMove::Down, shift),
+            KeyCode::Backspace => self.delete(CursorDelete::Back),
+            KeyCode::Delete => self.delete(CursorDelete::Forward),
+            KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
+            KeyCode::End => self.move_cursor(CursorMove::End, shift),
             KeyCode::Enter => {
                 self.push_char('\n');
-            }
-            KeyCode::Backspace => {
-                self.delete(CursorDelete::Back);
-            }
-            KeyCode::Delete => {
-                self.delete(CursorDelete::Forward);
+                true
             }
             KeyCode::Char(c) => match c {
                 'a' => {
                     if ctrl {
-                        self.select_all();
+                        self.select_all()
                     } else {
                         self.push_char(c);
+                        true
                     }
                 }
                 _ => {
                     self.push_char(c);
+                    true
                 }
             },
-            _ => {}
+            _ => false,
         }
     }
 
@@ -113,7 +100,9 @@ impl TextEditor {
         self.cursor_index += s.len();
     }
 
-    pub fn move_cursor(&mut self, cm: CursorMove, shift: bool) {
+    pub fn move_cursor(&mut self, cm: CursorMove, shift: bool) -> bool {
+        let (old_cursor, old_selector) = (self.cursor_index, self.selection_start);
+
         if shift {
             if self.selection_start.is_none() {
                 self.selection_start = Some(self.cursor_index);
@@ -155,25 +144,30 @@ impl TextEditor {
             }
         }
 
-        if let Some(selector) = self.selection_start {
-            if selector == self.cursor_index {
-                self.selection_start = None;
-            }
-        }
+        self.selection_start.take_if(|s| *s == self.cursor_index);
+
+        self.cursor_index != old_cursor || self.selection_start != old_selector
     }
 
-    pub fn select_all(&mut self) {
-        self.selection_start = Some(0);
+    pub fn select_all(&mut self) -> bool {
+        let (old_cursor, old_selector) = (self.cursor_index, self.selection_start);
+
         self.cursor_index = self.input.len();
+        self.selection_start = Some(0);
+
+        self.cursor_index != old_cursor || self.selection_start != old_selector
     }
 
-    pub fn delete(&mut self, cd: CursorDelete) {
+    pub fn delete(&mut self, cd: CursorDelete) -> bool {
         match cd {
             CursorDelete::Forward => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
                 None => {
                     if self.input[self.cursor_index..].chars().next().is_some() {
                         self.input.remove(self.cursor_index);
+                        true
+                    } else {
+                        false
                     }
                 }
             },
@@ -183,12 +177,17 @@ impl TextEditor {
                     if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
                         self.cursor_index -= c.len_utf8();
                         self.input.remove(self.cursor_index);
+                        true
+                    } else {
+                        false
                     }
                 }
             },
             CursorDelete::Selection => {
                 if let Some(selector) = self.selection_start.take() {
-                    self.delete_selection(selector);
+                    self.delete_selection(selector)
+                } else {
+                    false
                 }
             }
         }
@@ -202,11 +201,11 @@ impl TextEditor {
         self.selection_start = None;
         self.line_width = 0;
         self.line_start_indexes.clear();
-        self.line_spans.clear();
+        self.lines.clear();
         self.scroll = 0;
     }
 
-    fn delete_selection(&mut self, selector: usize) {
+    fn delete_selection(&mut self, selector: usize) -> bool {
         let (start, end) = if self.cursor_index < selector {
             (self.cursor_index, selector)
         } else {
@@ -214,9 +213,12 @@ impl TextEditor {
         };
         self.input.replace_range(start..end, "");
         self.cursor_index = start;
+        start != end
     }
 
-    fn jump_to_line(&mut self, i: usize) {
+    fn jump_to_line(&mut self, i: usize) -> bool {
+        let old_cursor = self.cursor_index;
+
         self.cursor_line_index = i;
         self.cursor_index = self.line_start_indexes[i];
 
@@ -249,6 +251,8 @@ impl TextEditor {
 
         self.cursor_column = column;
         self.cursor_index += offset;
+
+        self.cursor_index != old_cursor
     }
 }
 
@@ -257,7 +261,7 @@ impl Widget for &mut TextEditor {
     where
         Self: Sized,
     {
-        self.line_spans.clear();
+        self.lines.clear();
         self.line_start_indexes.clear();
         self.cursor_column = 0;
         self.cursor_line_index = 0;
@@ -275,7 +279,7 @@ impl Widget for &mut TextEditor {
             .max(self.cursor_index);
 
         self.line_start_indexes.push(0);
-        self.line_spans.push(Line::default());
+        self.lines.push(Line::default());
 
         let mut chars = self.input.char_indices();
 
@@ -284,7 +288,7 @@ impl Widget for &mut TextEditor {
                 if self.cursor_index == input_len {
                     self.cursor_line_index = line_index;
                     self.cursor_column = line_width;
-                    self.line_spans[line_index].push_span(Span::styled(" ", STYLE_CURSOR));
+                    self.lines[line_index].push_span(Span::styled(" ", STYLE_CURSOR));
                 }
                 break;
             };
@@ -304,17 +308,17 @@ impl Widget for &mut TextEditor {
 
             let is_next_line = if c == '\n' {
                 if is_cursor || (is_selected && i < input_len) {
-                    self.line_spans[line_index].push_span(Span::styled(" ", style));
+                    self.lines[line_index].push_span(Span::styled(" ", style));
                 }
                 true
             } else if c.is_whitespace() {
-                self.line_spans[line_index].push_span(Span::styled(" ", style));
+                self.lines[line_index].push_span(Span::styled(" ", style));
                 line_width += 1;
                 line_width >= area.width as usize
             } else {
                 let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
                 let span = Span::styled(c.to_string(), style);
-                self.line_spans[line_index].push_span(span);
+                self.lines[line_index].push_span(span);
                 line_width += char_width;
                 line_width >= area.width as usize
             };
@@ -322,7 +326,7 @@ impl Widget for &mut TextEditor {
             if is_next_line {
                 line_width = 0;
                 line_index += 1;
-                self.line_spans.push(Line::default());
+                self.lines.push(Line::default());
                 self.line_start_indexes.push(i + c.len_utf8());
             }
         }
@@ -342,7 +346,7 @@ impl Widget for &mut TextEditor {
         let mut line_area = area;
         line_area.height = 1;
 
-        self.line_spans
+        self.lines
             .iter()
             .skip(self.scroll)
             .take(height)
