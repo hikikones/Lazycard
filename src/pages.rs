@@ -40,6 +40,7 @@ pub struct Review {
     total: usize,
     progress: usize,
     state: ReviewState,
+    reveal: Vec<String>,
     text: String,
 }
 
@@ -56,6 +57,7 @@ impl Review {
             total: 0,
             progress: 0,
             state: ReviewState::None,
+            reveal: Vec::new(),
             text: String::new(),
         }
     }
@@ -63,10 +65,31 @@ impl Review {
     pub fn on_enter(&mut self, db: &Database) {
         self.due.extend(db.iter().rev().map(|(id, _)| id));
         self.total = self.due.len();
+
+        if !self.due.is_empty() {
+            self.next_card(db);
+        }
+    }
+
+    fn next_card(&mut self, db: &Database) {
+        self.reveal.clear();
+        self.text.clear();
+
         if let Some(id) = self.due.pop() {
             let card = db.get(&id).unwrap();
+            self.reveal
+                .extend(card.0.split("\n---\n").map(|s| s.to_owned()));
+            self.reveal.reverse();
+            self.show();
             self.state = ReviewState::Review(id);
-            self.text.push_str(card.0.as_str());
+        } else {
+            self.state = ReviewState::Done;
+        }
+    }
+
+    fn show(&mut self) {
+        if let Some(s) = self.reveal.pop() {
+            self.text.push_str(s.as_str());
         }
     }
 
@@ -103,18 +126,13 @@ impl Review {
                     KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                     KeyCode::Delete => {
                         db.remove(&id);
-                        if let Some(next_id) = self.due.pop() {
-                            self.state = ReviewState::Review(next_id);
-                            let card = db.get(&next_id).unwrap();
-                            self.text.clear();
-                            self.text.push_str(card.0.as_str());
-                        } else {
-                            self.state = ReviewState::Done;
-                        }
+                        self.total = self.total.saturating_sub(1);
+                        self.next_card(db);
                         return Action::Render;
                     }
                     KeyCode::Char(' ') => {
-                        // todo: show answer
+                        self.show();
+                        return Action::Render;
                     }
                     KeyCode::Up => {
                         // todo: successful recall
@@ -131,12 +149,9 @@ impl Review {
                         }
                     }
                     KeyCode::Right => {
-                        if let Some(next_id) = self.due.pop() {
+                        if !self.due.is_empty() {
+                            self.next_card(db);
                             self.due.insert(0, id);
-                            self.state = ReviewState::Review(next_id);
-                            let card = db.get(&next_id).unwrap();
-                            self.text.clear();
-                            self.text.push_str(card.0.as_str());
                             return Action::Render;
                         }
                     }
@@ -158,6 +173,7 @@ impl Review {
         self.total = 0;
         self.progress = 0;
         self.state = ReviewState::None;
+        self.reveal.clear();
         self.text.clear();
     }
 
