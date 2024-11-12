@@ -196,6 +196,7 @@ enum BlockElement<'a> {
 struct BlockParser<'a> {
     input: &'a str,
     chars: Peekable<CharIndices<'a>>,
+    prev: Option<char>,
 }
 
 impl<'a> BlockParser<'a> {
@@ -203,6 +204,7 @@ impl<'a> BlockParser<'a> {
         Self {
             input,
             chars: input.char_indices().peekable(),
+            prev: None,
         }
     }
 }
@@ -213,21 +215,28 @@ impl<'a> Iterator for BlockParser<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((i, c)) = self.chars.next() {
             if c.is_whitespace() {
+                self.prev = Some(c);
                 continue;
             }
 
-            match c {
+            let block = match c {
                 '`' => {
-                    let ticks = 1 + count_ticks(&mut self.chars);
-                    if ticks < 3 {
-                        return Some(parse_paragraph(i, c, self.input, &mut self.chars));
+                    if let Some('\n') | None = self.prev {
+                        let ticks = 1 + count_ticks(&mut self.chars);
+                        if ticks >= 3 {
+                            parse_code_block(i, ticks, self.input, &mut self.chars)
+                        } else {
+                            parse_paragraph(i, c, self.input, &mut self.chars)
+                        }
+                    } else {
+                        parse_paragraph(i, c, self.input, &mut self.chars)
                     }
-                    return Some(parse_code_block(i, ticks, self.input, &mut self.chars));
                 }
-                _ => {
-                    return Some(parse_paragraph(i, c, self.input, &mut self.chars));
-                }
-            }
+                _ => parse_paragraph(i, c, self.input, &mut self.chars),
+            };
+
+            self.prev = None;
+            return Some(block);
         }
 
         None

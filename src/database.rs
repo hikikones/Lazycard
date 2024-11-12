@@ -52,15 +52,9 @@ fn add_test_data(db: &mut BTreeMap<CardId, Card>) {
             r#"
 left paragraph with **bold** and __italic__ text that **should wrap** when line becomes __tooooooooo__ long...
 
----
-
 > right paragraph
 
----
-
 | center paragraph
-
----
 
 ```rust
 fn main() {
