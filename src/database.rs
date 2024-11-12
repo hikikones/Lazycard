@@ -51,6 +51,7 @@ fn add_test_data(db: &mut BTreeMap<CardId, Card>) {
         Card::new(
             r#"
 left paragraph with **bold** and __italic__ text that **should wrap** when line becomes __tooooooooo__ long...
+Also here is {{a secret}} that requires a key.
 
 > right paragraph
 

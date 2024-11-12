@@ -89,6 +89,7 @@ impl Markup {
                                 InlineTag::Text => Style::new(),
                                 InlineTag::Bold => Style::new().bold(),
                                 InlineTag::Italic => Style::new().italic(),
+                                InlineTag::Secret => Style::new().bg(Color::Black).fg(Color::Black),
                             };
 
                             for word in span.split_whitespace() {
@@ -104,7 +105,11 @@ impl Markup {
                                 line.push_span(Span::styled(" ", style));
                                 column += word_width + 1;
                             }
+
+                            line.spans.pop();
+                            line.push_span(Span::raw(" "));
                         }
+
                         self.lines.push(line);
                     }
                     BlockElement::Code { language, text } => {
@@ -342,6 +347,7 @@ enum InlineTag {
     Text,
     Bold,
     Italic,
+    Secret,
 }
 
 struct InlineParser<'a> {
@@ -402,6 +408,17 @@ impl<'a> Iterator for InlineParser<'a> {
                                 return Some((InlineTag::Text, text));
                             }
                         }
+                        '{' => {
+                            if let Some((i, _)) = self.chars.next_if(|&(_, c)| c == '{') {
+                                self.tag = InlineTag::Secret;
+                                let text = &self.input[self.start..i - 1];
+                                self.start = i + 1;
+                                if text.is_empty() {
+                                    break;
+                                }
+                                return Some((InlineTag::Text, text));
+                            }
+                        }
                         _ => {}
                     }
                 },
@@ -431,6 +448,20 @@ impl<'a> Iterator for InlineParser<'a> {
                         let text = &self.input[self.start..i - 1];
                         self.start = i + 1;
                         return Some((InlineTag::Italic, text));
+                    }
+                },
+                InlineTag::Secret => loop {
+                    if self.chars.find(|&(_, c)| c == '}').is_none() {
+                        let text = &self.input[self.start..];
+                        self.start = self.input.len();
+                        return Some((InlineTag::Secret, text));
+                    };
+
+                    if let Some((i, '}')) = self.chars.next() {
+                        self.tag = InlineTag::Text;
+                        let text = &self.input[self.start..i - 1];
+                        self.start = i + 1;
+                        return Some((InlineTag::Secret, text));
                     }
                 },
             }
