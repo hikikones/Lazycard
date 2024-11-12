@@ -40,7 +40,8 @@ pub struct Review {
     total: usize,
     progress: usize,
     state: ReviewState,
-    reveal: Vec<String>,
+    reveals: Vec<String>,
+    reveal_done: bool,
     text: String,
 }
 
@@ -57,7 +58,8 @@ impl Review {
             total: 0,
             progress: 0,
             state: ReviewState::None,
-            reveal: Vec::new(),
+            reveals: Vec::new(),
+            reveal_done: false,
             text: String::new(),
         }
     }
@@ -72,24 +74,33 @@ impl Review {
     }
 
     fn next_card(&mut self, db: &Database) {
-        self.reveal.clear();
+        self.reveals.clear();
+        self.reveal_done = false;
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
             let card = db.get(&id).unwrap();
-            self.reveal
-                .extend(card.0.split("\n---\n").map(|s| s.to_owned()));
-            self.reveal.reverse();
-            self.show();
+            let split = card.0.split("\n---\n").map(|s| s.to_owned());
+            self.reveals.extend(split);
+            self.reveals.reverse();
+            self.reveal_next();
             self.state = ReviewState::Review(id);
         } else {
             self.state = ReviewState::Done;
         }
     }
 
-    fn show(&mut self) {
-        if let Some(s) = self.reveal.pop() {
+    fn reveal_next(&mut self) {
+        if let Some(start) = self.text.find("{{") {
+            if let Some(end) = self.text[start + 2..].find("}}") {
+                let end = start + end + 2;
+                self.text.replace_range(end..end + 2, "**");
+                self.text.replace_range(start..start + 2, "**");
+            }
+        } else if let Some(s) = self.reveals.pop() {
             self.text.push_str(s.as_str());
+        } else {
+            self.reveal_done = true;
         }
     }
 
@@ -131,8 +142,10 @@ impl Review {
                         return Action::Render;
                     }
                     KeyCode::Char(' ') => {
-                        self.show();
-                        return Action::Render;
+                        if !self.reveal_done {
+                            self.reveal_next();
+                            return Action::Render;
+                        }
                     }
                     KeyCode::Up => {
                         // todo: successful recall
@@ -173,27 +186,30 @@ impl Review {
         self.total = 0;
         self.progress = 0;
         self.state = ReviewState::None;
-        self.reveal.clear();
+        self.reveals.clear();
+        self.reveal_done = false;
         self.text.clear();
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
         match self.state {
             ReviewState::Review(_) => {
-                if self.due.is_empty() {
+                if self.reveal_done {
                     &[
-                        SHORTCUT_SCROLL,
+                        SHORTCUT_YES,
+                        SHORTCUT_NO,
                         SHORTCUT_EDIT,
                         SHORTCUT_DELETE,
+                        SHORTCUT_SKIP,
                         SHORTCUT_MENU,
                         SHORTCUT_QUIT,
                     ]
                 } else {
                     &[
-                        SHORTCUT_SCROLL,
+                        SHORTCUT_SHOW,
+                        SHORTCUT_SKIP,
                         SHORTCUT_EDIT,
                         SHORTCUT_DELETE,
-                        SHORTCUT_SKIP,
                         SHORTCUT_MENU,
                         SHORTCUT_QUIT,
                     ]

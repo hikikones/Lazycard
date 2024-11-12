@@ -10,12 +10,15 @@ pub const STYLE_SELECTED: Style = Style::new().bg(Color::Blue);
 
 pub const SHORTCUT_QUIT: Shortcut = Shortcut::new("Quit", "Esc");
 pub const SHORTCUT_MENU: Shortcut = Shortcut::new("Menu", "Tab");
+pub const SHORTCUT_SHOW: Shortcut = Shortcut::new("Show", "Space");
+pub const SHORTCUT_YES: Shortcut = Shortcut::new("Yes", "y");
+pub const SHORTCUT_NO: Shortcut = Shortcut::new("No", "n");
 pub const SHORTCUT_EDIT: Shortcut = Shortcut::new("Edit", "e");
 pub const SHORTCUT_DELETE: Shortcut = Shortcut::new("Delete", "Del");
 pub const SHORTCUT_SAVE: Shortcut = Shortcut::new("Save", "^s");
 pub const _SHORTCUT_CANCEL: Shortcut = Shortcut::new("Cancel", "^c");
 pub const SHORTCUT_PREVIEW: Shortcut = Shortcut::new("Preview", "^p");
-pub const SHORTCUT_SCROLL: Shortcut = Shortcut::new("Scroll", "⇅");
+pub const _SHORTCUT_SCROLL: Shortcut = Shortcut::new("Scroll", "⇅");
 pub const SHORTCUT_SKIP: Shortcut = Shortcut::new("Skip", "➝");
 
 pub struct Shortcut<'a> {
