@@ -220,19 +220,33 @@ impl<'a> Iterator for BlockParser<'a> {
             }
 
             let block = match c {
+                '|' => {
+                    if let Some('\n') | None = self.prev {
+                        parse_paragraph(i, Alignment::Center, self.input, &mut self.chars)
+                    } else {
+                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                    }
+                }
+                '>' => {
+                    if let Some('\n') | None = self.prev {
+                        parse_paragraph(i, Alignment::Right, self.input, &mut self.chars)
+                    } else {
+                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                    }
+                }
                 '`' => {
                     if let Some('\n') | None = self.prev {
                         let ticks = 1 + count_ticks(&mut self.chars);
                         if ticks >= 3 {
                             parse_code_block(i, ticks, self.input, &mut self.chars)
                         } else {
-                            parse_paragraph(i, c, self.input, &mut self.chars)
+                            parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
                         }
                     } else {
-                        parse_paragraph(i, c, self.input, &mut self.chars)
+                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
                     }
                 }
-                _ => parse_paragraph(i, c, self.input, &mut self.chars),
+                _ => parse_paragraph(i, Alignment::Left, self.input, &mut self.chars),
             };
 
             self.prev = None;
@@ -245,21 +259,16 @@ impl<'a> Iterator for BlockParser<'a> {
 
 fn parse_paragraph<'a>(
     i: usize,
-    c: char,
+    alignment: Alignment,
     input: &'a str,
     chars: &mut Peekable<CharIndices<'a>>,
 ) -> BlockElement<'a> {
-    let (alignment, offset) = {
-        if c == '>' {
-            (Alignment::Right, 1)
-        } else if c == '|' {
-            (Alignment::Center, 1)
-        } else {
-            (Alignment::Left, 0)
-        }
+    let offset = match alignment {
+        Alignment::Left => 0,
+        Alignment::Center | Alignment::Right => 1,
     };
-
     let paragraph_start = i + offset;
+
     loop {
         if chars.find(|&(_, c)| c == '\n').is_none() {
             return BlockElement::Paragraph {
