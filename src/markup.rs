@@ -188,11 +188,11 @@ impl Markup {
     }
 
     pub fn clear(&mut self) {
-        self.lines.clear();
-        self.scroll = 0;
         self.width = 0;
         self.height = 0;
         self.hash = 0;
+        self.scroll = 0;
+        self.lines.clear();
     }
 }
 
@@ -217,6 +217,76 @@ impl<'a> BlockParser<'a> {
             prev: None,
         }
     }
+
+    fn parse_paragraph(&mut self, start: usize, alignment: Alignment) -> BlockElement<'a> {
+        let offset = match alignment {
+            Alignment::Left => 0,
+            Alignment::Center | Alignment::Right => 1,
+        };
+        let start = start + offset;
+
+        loop {
+            if self.chars.find(|&(_, c)| c == '\n').is_none() {
+                return BlockElement::Paragraph {
+                    alignment,
+                    text: self.input[start..].trim(),
+                };
+            };
+
+            if let Some((end, '\n')) = self.chars.next() {
+                return BlockElement::Paragraph {
+                    alignment,
+                    text: self.input[start..end - 1].trim(),
+                };
+            }
+        }
+    }
+
+    fn parse_code_block(&mut self, start: usize, ticks: usize) -> BlockElement<'a> {
+        let lang_start = start + ticks;
+        let Some((i, _)) = self.chars.find(|(_, c)| *c == '\n') else {
+            return BlockElement::Code {
+                language: self.input[lang_start..].trim(),
+                text: "",
+            };
+        };
+
+        let language = self.input[lang_start..i].trim();
+        let code_start = i + 1;
+        loop {
+            let Some((end, _)) = self.chars.find(|(_, c)| *c == '\n') else {
+                return BlockElement::Code {
+                    language,
+                    text: &self.input[code_start..],
+                };
+            };
+
+            let end_ticks = self.count_consecutive('`');
+            if end_ticks == ticks {
+                let Some((_, c)) = self.chars.next() else {
+                    return BlockElement::Code {
+                        language,
+                        text: &self.input[code_start..end],
+                    };
+                };
+
+                if c == '\n' {
+                    return BlockElement::Code {
+                        language,
+                        text: &self.input[code_start..end],
+                    };
+                }
+            }
+        }
+    }
+
+    fn count_consecutive(&mut self, c: char) -> usize {
+        let mut count = 0;
+        while self.chars.next_if(|(_, cc)| *cc == c).is_some() {
+            count += 1;
+        }
+        count
+    }
 }
 
 impl<'a> Iterator for BlockParser<'a> {
@@ -232,46 +302,46 @@ impl<'a> Iterator for BlockParser<'a> {
             let block = match c {
                 '|' => {
                     if let Some('\n') | None = self.prev {
-                        parse_paragraph(i, Alignment::Center, self.input, &mut self.chars)
+                        self.parse_paragraph(i, Alignment::Center)
                     } else {
-                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                        self.parse_paragraph(i, Alignment::Left)
                     }
                 }
                 '>' => {
                     if let Some('\n') | None = self.prev {
-                        parse_paragraph(i, Alignment::Right, self.input, &mut self.chars)
+                        self.parse_paragraph(i, Alignment::Right)
                     } else {
-                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                        self.parse_paragraph(i, Alignment::Left)
                     }
                 }
                 '`' => {
                     if let Some('\n') | None = self.prev {
-                        let ticks = 1 + count_consecutive('`', &mut self.chars);
+                        let ticks = 1 + self.count_consecutive('`');
                         if ticks >= 3 {
-                            parse_code_block(i, ticks, self.input, &mut self.chars)
+                            self.parse_code_block(i, ticks)
                         } else {
-                            parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                            self.parse_paragraph(i, Alignment::Left)
                         }
                     } else {
-                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                        self.parse_paragraph(i, Alignment::Left)
                     }
                 }
                 '-' => {
                     if let Some('\n') | None = self.prev {
-                        let dashes = 1 + count_consecutive('-', &mut self.chars);
+                        let dashes = 1 + self.count_consecutive('-');
                         if dashes == 1 {
                             // todo: list item
-                            parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                            self.parse_paragraph(i, Alignment::Left)
                         } else if dashes == 3 && self.chars.next_if(|(_, c)| *c == '\n').is_some() {
                             BlockElement::Break
                         } else {
-                            parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                            self.parse_paragraph(i, Alignment::Left)
                         }
                     } else {
-                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                        self.parse_paragraph(i, Alignment::Left)
                     }
                 }
-                _ => parse_paragraph(i, Alignment::Left, self.input, &mut self.chars),
+                _ => self.parse_paragraph(i, Alignment::Left),
             };
 
             self.prev = None;
@@ -279,86 +349,6 @@ impl<'a> Iterator for BlockParser<'a> {
         }
 
         None
-    }
-}
-
-fn count_consecutive(char: char, chars: &mut Peekable<CharIndices>) -> usize {
-    let mut count = 0;
-    while chars.next_if(|(_, c)| *c == char).is_some() {
-        count += 1;
-    }
-    count
-}
-
-fn parse_paragraph<'a>(
-    i: usize,
-    alignment: Alignment,
-    input: &'a str,
-    chars: &mut Peekable<CharIndices<'a>>,
-) -> BlockElement<'a> {
-    let offset = match alignment {
-        Alignment::Left => 0,
-        Alignment::Center | Alignment::Right => 1,
-    };
-    let paragraph_start = i + offset;
-
-    loop {
-        if chars.find(|&(_, c)| c == '\n').is_none() {
-            return BlockElement::Paragraph {
-                alignment,
-                text: input[paragraph_start..].trim(),
-            };
-        };
-
-        if let Some((ni, '\n')) = chars.next() {
-            return BlockElement::Paragraph {
-                alignment,
-                text: input[paragraph_start..ni - 1].trim(),
-            };
-        }
-    }
-}
-
-fn parse_code_block<'a>(
-    i: usize,
-    ticks: usize,
-    input: &'a str,
-    chars: &mut Peekable<CharIndices<'a>>,
-) -> BlockElement<'a> {
-    let lang_start = i + ticks;
-    let Some((i, _)) = chars.find(|(_, c)| *c == '\n') else {
-        return BlockElement::Code {
-            language: input[lang_start..].trim(),
-            text: "",
-        };
-    };
-
-    let language = input[lang_start..i].trim();
-    let code_start = i + 1;
-    loop {
-        let Some((end, _)) = chars.find(|(_, c)| *c == '\n') else {
-            return BlockElement::Code {
-                language,
-                text: &input[code_start..],
-            };
-        };
-
-        let end_ticks = count_consecutive('`', chars);
-        if end_ticks == ticks {
-            let Some((_, c)) = chars.next() else {
-                return BlockElement::Code {
-                    language,
-                    text: &input[code_start..end],
-                };
-            };
-
-            if c == '\n' {
-                return BlockElement::Code {
-                    language,
-                    text: &input[code_start..end],
-                };
-            }
-        }
     }
 }
 
