@@ -41,7 +41,6 @@ pub struct Review {
     progress: usize,
     state: ReviewState,
     reveals: Vec<String>,
-    reveal_done: bool,
     text: String,
 }
 
@@ -59,7 +58,6 @@ impl Review {
             progress: 0,
             state: ReviewState::None,
             reveals: Vec::new(),
-            reveal_done: false,
             text: String::new(),
         }
     }
@@ -75,7 +73,6 @@ impl Review {
 
     fn next_card(&mut self, db: &Database) {
         self.reveals.clear();
-        self.reveal_done = false;
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
@@ -91,16 +88,8 @@ impl Review {
     }
 
     fn reveal_next(&mut self) {
-        if let Some(start) = self.text.find("{{") {
-            if let Some(end) = self.text[start + 2..].find("}}") {
-                let end = start + end + 2;
-                self.text.replace_range(end..end + 2, "**");
-                self.text.replace_range(start..start + 2, "**");
-            }
-        } else if let Some(s) = self.reveals.pop() {
+        if let Some(s) = self.reveals.pop() {
             self.text.push_str(s.as_str());
-        } else {
-            self.reveal_done = true;
         }
     }
 
@@ -142,7 +131,7 @@ impl Review {
                         return Action::Render;
                     }
                     KeyCode::Char(' ') => {
-                        if !self.reveal_done {
+                        if !self.reveals.is_empty() {
                             self.reveal_next();
                             return Action::Render;
                         }
@@ -187,20 +176,19 @@ impl Review {
         self.progress = 0;
         self.state = ReviewState::None;
         self.reveals.clear();
-        self.reveal_done = false;
         self.text.clear();
     }
 
     pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
         match self.state {
             ReviewState::Review(_) => {
-                if self.reveal_done {
+                if self.reveals.is_empty() {
                     &[
                         SHORTCUT_YES,
                         SHORTCUT_NO,
+                        SHORTCUT_SKIP,
                         SHORTCUT_EDIT,
                         SHORTCUT_DELETE,
-                        SHORTCUT_SKIP,
                         SHORTCUT_MENU,
                         SHORTCUT_QUIT,
                     ]
