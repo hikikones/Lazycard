@@ -13,6 +13,8 @@ use syntect::{
     util::LinesWithEndings,
 };
 
+use crate::utils::STYLE_LABEL;
+
 #[derive(Debug)]
 pub struct Markup {
     width: usize,
@@ -162,6 +164,9 @@ impl Markup {
                             }
                         }
                     }
+                    BlockElement::Break => self
+                        .lines
+                        .push(Line::styled("——————————", STYLE_LABEL).alignment(Alignment::Center)),
                 }
                 self.lines.push(Line::default());
             }
@@ -196,6 +201,7 @@ impl Markup {
 enum BlockElement<'a> {
     Paragraph { alignment: Alignment, text: &'a str },
     Code { language: &'a str, text: &'a str },
+    Break,
 }
 
 struct BlockParser<'a> {
@@ -241,9 +247,24 @@ impl<'a> Iterator for BlockParser<'a> {
                 }
                 '`' => {
                     if let Some('\n') | None = self.prev {
-                        let ticks = 1 + count_ticks(&mut self.chars);
+                        let ticks = 1 + count_consecutive('`', &mut self.chars);
                         if ticks >= 3 {
                             parse_code_block(i, ticks, self.input, &mut self.chars)
+                        } else {
+                            parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                        }
+                    } else {
+                        parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                    }
+                }
+                '-' => {
+                    if let Some('\n') | None = self.prev {
+                        let dashes = 1 + count_consecutive('-', &mut self.chars);
+                        if dashes == 1 {
+                            // todo: list item
+                            parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
+                        } else if dashes == 3 && self.chars.next_if(|(_, c)| *c == '\n').is_some() {
+                            BlockElement::Break
                         } else {
                             parse_paragraph(i, Alignment::Left, self.input, &mut self.chars)
                         }
@@ -260,6 +281,14 @@ impl<'a> Iterator for BlockParser<'a> {
 
         None
     }
+}
+
+fn count_consecutive(char: char, chars: &mut Peekable<CharIndices>) -> usize {
+    let mut count = 0;
+    while chars.next_if(|(_, c)| *c == char).is_some() {
+        count += 1;
+    }
+    count
 }
 
 fn parse_paragraph<'a>(
@@ -315,7 +344,7 @@ fn parse_code_block<'a>(
             };
         };
 
-        let end_ticks = count_ticks(chars);
+        let end_ticks = count_consecutive('`', chars);
         if end_ticks == ticks {
             let Some((_, c)) = chars.next() else {
                 return BlockElement::Code {
@@ -332,14 +361,6 @@ fn parse_code_block<'a>(
             }
         }
     }
-}
-
-fn count_ticks(chars: &mut Peekable<CharIndices>) -> usize {
-    let mut count = 0;
-    while chars.next_if(|(_, c)| *c == '`').is_some() {
-        count += 1;
-    }
-    count
 }
 
 #[derive(Debug, Clone, Copy)]
