@@ -188,31 +188,22 @@ impl Review {
         self.text.clear();
     }
 
-    pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
+    pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
         match self.state {
             ReviewState::Review(_) => {
-                if self.reveals.is_empty() {
-                    &[
-                        SHORTCUT_YES,
-                        SHORTCUT_NO,
-                        SHORTCUT_SKIP,
-                        SHORTCUT_EDIT,
-                        SHORTCUT_DELETE,
-                        SHORTCUT_MENU,
-                        SHORTCUT_QUIT,
-                    ]
+                if !self.reveals.is_empty() {
+                    shortcuts.extend([SHORTCUT_SHOW]);
                 } else {
-                    &[
-                        SHORTCUT_SHOW,
-                        SHORTCUT_SKIP,
-                        SHORTCUT_EDIT,
-                        SHORTCUT_DELETE,
-                        SHORTCUT_MENU,
-                        SHORTCUT_QUIT,
-                    ]
+                    shortcuts.extend([SHORTCUT_YES, SHORTCUT_NO]);
                 }
+                if !self.due.is_empty() {
+                    shortcuts.extend([SHORTCUT_SKIP]);
+                }
+                shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE, SHORTCUT_MENU, SHORTCUT_QUIT]);
             }
-            ReviewState::None | ReviewState::Done => &[SHORTCUT_MENU, SHORTCUT_QUIT],
+            ReviewState::None | ReviewState::Done => {
+                shortcuts.extend([SHORTCUT_MENU, SHORTCUT_QUIT]);
+            }
         }
     }
 }
@@ -350,12 +341,12 @@ impl CardEditor {
         }
     }
 
-    pub fn shortcuts<'a>(&'a self) -> &'a [Shortcut] {
-        &[
+    pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
+        shortcuts.extend([
             SHORTCUT_SAVE,
             SHORTCUT_PREVIEW,
             SHORTCUT_MENU,
             SHORTCUT_QUIT,
-        ]
+        ]);
     }
 }

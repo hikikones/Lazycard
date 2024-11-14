@@ -9,6 +9,7 @@ pub struct App {
     pages: Pages,
     db: Database,
     markup: Markup,
+    shortcuts: Shortcuts<'static>,
 }
 
 pub enum Action {
@@ -26,6 +27,7 @@ impl App {
             pages: Pages::new(),
             db: Database::new(),
             markup: Markup::new(),
+            shortcuts: Shortcuts::new(),
         }
     }
 
@@ -112,24 +114,24 @@ impl App {
             // Body
             let body =
                 layout_center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
-            let shortcuts = match self.route {
+            match self.route {
                 Route::Review => {
                     self.pages.review.on_render(body, buf, &mut self.markup);
-                    self.pages.review.shortcuts()
+                    self.pages.review.shortcuts(&mut self.shortcuts);
                 }
                 Route::Editor(_) => {
                     self.pages.editor.on_render(body, buf, &mut self.markup);
-                    self.pages.editor.shortcuts()
+                    self.pages.editor.shortcuts(&mut self.shortcuts);
                 }
-            };
+            }
 
             // Footer
             let mut footer_line = Line::default();
-            for &Shortcut { name, key } in shortcuts {
+            for shortcut in self.shortcuts.drain(..) {
                 footer_line.extend([
-                    Span::styled(key, STYLE_LABEL),
+                    Span::styled(shortcut.key, STYLE_LABEL),
                     Span::raw(" "),
-                    Span::raw(name),
+                    Span::raw(shortcut.name),
                     Span::raw("  "),
                 ]);
             }

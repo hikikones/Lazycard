@@ -32,6 +32,28 @@ impl<'a> Shortcut<'a> {
     }
 }
 
+pub struct Shortcuts<'a>(Vec<Shortcut<'a>>);
+
+impl<'a> Shortcuts<'a> {
+    pub const fn new() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<'a> std::ops::Deref for Shortcuts<'a> {
+    type Target = Vec<Shortcut<'a>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> std::ops::DerefMut for Shortcuts<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 pub fn _layout_center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
     _layout_center_vertical(layout_center_horizontal(area, horizontal), vertical)
 }
