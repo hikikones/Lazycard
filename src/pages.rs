@@ -76,10 +76,19 @@ impl Review {
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
-            let card = db.get(&id).unwrap();
-            let split = card.0.split("\n---\n").map(|s| s.to_owned());
-            self.reveals.extend(split);
+            let card_content = db.get(&id).unwrap().0.as_str();
+
+            let mut start = 0;
+            BlockParser::new(card_content)
+                .filter(|(block, _)| matches!(block, BlockElement::Break))
+                .for_each(|(_, range)| {
+                    self.reveals
+                        .push(card_content[start..range.start].to_owned());
+                    start = range.start;
+                });
+            self.reveals.push(card_content[start..].to_owned());
             self.reveals.reverse();
+
             self.reveal_next();
             self.state = ReviewState::Review(id);
         } else {

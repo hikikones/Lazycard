@@ -198,20 +198,20 @@ impl Markup {
 }
 
 #[derive(Debug)]
-enum BlockElement<'a> {
+pub enum BlockElement<'a> {
     Paragraph { alignment: Alignment, text: &'a str },
     Code { language: &'a str, text: &'a str },
     Break,
 }
 
-struct BlockParser<'a> {
+pub struct BlockParser<'a> {
     input: &'a str,
     chars: Peekable<CharIndices<'a>>,
     prev: Option<char>,
 }
 
 impl<'a> BlockParser<'a> {
-    fn new(input: &'a str) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Self {
             input,
             chars: input.char_indices().peekable(),
@@ -373,7 +373,7 @@ impl<'a> Iterator for BlockParser<'a> {
                         if dashes == 1 {
                             // todo: list item
                             self.parse_paragraph(i, Alignment::Left)
-                        } else if dashes == 3 && self.count_consecutive('\n') == 2 {
+                        } else if dashes == 3 && self.count_consecutive('\n') >= 2 {
                             (BlockElement::Break, i..i + dashes + 2)
                         } else {
                             self.parse_paragraph(i, Alignment::Left)
