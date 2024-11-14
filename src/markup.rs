@@ -1,6 +1,7 @@
 use std::{
     hash::{DefaultHasher, Hash, Hasher},
     iter::Peekable,
+    ops::Range,
     str::CharIndices,
     sync::LazyLock,
 };
@@ -80,7 +81,7 @@ impl Markup {
             self.hash = hash;
 
             // Process markup
-            for block in BlockParser::new(text) {
+            for (block, _) in BlockParser::new(text) {
                 match block {
                     BlockElement::Paragraph { alignment, text } => {
                         let mut line = Line::default().alignment(alignment);
@@ -218,63 +219,103 @@ impl<'a> BlockParser<'a> {
         }
     }
 
-    fn parse_paragraph(&mut self, start: usize, alignment: Alignment) -> BlockElement<'a> {
+    fn parse_paragraph(
+        &mut self,
+        start: usize,
+        alignment: Alignment,
+    ) -> (BlockElement<'a>, Range<usize>) {
         let offset = match alignment {
             Alignment::Left => 0,
             Alignment::Center | Alignment::Right => 1,
         };
-        let start = start + offset;
+        let paragraph_start = start + offset;
 
         loop {
             if self.chars.find(|&(_, c)| c == '\n').is_none() {
-                return BlockElement::Paragraph {
-                    alignment,
-                    text: self.input[start..].trim(),
-                };
+                return (
+                    BlockElement::Paragraph {
+                        alignment,
+                        text: self.input[paragraph_start..].trim(),
+                    },
+                    start..self.input.len(),
+                );
             };
 
             if let Some((end, '\n')) = self.chars.next() {
-                return BlockElement::Paragraph {
-                    alignment,
-                    text: self.input[start..end - 1].trim(),
-                };
+                return (
+                    BlockElement::Paragraph {
+                        alignment,
+                        text: self.input[paragraph_start..end - 1].trim(),
+                    },
+                    start..end + 1,
+                );
             }
         }
     }
 
-    fn parse_code_block(&mut self, start: usize, ticks: usize) -> BlockElement<'a> {
+    fn parse_code_block(&mut self, start: usize, ticks: usize) -> (BlockElement<'a>, Range<usize>) {
         let lang_start = start + ticks;
         let Some((i, _)) = self.chars.find(|(_, c)| *c == '\n') else {
-            return BlockElement::Code {
-                language: self.input[lang_start..].trim(),
-                text: "",
-            };
+            return (
+                BlockElement::Code {
+                    language: self.input[lang_start..].trim(),
+                    text: "",
+                },
+                start..self.input.len(),
+            );
         };
 
         let language = self.input[lang_start..i].trim();
         let code_start = i + 1;
         loop {
-            let Some((end, _)) = self.chars.find(|(_, c)| *c == '\n') else {
-                return BlockElement::Code {
-                    language,
-                    text: &self.input[code_start..],
-                };
+            let Some((code_end, _)) = self.chars.find(|(_, c)| *c == '\n') else {
+                return (
+                    BlockElement::Code {
+                        language,
+                        text: &self.input[code_start..],
+                    },
+                    start..self.input.len(),
+                );
             };
 
             let end_ticks = self.count_consecutive('`');
             if end_ticks == ticks {
-                let Some((_, c)) = self.chars.next() else {
-                    return BlockElement::Code {
-                        language,
-                        text: &self.input[code_start..end],
-                    };
+                let end = code_end + 1 + end_ticks;
+                let mut chars = self.input[end..].chars();
+
+                let Some(c) = chars.next() else {
+                    return (
+                        BlockElement::Code {
+                            language,
+                            text: &self.input[code_start..code_end],
+                        },
+                        start..end,
+                    );
                 };
 
                 if c == '\n' {
-                    return BlockElement::Code {
-                        language,
-                        text: &self.input[code_start..end],
+                    let Some(c) = chars.next() else {
+                        return (
+                            BlockElement::Code {
+                                language,
+                                text: &self.input[code_start..code_end],
+                            },
+                            start..end + 1,
+                        );
                     };
+
+                    if c == '\n' {
+                        self.chars.next();
+                        self.chars.next();
+
+                        return (
+                            BlockElement::Code {
+                                language,
+                                text: &self.input[code_start..code_end],
+                            },
+                            start..end + 2,
+                        );
+                    }
                 }
             }
         }
@@ -290,7 +331,7 @@ impl<'a> BlockParser<'a> {
 }
 
 impl<'a> Iterator for BlockParser<'a> {
-    type Item = BlockElement<'a>;
+    type Item = (BlockElement<'a>, Range<usize>);
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((i, c)) = self.chars.next() {
@@ -299,7 +340,7 @@ impl<'a> Iterator for BlockParser<'a> {
                 continue;
             }
 
-            let block = match c {
+            let (block, range) = match c {
                 '|' => {
                     if let Some('\n') | None = self.prev {
                         self.parse_paragraph(i, Alignment::Center)
@@ -332,8 +373,8 @@ impl<'a> Iterator for BlockParser<'a> {
                         if dashes == 1 {
                             // todo: list item
                             self.parse_paragraph(i, Alignment::Left)
-                        } else if dashes == 3 && self.chars.next_if(|(_, c)| *c == '\n').is_some() {
-                            BlockElement::Break
+                        } else if dashes == 3 && self.count_consecutive('\n') == 2 {
+                            (BlockElement::Break, i..i + dashes + 2)
                         } else {
                             self.parse_paragraph(i, Alignment::Left)
                         }
@@ -345,7 +386,7 @@ impl<'a> Iterator for BlockParser<'a> {
             };
 
             self.prev = None;
-            return Some(block);
+            return Some((block, range));
         }
 
         None
