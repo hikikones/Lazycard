@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
 
 use crate::{database::*, markup::Markup, pages::*, utils::*};
@@ -39,19 +39,35 @@ impl App {
             let action = match crossterm::event::read()? {
                 Event::Key(key) => {
                     if key.kind == KeyEventKind::Press {
-                        match self.route {
-                            Route::Review => self.pages.review.on_input(
-                                key.code,
-                                key.modifiers,
-                                &mut self.markup,
-                                &mut self.db,
-                            ),
-                            Route::Editor(_) => self.pages.editor.on_input(
-                                key.code,
-                                key.modifiers,
-                                &mut self.markup,
-                                &mut self.db,
-                            ),
+                        match key.code {
+                            KeyCode::Esc => Action::Quit,
+                            KeyCode::Tab => match self.route {
+                                Route::Review => Action::Route(Route::Editor(None)),
+                                Route::Editor(_) => Action::Route(Route::Settings),
+                                Route::Settings => Action::Route(Route::Review),
+                            },
+                            KeyCode::BackTab => match self.route {
+                                Route::Review => Action::Route(Route::Settings),
+                                Route::Editor(_) => Action::Route(Route::Review),
+                                Route::Settings => Action::Route(Route::Editor(None)),
+                            },
+                            _ => match self.route {
+                                Route::Review => self.pages.review.on_input(
+                                    key.code,
+                                    key.modifiers,
+                                    &mut self.markup,
+                                    &mut self.db,
+                                ),
+                                Route::Editor(_) => self.pages.editor.on_input(
+                                    key.code,
+                                    key.modifiers,
+                                    &mut self.markup,
+                                    &mut self.db,
+                                ),
+                                Route::Settings => {
+                                    self.pages.settings.on_input(key.code, key.modifiers)
+                                }
+                            },
                         }
                     } else {
                         Action::None
@@ -70,6 +86,7 @@ impl App {
                     match self.route {
                         Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
+                        Route::Settings => {}
                     }
 
                     self.route = route;
@@ -78,6 +95,7 @@ impl App {
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.db),
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
+                        Route::Settings => {}
                     }
 
                     self.render(&mut terminal)?;
@@ -99,21 +117,43 @@ impl App {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let [header, body, footer] = Layout::vertical([
+            let [title, _, nav, body, shortcuts, footer] = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Min(0),
+                Constraint::Length(1),
                 Constraint::Length(1),
             ])
             .areas(area);
 
-            // Header
-            Line::raw(format!("Lazycard: {}", self.route.title()))
-                .alignment(Alignment::Center)
-                .render(header, buf);
+            // Title
+            let mut title_line = Line::default().alignment(Alignment::Center);
+            title_line.push_span(Span::styled("lazycard", STYLE_LABEL));
+            title_line.render(title, buf);
+
+            // Navigation
+            let mut nav_line = Line::default().alignment(Alignment::Center);
+            nav_line.push_span(Span::raw("  "));
+            for route in [Route::Review, Route::Editor(None), Route::Settings] {
+                let (name, is_current) = match route {
+                    Route::Review => ("Review", matches!(self.route, Route::Review)),
+                    Route::Editor(_) => ("Editor", matches!(self.route, Route::Editor(_))),
+                    Route::Settings => ("Settings", matches!(self.route, Route::Settings)),
+                };
+                let style = if is_current {
+                    Style::new().bold()
+                } else {
+                    Style::new()
+                };
+                nav_line.push_span(Span::styled(name, style));
+                nav_line.push_span(Span::raw("   "));
+            }
+            nav_line.spans.pop();
+            nav_line.render(nav, buf);
 
             // Body
-            let body =
-                layout_center_horizontal(body.inner(Margin::new(2, 2)), Constraint::Length(64));
+            let body = layout_center_horizontal(body, Constraint::Length(64));
             match self.route {
                 Route::Review => {
                     self.pages.review.on_render(body, buf, &mut self.markup);
@@ -123,20 +163,24 @@ impl App {
                     self.pages.editor.on_render(body, buf, &mut self.markup);
                     self.pages.editor.shortcuts(&mut self.shortcuts);
                 }
+                Route::Settings => {
+                    self.pages.settings.on_render(body, buf);
+                }
             }
 
-            // Footer
-            let mut footer_line = Line::default();
+            // Shortcuts
+            let mut shortcuts_line = Line::default().alignment(Alignment::Center);
             for shortcut in self.shortcuts.drain(..) {
-                footer_line.extend([
-                    Span::styled(shortcut.key, STYLE_LABEL),
-                    Span::raw(" "),
-                    Span::raw(shortcut.name),
-                    Span::raw("  "),
-                ]);
+                shortcuts_line.extend(shortcut.as_spans());
             }
-            footer_line.spans.pop();
-            footer_line.alignment(Alignment::Center).render(footer, buf);
+            shortcuts_line.render(shortcuts, buf);
+
+            // Footer
+            let mut footer_line = Line::default().alignment(Alignment::Center);
+            footer_line.extend(SHORTCUT_NEXT.as_spans());
+            footer_line.extend(SHORTCUT_PREV.as_spans());
+            footer_line.extend(SHORTCUT_QUIT.as_spans());
+            footer_line.render(footer, buf);
         })
     }
 }

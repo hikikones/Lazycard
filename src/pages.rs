@@ -7,23 +7,13 @@ use crate::{app::Action, database::*, editor::*, markup::*, utils::*};
 pub enum Route {
     Review,
     Editor(Option<CardId>),
-}
-
-impl Route {
-    pub const fn title(self) -> &'static str {
-        match self {
-            Route::Review => "Review",
-            Route::Editor(id) => match id {
-                Some(_) => "Edit Card",
-                None => "New Card",
-            },
-        }
-    }
+    Settings,
 }
 
 pub struct Pages {
     pub review: Review,
     pub editor: CardEditor,
+    pub settings: Settings,
 }
 
 impl Pages {
@@ -31,6 +21,7 @@ impl Pages {
         Self {
             review: Review::new(),
             editor: CardEditor::new(),
+            settings: Settings,
         }
     }
 }
@@ -102,20 +93,30 @@ impl Review {
         }
     }
 
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
+    pub fn on_render(&mut self, mut area: Rect, buf: &mut Buffer, markup: &mut Markup) {
         match self.state {
             ReviewState::None => {
                 Line::raw("no cards to review...")
                     .alignment(Alignment::Center)
-                    .render(area, buf);
+                    .render(area.inner(MARGIN_CONTENT), buf);
             }
             ReviewState::Review(_) => {
-                markup.render_markup(&self.text, area, buf);
+                area.y += 1;
+                area.height -= 1;
+
+                let mut progress_line = Line::default().alignment(Alignment::Center);
+                progress_line.push_span(Span::styled(
+                    format!("{} / {}", self.progress, self.total),
+                    STYLE_LABEL,
+                ));
+                progress_line.render(area, buf);
+
+                markup.render_markup(&self.text, area.inner(MARGIN_CONTENT), buf);
             }
             ReviewState::Done => {
                 Line::raw("done")
                     .alignment(Alignment::Center)
-                    .render(area, buf);
+                    .render(area.inner(MARGIN_CONTENT), buf);
             }
         }
     }
@@ -130,8 +131,6 @@ impl Review {
         match self.state {
             ReviewState::Review(id) => {
                 match key {
-                    KeyCode::Esc => return Action::Quit,
-                    KeyCode::Tab => return Action::Route(Route::Editor(None)),
                     KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                     KeyCode::Delete => {
                         db.remove(&id);
@@ -142,6 +141,7 @@ impl Review {
                     KeyCode::Char(' ') => {
                         if !self.reveals.is_empty() {
                             self.reveal_next();
+                            markup.scroll(ScrollMove::End);
                             return Action::Render;
                         }
                     }
@@ -169,11 +169,7 @@ impl Review {
                     _ => {}
                 }
             }
-            ReviewState::None | ReviewState::Done => match key {
-                KeyCode::Esc => return Action::Quit,
-                KeyCode::Tab => return Action::Route(Route::Editor(None)),
-                _ => {}
-            },
+            ReviewState::None | ReviewState::Done => {}
         }
 
         Action::None
@@ -199,11 +195,9 @@ impl Review {
                 if !self.due.is_empty() {
                     shortcuts.extend([SHORTCUT_SKIP]);
                 }
-                shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE, SHORTCUT_MENU, SHORTCUT_QUIT]);
+                shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
             }
-            ReviewState::None | ReviewState::Done => {
-                shortcuts.extend([SHORTCUT_MENU, SHORTCUT_QUIT]);
-            }
+            ReviewState::None | ReviewState::Done => {}
         }
     }
 }
@@ -243,11 +237,23 @@ impl CardEditor {
         }
     }
 
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer, markup: &mut Markup) {
+    pub fn on_render(&mut self, mut area: Rect, buf: &mut Buffer, markup: &mut Markup) {
+        let title = match self.state {
+            CardEditorState::New => "New Card",
+            CardEditorState::Edit(_) => "Edit Card",
+        };
+
+        area.y += 1;
+        area.height -= 1;
+
+        Line::raw(title)
+            .alignment(Alignment::Center)
+            .render(area, buf);
+
         if self.preview {
-            markup.render_markup(self.editor.as_str(), area, buf);
+            markup.render_markup(self.editor.as_str(), area.inner(MARGIN_CONTENT), buf);
         } else {
-            self.editor.render(area, buf);
+            self.editor.render(area.inner(MARGIN_CONTENT), buf);
         }
     }
 
@@ -262,11 +268,6 @@ impl CardEditor {
         let shift = modifiers.contains(KeyModifiers::SHIFT);
 
         match key {
-            KeyCode::Esc => return Action::Quit,
-            KeyCode::Tab => match self.state {
-                CardEditorState::New => return Action::Route(Route::Review),
-                CardEditorState::Edit(_) => return Action::Route(Route::Review), // todo: go back
-            },
             KeyCode::Up => {
                 if self.preview {
                     if markup.scroll(ScrollMove::Up) {
@@ -342,11 +343,20 @@ impl CardEditor {
     }
 
     pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
-        shortcuts.extend([
-            SHORTCUT_SAVE,
-            SHORTCUT_PREVIEW,
-            SHORTCUT_MENU,
-            SHORTCUT_QUIT,
-        ]);
+        shortcuts.extend([SHORTCUT_SAVE, SHORTCUT_PREVIEW]);
+    }
+}
+
+pub struct Settings;
+
+impl Settings {
+    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer) {
+        Line::raw("todo")
+            .alignment(Alignment::Center)
+            .render(area.inner(MARGIN_CONTENT), buf);
+    }
+
+    pub fn on_input(&mut self, _key: KeyCode, _modifiers: KeyModifiers) -> Action {
+        Action::None
     }
 }

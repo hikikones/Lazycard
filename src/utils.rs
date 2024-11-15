@@ -1,6 +1,7 @@
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Rect},
+    layout::{Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Style},
+    text::Span,
 };
 
 pub const STYLE_NONE: Style = Style::new();
@@ -9,7 +10,8 @@ pub const STYLE_CURSOR: Style = Style::new().bg(Color::Blue);
 pub const STYLE_SELECTED: Style = Style::new().bg(Color::Blue);
 
 pub const SHORTCUT_QUIT: Shortcut = Shortcut::new("Quit", "Esc");
-pub const SHORTCUT_MENU: Shortcut = Shortcut::new("Menu", "Tab");
+pub const SHORTCUT_NEXT: Shortcut = Shortcut::new("Next", "Tab");
+pub const SHORTCUT_PREV: Shortcut = Shortcut::new("Prev", "⇧Tab");
 pub const SHORTCUT_SHOW: Shortcut = Shortcut::new("Show", "Space");
 pub const SHORTCUT_YES: Shortcut = Shortcut::new("Yes", "y");
 pub const SHORTCUT_NO: Shortcut = Shortcut::new("No", "n");
@@ -21,6 +23,8 @@ pub const SHORTCUT_PREVIEW: Shortcut = Shortcut::new("Preview", "^p");
 pub const _SHORTCUT_SCROLL: Shortcut = Shortcut::new("Scroll", "⇅");
 pub const SHORTCUT_SKIP: Shortcut = Shortcut::new("Skip", "➝");
 
+pub const MARGIN_CONTENT: Margin = Margin::new(2, 2);
+
 pub struct Shortcut<'a> {
     pub name: &'a str,
     pub key: &'a str,
@@ -29,6 +33,16 @@ pub struct Shortcut<'a> {
 impl<'a> Shortcut<'a> {
     pub const fn new(name: &'a str, key: &'a str) -> Self {
         Self { name, key }
+    }
+
+    pub fn as_spans(self) -> [Span<'a>; 5] {
+        [
+            Span::raw(" "),
+            Span::styled(self.key, STYLE_LABEL),
+            Span::raw(" "),
+            Span::raw(self.name),
+            Span::raw(" "),
+        ]
     }
 }
 

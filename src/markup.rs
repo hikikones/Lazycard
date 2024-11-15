@@ -29,7 +29,7 @@ pub enum ScrollMove {
     Up,
     Down,
     _Start,
-    _End,
+    End,
 }
 
 impl Markup {
@@ -51,20 +51,16 @@ impl Markup {
             ScrollMove::Up => self.set_scroll(self.scroll.saturating_sub(1), lines, height),
             ScrollMove::Down => self.set_scroll(self.scroll.saturating_add(1), lines, height),
             ScrollMove::_Start => self.set_scroll(0, lines, height),
-            ScrollMove::_End => self.set_scroll(usize::MAX, lines, height),
+            ScrollMove::End => self.set_scroll(usize::MAX, lines, height),
         }
     }
 
     fn set_scroll(&mut self, n: usize, lines: usize, height: usize) -> bool {
         let old_scroll = self.scroll;
+        let new_scroll = calculate_scroll(n, lines, height);
+        self.scroll = n;
 
-        self.scroll = if lines <= height {
-            0
-        } else {
-            usize::min(n, lines - height)
-        };
-
-        old_scroll != self.scroll
+        old_scroll != new_scroll
     }
 
     pub fn render_markup(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
@@ -171,10 +167,10 @@ impl Markup {
                 self.lines.push(Line::default());
             }
             self.lines.pop();
-
-            // Update scroll
-            self.set_scroll(self.scroll, self.lines.len(), self.height);
         }
+
+        // Update scroll
+        self.scroll = calculate_scroll(self.scroll, self.lines.len(), self.height);
 
         // Render lines
         let mut line_area = Rect { height: 1, ..area };
@@ -194,6 +190,14 @@ impl Markup {
         self.hash = 0;
         self.scroll = 0;
         self.lines.clear();
+    }
+}
+
+fn calculate_scroll(scroll: usize, lines: usize, height: usize) -> usize {
+    if lines <= height {
+        0
+    } else {
+        usize::min(scroll, lines - height)
     }
 }
 
