@@ -141,7 +141,7 @@ impl Review {
                     KeyCode::Char(' ') => {
                         if !self.reveals.is_empty() {
                             self.reveal_next();
-                            markup.scroll(ScrollMove::End);
+                            markup.desired_scroll(ScrollMove::End);
                             return Action::Render;
                         }
                     }

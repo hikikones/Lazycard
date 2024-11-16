@@ -22,6 +22,7 @@ pub struct Markup {
     height: usize,
     hash: u64,
     scroll: usize,
+    desired_scroll: Option<usize>,
     lines: Vec<Line<'static>>,
 }
 
@@ -39,6 +40,7 @@ impl Markup {
             height: 0,
             hash: 0,
             scroll: 0,
+            desired_scroll: None,
             lines: Vec::new(),
         }
     }
@@ -46,21 +48,31 @@ impl Markup {
     pub fn scroll(&mut self, sm: ScrollMove) -> bool {
         let lines = self.lines.len();
         let height = self.height;
+        let old_scroll = self.scroll;
 
-        match sm {
-            ScrollMove::Up => self.set_scroll(self.scroll.saturating_sub(1), lines, height),
-            ScrollMove::Down => self.set_scroll(self.scroll.saturating_add(1), lines, height),
-            ScrollMove::_Start => self.set_scroll(0, lines, height),
-            ScrollMove::End => self.set_scroll(usize::MAX, lines, height),
-        }
+        self.scroll = match sm {
+            ScrollMove::Up => calculate_scroll(self.scroll.saturating_sub(1), lines, height),
+            ScrollMove::Down => calculate_scroll(self.scroll.saturating_add(1), lines, height),
+            ScrollMove::_Start => calculate_scroll(0, lines, height),
+            ScrollMove::End => calculate_scroll(usize::MAX, lines, height),
+        };
+
+        self.scroll != old_scroll
     }
 
-    fn set_scroll(&mut self, n: usize, lines: usize, height: usize) -> bool {
-        let old_scroll = self.scroll;
-        let new_scroll = calculate_scroll(n, lines, height);
-        self.scroll = n;
-
-        old_scroll != new_scroll
+    pub fn desired_scroll(&mut self, sm: ScrollMove) {
+        match sm {
+            ScrollMove::Up => match self.desired_scroll.as_mut() {
+                Some(scroll) => *scroll = scroll.saturating_sub(1),
+                None => self.desired_scroll = Some(self.scroll.saturating_sub(1)),
+            },
+            ScrollMove::Down => match self.desired_scroll.as_mut() {
+                Some(scroll) => *scroll = scroll.saturating_add(1),
+                None => self.desired_scroll = Some(self.scroll.saturating_add(1)),
+            },
+            ScrollMove::_Start => self.desired_scroll = Some(0),
+            ScrollMove::End => self.desired_scroll = Some(usize::MAX),
+        }
     }
 
     pub fn render_markup(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
@@ -170,7 +182,8 @@ impl Markup {
         }
 
         // Update scroll
-        self.scroll = calculate_scroll(self.scroll, self.lines.len(), self.height);
+        let scroll = self.desired_scroll.take().unwrap_or(self.scroll);
+        self.scroll = calculate_scroll(scroll, self.lines.len(), self.height);
 
         // Render lines
         let mut line_area = Rect { height: 1, ..area };
@@ -189,6 +202,7 @@ impl Markup {
         self.height = 0;
         self.hash = 0;
         self.scroll = 0;
+        self.desired_scroll = None;
         self.lines.clear();
     }
 }
