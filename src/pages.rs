@@ -141,21 +141,21 @@ impl Review {
                     KeyCode::Char(' ') => {
                         if !self.reveals.is_empty() {
                             self.reveal_next();
-                            markup.desired_scroll(ScrollMove::End);
+                            markup.desired_scroll(ScrollMove::Down(usize::MAX));
                             return Action::Render;
                         }
                     }
                     KeyCode::Up => {
                         // todo: successful recall
                         // fixme: activates when scrolling with touchpad?
-                        if markup.scroll(ScrollMove::Up) {
+                        if markup.scroll(ScrollMove::Up(1)) {
                             return Action::Render;
                         }
                     }
                     KeyCode::Down => {
                         // todo: unsuccessful recall
                         // fixme: activates when scrolling with touchpad?
-                        if markup.scroll(ScrollMove::Down) {
+                        if markup.scroll(ScrollMove::Down(1)) {
                             return Action::Render;
                         }
                     }
@@ -270,7 +270,7 @@ impl CardEditor {
         match key {
             KeyCode::Up => {
                 if self.preview {
-                    if markup.scroll(ScrollMove::Up) {
+                    if markup.scroll(ScrollMove::Up(1)) {
                         return Action::Render;
                     }
                 } else {
@@ -281,7 +281,7 @@ impl CardEditor {
             }
             KeyCode::Down => {
                 if self.preview {
-                    if markup.scroll(ScrollMove::Down) {
+                    if markup.scroll(ScrollMove::Down(1)) {
                         return Action::Render;
                     }
                 } else {

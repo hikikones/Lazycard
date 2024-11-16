@@ -27,10 +27,8 @@ pub struct Markup {
 }
 
 pub enum ScrollMove {
-    Up,
-    Down,
-    _Start,
-    End,
+    Up(usize),
+    Down(usize),
 }
 
 impl Markup {
@@ -51,10 +49,8 @@ impl Markup {
         let old_scroll = self.scroll;
 
         self.scroll = match sm {
-            ScrollMove::Up => calculate_scroll(self.scroll.saturating_sub(1), lines, height),
-            ScrollMove::Down => calculate_scroll(self.scroll.saturating_add(1), lines, height),
-            ScrollMove::_Start => calculate_scroll(0, lines, height),
-            ScrollMove::End => calculate_scroll(usize::MAX, lines, height),
+            ScrollMove::Up(n) => calculate_scroll(self.scroll.saturating_sub(n), lines, height),
+            ScrollMove::Down(n) => calculate_scroll(self.scroll.saturating_add(n), lines, height),
         };
 
         self.scroll != old_scroll
@@ -62,16 +58,14 @@ impl Markup {
 
     pub fn desired_scroll(&mut self, sm: ScrollMove) {
         match sm {
-            ScrollMove::Up => match self.desired_scroll.as_mut() {
-                Some(scroll) => *scroll = scroll.saturating_sub(1),
-                None => self.desired_scroll = Some(self.scroll.saturating_sub(1)),
+            ScrollMove::Up(n) => match self.desired_scroll.as_mut() {
+                Some(scroll) => *scroll = scroll.saturating_sub(n),
+                None => self.desired_scroll = Some(self.scroll.saturating_sub(n)),
             },
-            ScrollMove::Down => match self.desired_scroll.as_mut() {
-                Some(scroll) => *scroll = scroll.saturating_add(1),
-                None => self.desired_scroll = Some(self.scroll.saturating_add(1)),
+            ScrollMove::Down(n) => match self.desired_scroll.as_mut() {
+                Some(scroll) => *scroll = scroll.saturating_add(n),
+                None => self.desired_scroll = Some(self.scroll.saturating_add(n)),
             },
-            ScrollMove::_Start => self.desired_scroll = Some(0),
-            ScrollMove::End => self.desired_scroll = Some(usize::MAX),
         }
     }
 
