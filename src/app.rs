@@ -64,7 +64,12 @@ impl App {
                                     &mut self.markup,
                                     &mut self.db,
                                 ),
-                                Route::Cards => self.pages.cards.on_input(key.code, key.modifiers),
+                                Route::Cards => self.pages.cards.on_input(
+                                    key.code,
+                                    key.modifiers,
+                                    &mut self.markup,
+                                    &mut self.db,
+                                ),
                             },
                         }
                     } else {

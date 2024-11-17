@@ -141,7 +141,7 @@ impl Review {
                     KeyCode::Char(' ') => {
                         if !self.reveals.is_empty() {
                             self.reveal_next();
-                            markup.desired_scroll(ScrollMove::Down(usize::MAX));
+                            markup.desired_scroll(ScrollMove::End);
                             return Action::Render;
                         }
                     }
@@ -350,6 +350,14 @@ impl CardEditor {
 pub struct Cards {
     cards: Vec<CardId>,
     index: usize,
+    sort: CardSort,
+}
+
+enum CardSort {
+    Newest,
+    Oldest,
+    // todo: search
+    // todo: deleted
 }
 
 impl Cards {
@@ -357,11 +365,19 @@ impl Cards {
         Self {
             cards: Vec::new(),
             index: 0,
+            sort: CardSort::Newest,
         }
     }
 
     pub fn on_enter(&mut self, db: &Database) {
-        self.cards.extend(db.iter().map(|(id, _)| id));
+        match self.sort {
+            CardSort::Newest => {
+                self.cards.extend(db.iter().rev().map(|(id, _)| id));
+            }
+            CardSort::Oldest => {
+                self.cards.extend(db.iter().map(|(id, _)| id));
+            }
+        }
     }
 
     pub fn on_render(
@@ -383,7 +399,13 @@ impl Cards {
                         STYLE_LABEL,
                     ),
                     Span::raw("   "),
-                    Span::styled("Oldest", STYLE_LABEL),
+                    Span::styled(
+                        match self.sort {
+                            CardSort::Newest => "Newest",
+                            CardSort::Oldest => "Oldest",
+                        },
+                        STYLE_LABEL,
+                    ),
                 ]);
                 menu.render(area, buf);
 
@@ -391,29 +413,69 @@ impl Cards {
                 markup.render_markup(&card.0, area.inner(MARGIN_CONTENT), buf);
             }
             None => {
-                Line::raw("todo")
+                Line::raw("todo: no cards or card not found")
                     .alignment(Alignment::Center)
                     .render(area.inner(MARGIN_CONTENT), buf);
             }
         }
     }
 
-    pub fn on_input(&mut self, key: KeyCode, _modifiers: KeyModifiers) -> Action {
+    pub fn on_input(
+        &mut self,
+        key: KeyCode,
+        _modifiers: KeyModifiers,
+        markup: &mut Markup,
+        db: &mut Database,
+    ) -> Action {
         match key {
             KeyCode::Right => {
-                self.index = (self.index + 1) % self.cards.len();
-                Action::Render
+                if self.cards.len() > 1 {
+                    self.index = (self.index + 1) % self.cards.len();
+                    markup.desired_scroll(ScrollMove::Start);
+                    return Action::Render;
+                }
             }
             KeyCode::Left => {
-                if self.index == 0 {
-                    self.index = self.cards.len().saturating_sub(1);
-                } else {
-                    self.index -= 1;
+                if self.cards.len() > 1 {
+                    if self.index == 0 {
+                        self.index = self.cards.len() - 1;
+                    } else {
+                        self.index -= 1;
+                    }
+                    markup.desired_scroll(ScrollMove::Start);
+                    return Action::Render;
                 }
-                Action::Render
             }
-            _ => Action::None,
+            KeyCode::Up => {
+                if markup.scroll(ScrollMove::Up(1)) {
+                    return Action::Render;
+                }
+            }
+            KeyCode::Down => {
+                if markup.scroll(ScrollMove::Down(1)) {
+                    return Action::Render;
+                }
+            }
+            KeyCode::Delete => {
+                // todo: delete
+            }
+            KeyCode::Char('e') => {
+                // todo: edit
+            }
+            KeyCode::Char('s') => {
+                match self.sort {
+                    CardSort::Newest => self.sort = CardSort::Oldest,
+                    CardSort::Oldest => self.sort = CardSort::Newest,
+                }
+                self.on_exit();
+                self.on_enter(db);
+                markup.desired_scroll(ScrollMove::Start);
+                return Action::Render;
+            }
+            _ => {}
         }
+
+        Action::None
     }
 
     pub fn on_exit(&mut self) {
@@ -421,5 +483,7 @@ impl Cards {
         self.index = 0;
     }
 
-    pub fn shortcuts(&self, _shortcuts: &mut Shortcuts) {}
+    pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
+        shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SORT]);
+    }
 }

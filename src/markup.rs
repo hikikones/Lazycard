@@ -29,6 +29,8 @@ pub struct Markup {
 pub enum ScrollMove {
     Up(usize),
     Down(usize),
+    Start,
+    End,
 }
 
 impl Markup {
@@ -51,6 +53,8 @@ impl Markup {
         self.scroll = match sm {
             ScrollMove::Up(n) => calculate_scroll(self.scroll.saturating_sub(n), lines, height),
             ScrollMove::Down(n) => calculate_scroll(self.scroll.saturating_add(n), lines, height),
+            ScrollMove::Start => 0,
+            ScrollMove::End => calculate_scroll(usize::MAX, lines, height),
         };
 
         self.scroll != old_scroll
@@ -66,6 +70,8 @@ impl Markup {
                 Some(scroll) => *scroll = scroll.saturating_add(n),
                 None => self.desired_scroll = Some(self.scroll.saturating_add(n)),
             },
+            ScrollMove::Start => self.desired_scroll = Some(0),
+            ScrollMove::End => self.desired_scroll = Some(usize::MAX),
         }
     }
 
