@@ -43,13 +43,13 @@ impl App {
                             KeyCode::Esc => Action::Quit,
                             KeyCode::Tab => match self.route {
                                 Route::Review => Action::Route(Route::Editor(None)),
-                                Route::Editor(_) => Action::Route(Route::Settings),
-                                Route::Settings => Action::Route(Route::Review),
+                                Route::Editor(_) => Action::Route(Route::Cards),
+                                Route::Cards => Action::Route(Route::Review),
                             },
                             KeyCode::BackTab => match self.route {
-                                Route::Review => Action::Route(Route::Settings),
+                                Route::Review => Action::Route(Route::Cards),
                                 Route::Editor(_) => Action::Route(Route::Review),
-                                Route::Settings => Action::Route(Route::Editor(None)),
+                                Route::Cards => Action::Route(Route::Editor(None)),
                             },
                             _ => match self.route {
                                 Route::Review => self.pages.review.on_input(
@@ -64,9 +64,7 @@ impl App {
                                     &mut self.markup,
                                     &mut self.db,
                                 ),
-                                Route::Settings => {
-                                    self.pages.settings.on_input(key.code, key.modifiers)
-                                }
+                                Route::Cards => self.pages.cards.on_input(key.code, key.modifiers),
                             },
                         }
                     } else {
@@ -86,7 +84,7 @@ impl App {
                     match self.route {
                         Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
-                        Route::Settings => {}
+                        Route::Cards => self.pages.cards.on_exit(),
                     }
 
                     self.route = route;
@@ -95,7 +93,7 @@ impl App {
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.db),
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
-                        Route::Settings => {}
+                        Route::Cards => self.pages.cards.on_enter(&self.db),
                     }
 
                     self.render(&mut terminal)?;
@@ -134,12 +132,11 @@ impl App {
 
             // Navigation
             let mut nav_line = Line::default().alignment(Alignment::Center);
-            nav_line.push_span(Span::raw("  "));
-            for route in [Route::Review, Route::Editor(None), Route::Settings] {
+            for route in [Route::Review, Route::Editor(None), Route::Cards] {
                 let (name, is_current) = match route {
                     Route::Review => ("Review", matches!(self.route, Route::Review)),
                     Route::Editor(_) => ("Editor", matches!(self.route, Route::Editor(_))),
-                    Route::Settings => ("Settings", matches!(self.route, Route::Settings)),
+                    Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
                 };
                 let style = if is_current {
                     Style::new().bold()
@@ -163,8 +160,11 @@ impl App {
                     self.pages.editor.on_render(body, buf, &mut self.markup);
                     self.pages.editor.shortcuts(&mut self.shortcuts);
                 }
-                Route::Settings => {
-                    self.pages.settings.on_render(body, buf);
+                Route::Cards => {
+                    self.pages
+                        .cards
+                        .on_render(body, buf, &mut self.markup, &self.db);
+                    self.pages.cards.shortcuts(&mut self.shortcuts);
                 }
             }
 

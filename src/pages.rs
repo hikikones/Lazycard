@@ -7,13 +7,13 @@ use crate::{app::Action, database::*, editor::*, markup::*, utils::*};
 pub enum Route {
     Review,
     Editor(Option<CardId>),
-    Settings,
+    Cards,
 }
 
 pub struct Pages {
     pub review: Review,
     pub editor: CardEditor,
-    pub settings: Settings,
+    pub cards: Cards,
 }
 
 impl Pages {
@@ -21,7 +21,7 @@ impl Pages {
         Self {
             review: Review::new(),
             editor: CardEditor::new(),
-            settings: Settings,
+            cards: Cards::new(),
         }
     }
 }
@@ -347,16 +347,79 @@ impl CardEditor {
     }
 }
 
-pub struct Settings;
+pub struct Cards {
+    cards: Vec<CardId>,
+    index: usize,
+}
 
-impl Settings {
-    pub fn on_render(&mut self, area: Rect, buf: &mut Buffer) {
-        Line::raw("todo")
-            .alignment(Alignment::Center)
-            .render(area.inner(MARGIN_CONTENT), buf);
+impl Cards {
+    pub const fn new() -> Self {
+        Self {
+            cards: Vec::new(),
+            index: 0,
+        }
     }
 
-    pub fn on_input(&mut self, _key: KeyCode, _modifiers: KeyModifiers) -> Action {
-        Action::None
+    pub fn on_enter(&mut self, db: &Database) {
+        self.cards.extend(db.iter().map(|(id, _)| id));
     }
+
+    pub fn on_render(
+        &mut self,
+        mut area: Rect,
+        buf: &mut Buffer,
+        markup: &mut Markup,
+        db: &Database,
+    ) {
+        area.y += 1;
+        area.height -= 1;
+
+        match self.cards.get(self.index) {
+            Some(id) => {
+                let mut menu = Line::default().alignment(Alignment::Center);
+                menu.extend([
+                    Span::styled(
+                        format!("{} / {}", self.index + 1, self.cards.len()),
+                        STYLE_LABEL,
+                    ),
+                    Span::raw("   "),
+                    Span::styled("Oldest", STYLE_LABEL),
+                ]);
+                menu.render(area, buf);
+
+                let card = db.get(id).unwrap();
+                markup.render_markup(&card.0, area.inner(MARGIN_CONTENT), buf);
+            }
+            None => {
+                Line::raw("todo")
+                    .alignment(Alignment::Center)
+                    .render(area.inner(MARGIN_CONTENT), buf);
+            }
+        }
+    }
+
+    pub fn on_input(&mut self, key: KeyCode, _modifiers: KeyModifiers) -> Action {
+        match key {
+            KeyCode::Right => {
+                self.index = (self.index + 1) % self.cards.len();
+                Action::Render
+            }
+            KeyCode::Left => {
+                if self.index == 0 {
+                    self.index = self.cards.len().saturating_sub(1);
+                } else {
+                    self.index -= 1;
+                }
+                Action::Render
+            }
+            _ => Action::None,
+        }
+    }
+
+    pub fn on_exit(&mut self) {
+        self.cards.clear();
+        self.index = 0;
+    }
+
+    pub fn shortcuts(&self, _shortcuts: &mut Shortcuts) {}
 }
