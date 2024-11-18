@@ -1,10 +1,12 @@
 use ratatui::{
     layout::{Constraint, Flex, Layout, Margin, Rect},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::Span,
 };
 
 pub const STYLE_NONE: Style = Style::new();
+pub const STYLE_BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
+pub const STYLE_ITALIC: Style = Style::new().add_modifier(Modifier::ITALIC);
 pub const STYLE_LABEL: Style = Style::new().fg(Color::Gray);
 pub const STYLE_CURSOR: Style = Style::new().bg(Color::Blue);
 pub const STYLE_SELECTED: Style = Style::new().bg(Color::Blue);

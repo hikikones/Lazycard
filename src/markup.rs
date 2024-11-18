@@ -14,7 +14,7 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-use crate::utils::STYLE_LABEL;
+use crate::utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_LABEL, STYLE_NONE};
 
 #[derive(Debug)]
 pub struct Markup {
@@ -97,9 +97,9 @@ impl Markup {
 
                         for (tag, span) in InlineParser::new(text) {
                             let style = match tag {
-                                InlineTag::Text => Style::new(),
-                                InlineTag::Bold => Style::new().bold(),
-                                InlineTag::Italic => Style::new().italic(),
+                                InlineTag::Text => STYLE_NONE,
+                                InlineTag::Bold => STYLE_BOLD,
+                                InlineTag::Italic => STYLE_ITALIC,
                             };
 
                             for word in span.split_whitespace() {

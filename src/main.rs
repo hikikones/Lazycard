@@ -10,4 +10,8 @@ fn main() -> std::io::Result<()> {
     let app = app::App::new().run(terminal);
     ratatui::restore();
     app
+
+    // dbg!(unicode_width::UnicodeWidthChar::width('👻')).unwrap();
+
+    // Ok(())
 }
