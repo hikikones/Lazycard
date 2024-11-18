@@ -7,7 +7,7 @@ pub struct TextEditor {
     input: String,
     line_width: u16,
     cursor_index: usize,
-    cursor_column: usize,
+    cursor_column: u16,
     cursor_line_index: usize,
     line_start_indexes: Vec<usize>,
     selection_start: Option<usize>,
@@ -242,7 +242,7 @@ impl TextEditor {
             let char_width = if c.is_whitespace() {
                 1
             } else {
-                unicode_width::UnicodeWidthChar::width(c).unwrap_or(1)
+                unicode_width::UnicodeWidthChar::width(c).unwrap_or(1) as u16
             };
 
             column += char_width;
@@ -306,28 +306,37 @@ impl Widget for &mut TextEditor {
                 STYLE_NONE
             };
 
-            let is_next_line = if c == '\n' {
+            let (is_next_line, span) = if c == '\n' {
                 if is_cursor || (is_selected && i < input_len) {
                     self.lines[line_index].push_span(Span::styled(" ", style));
                 }
-                true
+                (true, None)
             } else if c.is_whitespace() {
                 self.lines[line_index].push_span(Span::styled(" ", style));
                 line_width += 1;
-                line_width >= area.width as usize
+                (line_width >= area.width, None)
             } else {
-                let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
                 let span = Span::styled(c.to_string(), style);
-                self.lines[line_index].push_span(span);
-                line_width += char_width;
-                line_width >= area.width as usize
+                line_width += span.width() as u16;
+                if line_width > area.width {
+                    (true, Some(span))
+                } else {
+                    self.lines[line_index].push_span(span);
+                    (false, None)
+                }
             };
 
             if is_next_line {
                 line_width = 0;
                 line_index += 1;
                 self.lines.push(Line::default());
-                self.line_start_indexes.push(i + c.len_utf8());
+                if let Some(span) = span {
+                    line_width += span.width() as u16;
+                    self.lines[line_index].push_span(span);
+                    self.line_start_indexes.push(i);
+                } else {
+                    self.line_start_indexes.push(i + c.len_utf8());
+                }
             }
         }
 
