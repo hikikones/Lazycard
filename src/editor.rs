@@ -401,6 +401,10 @@ impl TextInput {
         self
     }
 
+    pub fn as_str(&self) -> &str {
+        self.input.as_str()
+    }
+
     pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
         let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
         let shift = key_modifiers.contains(KeyModifiers::SHIFT);
@@ -414,10 +418,6 @@ impl TextInput {
             KeyCode::Delete => self.delete(CursorDelete::Forward),
             KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
             KeyCode::End => self.move_cursor(CursorMove::End, shift),
-            KeyCode::Enter => {
-                self.push_char('\n');
-                true
-            }
             KeyCode::Char(c) => match c {
                 'a' => {
                     if ctrl {

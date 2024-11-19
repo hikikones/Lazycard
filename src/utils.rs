@@ -26,6 +26,8 @@ pub const _SHORTCUT_SCROLL: Shortcut = Shortcut::new("Scroll", "⇅");
 pub const SHORTCUT_SKIP: Shortcut = Shortcut::new("Skip", "➝");
 pub const SHORTCUT_BROWSE: Shortcut = Shortcut::new("Browse", "⇄");
 pub const SHORTCUT_SORT: Shortcut = Shortcut::new("Sort", "s");
+pub const SHORTCUT_SEARCH: Shortcut = Shortcut::new("Search", "/");
+pub const SHORTCUT_CONFIRM: Shortcut = Shortcut::new("Confirm", "↵");
 
 pub const MARGIN_CONTENT: Margin = Margin::new(2, 2);
 

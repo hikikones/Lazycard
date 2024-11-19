@@ -350,14 +350,21 @@ impl CardEditor {
 pub struct Cards {
     cards: Vec<CardId>,
     index: usize,
-    sort: CardSort,
+    state: CardsState,
+    sort: CardsSort,
+    search: TextInput,
 }
 
-enum CardSort {
+enum CardsState {
+    Browse,
+    Search,
+    None,
+}
+
+enum CardsSort {
     Newest,
     Oldest,
-    // todo: search
-    // todo: deleted
+    Search,
 }
 
 impl Cards {
@@ -365,17 +372,48 @@ impl Cards {
         Self {
             cards: Vec::new(),
             index: 0,
-            sort: CardSort::Newest,
+            state: CardsState::None,
+            sort: CardsSort::Newest,
+            search: TextInput::new().with_placeholder("search..."),
         }
     }
 
     pub fn on_enter(&mut self, db: &Database) {
         match self.sort {
-            CardSort::Newest => {
+            CardsSort::Newest => {
                 self.cards.extend(db.iter().rev().map(|(id, _)| id));
+                self.state = if self.cards.is_empty() {
+                    CardsState::None
+                } else {
+                    CardsState::Browse
+                };
             }
-            CardSort::Oldest => {
+            CardsSort::Oldest => {
                 self.cards.extend(db.iter().map(|(id, _)| id));
+                self.state = if self.cards.is_empty() {
+                    CardsState::None
+                } else {
+                    CardsState::Browse
+                };
+            }
+            CardsSort::Search => {
+                let keywords = self.search.as_str().split_whitespace();
+                self.cards.extend(
+                    db.iter()
+                        .filter(|(_, card)| {
+                            for keyword in keywords.clone() {
+                                if card.0.contains(keyword) {
+                                    return true;
+                                }
+                            }
+                            false
+                        })
+                        .map(|(id, _)| id),
+                );
+
+                if !self.cards.is_empty() {
+                    self.state = CardsState::Browse;
+                }
             }
         }
     }
@@ -390,89 +428,151 @@ impl Cards {
         area.y += 1;
         area.height -= 1;
 
-        match self.cards.get(self.index) {
-            Some(id) => {
-                let mut menu = Line::default().alignment(Alignment::Center);
-                menu.extend([
-                    Span::styled(
-                        format!("{} / {}", self.index + 1, self.cards.len()),
-                        STYLE_LABEL,
-                    ),
-                    Span::raw("   "),
-                    Span::styled(
-                        match self.sort {
-                            CardSort::Newest => "Newest",
-                            CardSort::Oldest => "Oldest",
-                        },
-                        STYLE_LABEL,
-                    ),
-                ]);
-                menu.render(area, buf);
+        let mut menu = Line::default().alignment(Alignment::Center);
+        menu.extend([
+            Span::styled(
+                format!("{} / {}", self.index + 1, self.cards.len()),
+                STYLE_LABEL,
+            ),
+            Span::raw("   "),
+            Span::styled(
+                match self.sort {
+                    CardsSort::Newest => "Newest",
+                    CardsSort::Oldest => "Oldest",
+                    CardsSort::Search => "Search",
+                },
+                STYLE_LABEL,
+            ),
+        ]);
+        menu.render(area, buf);
 
-                let card = db.get(id).unwrap();
-                markup.render_markup(&card.0, area.inner(MARGIN_CONTENT), buf);
-            }
-            None => {
-                Line::raw("todo: no cards or card not found")
-                    .alignment(Alignment::Center)
-                    .render(area.inner(MARGIN_CONTENT), buf);
-            }
+        if let CardsState::Search = self.state {
+            area.y += 2;
+            area.height -= 2;
+
+            let search_area = Rect {
+                height: 1,
+                width: area.width / 2,
+                x: area.x + area.width / 4,
+                y: area.y,
+            };
+            self.search.render(search_area, buf);
         }
+
+        let area = area.inner(MARGIN_CONTENT);
+
+        let Some(id) = self.cards.get(self.index) else {
+            let msg = if let CardsSort::Search = self.sort {
+                "no card found from search"
+            } else {
+                "todo: oops no card id from index"
+            };
+            Line::raw(msg)
+                .alignment(Alignment::Center)
+                .render(area, buf);
+            return;
+        };
+
+        let Some(card) = db.get(id) else {
+            Line::raw("todo: oops card not found in database")
+                .alignment(Alignment::Center)
+                .render(area, buf);
+            return;
+        };
+
+        markup.render_markup(&card.0, area, buf);
     }
 
     pub fn on_input(
         &mut self,
         key: KeyCode,
-        _modifiers: KeyModifiers,
+        modifiers: KeyModifiers,
         markup: &mut Markup,
         db: &mut Database,
     ) -> Action {
-        match key {
-            KeyCode::Right => {
-                if self.cards.len() > 1 {
-                    self.index = (self.index + 1) % self.cards.len();
-                    markup.desired_scroll(ScrollMove::Start);
-                    return Action::Render;
-                }
-            }
-            KeyCode::Left => {
-                if self.cards.len() > 1 {
-                    if self.index == 0 {
-                        self.index = self.cards.len() - 1;
-                    } else {
-                        self.index -= 1;
+        match self.state {
+            CardsState::Browse => match key {
+                KeyCode::Right => {
+                    if self.cards.len() > 1 {
+                        self.index = (self.index + 1) % self.cards.len();
+                        markup.desired_scroll(ScrollMove::Start);
+                        return Action::Render;
                     }
+                }
+                KeyCode::Left => {
+                    if self.cards.len() > 1 {
+                        if self.index == 0 {
+                            self.index = self.cards.len() - 1;
+                        } else {
+                            self.index -= 1;
+                        }
+                        markup.desired_scroll(ScrollMove::Start);
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Up => {
+                    if markup.scroll(ScrollMove::Up(1)) {
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Down => {
+                    if markup.scroll(ScrollMove::Down(1)) {
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Delete => {
+                    if !self.cards.is_empty() {
+                        let id = self.cards.remove(self.index);
+                        db.remove(&id);
+                        if !self.cards.is_empty() {
+                            self.index = self.index.min(self.cards.len() - 1);
+                        }
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Char('e') => {
+                    if !self.cards.is_empty() {
+                        let id = self.cards.get(self.index).copied().unwrap();
+                        return Action::Route(Route::Editor(Some(id)));
+                    }
+                }
+                KeyCode::Char('s') => {
+                    match self.sort {
+                        CardsSort::Newest => self.sort = CardsSort::Oldest,
+                        CardsSort::Oldest => self.sort = CardsSort::Newest,
+                        CardsSort::Search => self.sort = CardsSort::Newest,
+                    }
+                    self.cards.clear();
+                    self.index = 0;
+                    self.on_enter(db);
                     markup.desired_scroll(ScrollMove::Start);
                     return Action::Render;
                 }
-            }
-            KeyCode::Up => {
-                if markup.scroll(ScrollMove::Up(1)) {
+                KeyCode::Char('/') => {
+                    self.state = CardsState::Search;
                     return Action::Render;
                 }
-            }
-            KeyCode::Down => {
-                if markup.scroll(ScrollMove::Down(1)) {
+                _ => {}
+            },
+            CardsState::Search => match key {
+                KeyCode::Enter => {
+                    if self.search.as_str().is_empty() {
+                        //todo: set previous sort
+                    } else {
+                        self.cards.clear();
+                        self.index = 0;
+                        self.sort = CardsSort::Search;
+                        self.on_enter(db);
+                    }
                     return Action::Render;
                 }
-            }
-            KeyCode::Delete => {
-                // todo: delete
-            }
-            KeyCode::Char('e') => {
-                // todo: edit
-            }
-            KeyCode::Char('s') => {
-                match self.sort {
-                    CardSort::Newest => self.sort = CardSort::Oldest,
-                    CardSort::Oldest => self.sort = CardSort::Newest,
+                _ => {
+                    if self.search.input(key, modifiers) {
+                        return Action::Render;
+                    }
                 }
-                self.on_exit();
-                self.on_enter(db);
-                markup.desired_scroll(ScrollMove::Start);
-                return Action::Render;
-            }
-            _ => {}
+            },
+            CardsState::None => {}
         }
 
         Action::None
@@ -481,9 +581,22 @@ impl Cards {
     pub fn on_exit(&mut self) {
         self.cards.clear();
         self.index = 0;
+        self.state = CardsState::None;
+        self.sort = CardsSort::Newest;
+        self.search.clear();
     }
 
     pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
-        shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SORT]);
+        match self.state {
+            CardsState::Browse => shortcuts.extend([
+                SHORTCUT_BROWSE,
+                SHORTCUT_SEARCH,
+                SHORTCUT_SORT,
+                SHORTCUT_EDIT,
+                SHORTCUT_DELETE,
+            ]),
+            CardsState::Search => shortcuts.extend([SHORTCUT_CONFIRM]),
+            CardsState::None => {}
+        }
     }
 }
