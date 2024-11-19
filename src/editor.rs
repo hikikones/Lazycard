@@ -320,6 +320,9 @@ impl Widget for &mut TextEditor {
                 line_width += span.width() as u16;
                 if line_width > area.width {
                     (true, Some(span))
+                } else if line_width == area.width {
+                    self.lines[line_index].push_span(span);
+                    (true, None)
                 } else {
                     self.lines[line_index].push_span(span);
                     (false, None)
@@ -334,6 +337,10 @@ impl Widget for &mut TextEditor {
                     line_width += span.width() as u16;
                     self.lines[line_index].push_span(span);
                     self.line_start_indexes.push(i);
+                    if is_cursor {
+                        self.cursor_line_index = line_index;
+                        self.cursor_column = 0;
+                    }
                 } else {
                     self.line_start_indexes.push(i + c.len_utf8());
                 }
