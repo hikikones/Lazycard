@@ -183,13 +183,10 @@ impl TextEditor {
                     }
                 }
             },
-            CursorDelete::Selection => {
-                if let Some(selector) = self.selection_start.take() {
-                    self.delete_selection(selector)
-                } else {
-                    false
-                }
-            }
+            CursorDelete::Selection => match self.selection_start.take() {
+                Some(selector) => self.delete_selection(selector),
+                None => false,
+            },
         }
     }
 
@@ -525,13 +522,10 @@ impl TextInput {
                     }
                 }
             },
-            CursorDelete::Selection => {
-                if let Some(selector) = self.selection_start.take() {
-                    self.delete_selection(selector)
-                } else {
-                    false
-                }
-            }
+            CursorDelete::Selection => match self.selection_start.take() {
+                Some(selector) => self.delete_selection(selector),
+                None => false,
+            },
         }
     }
 

@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-#[derive(Debug)]
 pub struct Database {
     btree: BTreeMap<CardId, Card>,
+    matcher: Matcher,
 }
 
 impl Database {
@@ -10,12 +10,74 @@ impl Database {
         let mut btree = BTreeMap::new();
         add_test_data(&mut btree);
 
-        Self { btree }
+        Self {
+            btree,
+            matcher: Matcher::new(),
+        }
     }
 
     pub fn add(&mut self, card: Card) {
         let last_id = self.keys().last().copied().unwrap_or_default().0;
         self.insert(CardId(last_id + 1), card);
+    }
+
+    pub fn search(&mut self, pattern: &str) -> impl Iterator<Item = (CardId, &Card, MatchScore)> {
+        self.matcher.pattern(pattern);
+        self.btree.iter().filter_map(|(id, card)| {
+            self.matcher
+                .score(&card.0)
+                .map(|score| (*id, card, MatchScore(score)))
+        })
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CardId(pub u64);
+
+#[derive(Debug, Default, Clone)]
+pub struct Card(pub String);
+
+impl Card {
+    pub fn new(content: impl Into<String>) -> Self {
+        Self(content.into())
+    }
+}
+
+pub struct MatchScore(pub u32);
+
+struct Matcher {
+    matcher: nucleo_matcher::Matcher,
+    pattern: nucleo_matcher::pattern::Pattern,
+    buffer: Vec<char>,
+}
+
+impl Matcher {
+    fn new() -> Self {
+        Self {
+            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
+            pattern: nucleo_matcher::pattern::Pattern::new(
+                "",
+                nucleo_matcher::pattern::CaseMatching::Smart,
+                nucleo_matcher::pattern::Normalization::Smart,
+                nucleo_matcher::pattern::AtomKind::Fuzzy,
+            ),
+            buffer: Vec::new(),
+        }
+    }
+
+    fn pattern(&mut self, pattern: &str) {
+        self.pattern.reparse(
+            pattern,
+            nucleo_matcher::pattern::CaseMatching::Smart,
+            nucleo_matcher::pattern::Normalization::Smart,
+        );
+    }
+
+    fn score(&mut self, haystack: &str) -> Option<u32> {
+        self.pattern.score(
+            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
+            &mut self.matcher,
+        )
     }
 }
 
@@ -30,18 +92,6 @@ impl std::ops::Deref for Database {
 impl std::ops::DerefMut for Database {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.btree
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CardId(pub u64);
-
-#[derive(Debug, Default, Clone)]
-pub struct Card(pub String);
-
-impl Card {
-    pub fn new(content: impl Into<String>) -> Self {
-        Self(content.into())
     }
 }
 

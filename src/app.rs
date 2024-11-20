@@ -98,7 +98,7 @@ impl App {
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.db),
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
-                        Route::Cards => self.pages.cards.on_enter(&self.db),
+                        Route::Cards => self.pages.cards.on_enter(&mut self.db),
                     }
 
                     self.render(&mut terminal)?;

@@ -353,7 +353,6 @@ pub struct Cards {
     state: CardState,
     sort: CardSort,
     search: TextInput,
-    matcher: Matcher,
 }
 
 enum CardState {
@@ -367,44 +366,6 @@ enum CardSort {
     Search,
 }
 
-struct MatchScore(u32);
-
-struct Matcher {
-    matcher: nucleo_matcher::Matcher,
-    pattern: nucleo_matcher::pattern::Pattern,
-    buffer: Vec<char>,
-}
-
-impl Matcher {
-    fn new() -> Self {
-        Self {
-            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
-            pattern: nucleo_matcher::pattern::Pattern::new(
-                "",
-                nucleo_matcher::pattern::CaseMatching::Smart,
-                nucleo_matcher::pattern::Normalization::Smart,
-                nucleo_matcher::pattern::AtomKind::Fuzzy,
-            ),
-            buffer: Vec::new(),
-        }
-    }
-
-    fn pattern(&mut self, pattern: &str) {
-        self.pattern.reparse(
-            pattern,
-            nucleo_matcher::pattern::CaseMatching::Smart,
-            nucleo_matcher::pattern::Normalization::Smart,
-        );
-    }
-
-    fn score(&mut self, haystack: &str) -> Option<u32> {
-        self.pattern.score(
-            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
-            &mut self.matcher,
-        )
-    }
-}
-
 impl Cards {
     pub fn new() -> Self {
         Self {
@@ -413,21 +374,18 @@ impl Cards {
             state: CardState::Browse,
             sort: CardSort::Newest,
             search: TextInput::new().with_placeholder("search..."),
-            matcher: Matcher::new(),
         }
     }
 
-    fn fetch_cards(&mut self, db: &Database) {
+    fn fetch_cards(&mut self, db: &mut Database) {
         if self.search.is_empty() {
-            self.cards
-                .extend(db.iter().map(|(id, _)| (*id, MatchScore(0))));
+            let all_cards = db.iter().map(|(id, _)| (*id, MatchScore(0)));
+            self.cards.extend(all_cards);
         } else {
-            self.matcher.pattern(self.search.as_str());
-            self.cards.extend(db.iter().filter_map(|(id, card)| {
-                self.matcher
-                    .score(&card.0)
-                    .map(|score| (*id, MatchScore(score)))
-            }));
+            let matched_cards = db
+                .search(self.search.as_str())
+                .map(|(id, _, score)| (id, score));
+            self.cards.extend(matched_cards);
         }
     }
 
@@ -447,7 +405,7 @@ impl Cards {
         }
     }
 
-    pub fn on_enter(&mut self, db: &Database) {
+    pub fn on_enter(&mut self, db: &mut Database) {
         self.fetch_cards(db);
         self.sort_cards();
     }
