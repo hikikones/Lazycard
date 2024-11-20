@@ -405,6 +405,10 @@ impl TextInput {
         self.input.as_str()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.input.as_str().is_empty()
+    }
+
     pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
         let ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
         let shift = key_modifiers.contains(KeyModifiers::SHIFT);
@@ -608,7 +612,6 @@ impl Widget for &mut TextInput {
         }
 
         if self.input.is_empty() {
-            self.spans.push(Span::raw(" "));
             self.spans.extend(
                 self.placeholder.chars().map(|c| {
                     Span::styled(c.to_string(), STYLE_LABEL.add_modifier(Modifier::ITALIC))

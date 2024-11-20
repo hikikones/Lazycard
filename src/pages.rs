@@ -348,74 +348,108 @@ impl CardEditor {
 }
 
 pub struct Cards {
-    cards: Vec<CardId>,
+    cards: Vec<(CardId, MatchScore)>,
     index: usize,
-    state: CardsState,
-    sort: CardsSort,
+    state: CardState,
+    sort: CardSort,
     search: TextInput,
+    matcher: Matcher,
 }
 
-enum CardsState {
+enum CardState {
     Browse,
     Search,
-    None,
 }
 
-enum CardsSort {
+enum CardSort {
     Newest,
     Oldest,
     Search,
 }
 
+struct MatchScore(u32);
+
+struct Matcher {
+    matcher: nucleo_matcher::Matcher,
+    pattern: nucleo_matcher::pattern::Pattern,
+    buffer: Vec<char>,
+}
+
+impl Matcher {
+    fn new() -> Self {
+        Self {
+            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
+            pattern: nucleo_matcher::pattern::Pattern::new(
+                "",
+                nucleo_matcher::pattern::CaseMatching::Smart,
+                nucleo_matcher::pattern::Normalization::Smart,
+                nucleo_matcher::pattern::AtomKind::Fuzzy,
+            ),
+            buffer: Vec::new(),
+        }
+    }
+
+    fn pattern(&mut self, pattern: &str) {
+        self.pattern.reparse(
+            pattern,
+            nucleo_matcher::pattern::CaseMatching::Smart,
+            nucleo_matcher::pattern::Normalization::Smart,
+        );
+    }
+
+    fn score(&mut self, haystack: &str) -> Option<u32> {
+        self.pattern.score(
+            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
+            &mut self.matcher,
+        )
+    }
+}
+
 impl Cards {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             cards: Vec::new(),
             index: 0,
-            state: CardsState::None,
-            sort: CardsSort::Newest,
+            state: CardState::Browse,
+            sort: CardSort::Newest,
             search: TextInput::new().with_placeholder("search..."),
+            matcher: Matcher::new(),
+        }
+    }
+
+    fn fetch_cards(&mut self, db: &Database) {
+        if self.search.is_empty() {
+            self.cards
+                .extend(db.iter().map(|(id, _)| (*id, MatchScore(0))));
+        } else {
+            self.matcher.pattern(self.search.as_str());
+            self.cards.extend(db.iter().filter_map(|(id, card)| {
+                self.matcher
+                    .score(&card.0)
+                    .map(|score| (*id, MatchScore(score)))
+            }));
+        }
+    }
+
+    fn sort_cards(&mut self) {
+        match self.sort {
+            CardSort::Newest => {
+                self.cards
+                    .sort_unstable_by_key(|(id, _)| std::cmp::Reverse(id.0));
+            }
+            CardSort::Oldest => {
+                self.cards.sort_unstable_by_key(|(id, _)| id.0);
+            }
+            CardSort::Search => {
+                self.cards
+                    .sort_by_key(|(_, score)| std::cmp::Reverse(score.0));
+            }
         }
     }
 
     pub fn on_enter(&mut self, db: &Database) {
-        match self.sort {
-            CardsSort::Newest => {
-                self.cards.extend(db.iter().rev().map(|(id, _)| id));
-                self.state = if self.cards.is_empty() {
-                    CardsState::None
-                } else {
-                    CardsState::Browse
-                };
-            }
-            CardsSort::Oldest => {
-                self.cards.extend(db.iter().map(|(id, _)| id));
-                self.state = if self.cards.is_empty() {
-                    CardsState::None
-                } else {
-                    CardsState::Browse
-                };
-            }
-            CardsSort::Search => {
-                let keywords = self.search.as_str().split_whitespace();
-                self.cards.extend(
-                    db.iter()
-                        .filter(|(_, card)| {
-                            for keyword in keywords.clone() {
-                                if card.0.contains(keyword) {
-                                    return true;
-                                }
-                            }
-                            false
-                        })
-                        .map(|(id, _)| id),
-                );
-
-                if !self.cards.is_empty() {
-                    self.state = CardsState::Browse;
-                }
-            }
-        }
+        self.fetch_cards(db);
+        self.sort_cards();
     }
 
     pub fn on_render(
@@ -437,16 +471,16 @@ impl Cards {
             Span::raw("   "),
             Span::styled(
                 match self.sort {
-                    CardsSort::Newest => "Newest",
-                    CardsSort::Oldest => "Oldest",
-                    CardsSort::Search => "Search",
+                    CardSort::Newest => "Newest",
+                    CardSort::Oldest => "Oldest",
+                    CardSort::Search => "Search",
                 },
                 STYLE_LABEL,
             ),
         ]);
         menu.render(area, buf);
 
-        if let CardsState::Search = self.state {
+        if let CardState::Search = self.state {
             area.y += 2;
             area.height -= 2;
 
@@ -457,24 +491,32 @@ impl Cards {
                 y: area.y,
             };
             self.search.render(search_area, buf);
+            return;
+        }
+
+        if !self.search.is_empty() {
+            area.y += 2;
+            area.height -= 2;
+
+            let mut bar = Line::default().alignment(Alignment::Center);
+            bar.push_span(Span::styled(
+                self.search.as_str(),
+                STYLE_LABEL.add_modifier(Modifier::ITALIC),
+            ));
+            bar.render(Rect { height: 1, ..area }, buf);
         }
 
         let area = area.inner(MARGIN_CONTENT);
 
-        let Some(id) = self.cards.get(self.index) else {
-            let msg = if let CardsSort::Search = self.sort {
-                "no card found from search"
-            } else {
-                "todo: oops no card id from index"
-            };
-            Line::raw(msg)
+        let Some((id, _)) = self.cards.get(self.index) else {
+            Line::raw("no cards")
                 .alignment(Alignment::Center)
                 .render(area, buf);
             return;
         };
 
         let Some(card) = db.get(id) else {
-            Line::raw("todo: oops card not found in database")
+            Line::raw("todo: card not found in database")
                 .alignment(Alignment::Center)
                 .render(area, buf);
             return;
@@ -491,7 +533,7 @@ impl Cards {
         db: &mut Database,
     ) -> Action {
         match self.state {
-            CardsState::Browse => match key {
+            CardState::Browse => match key {
                 KeyCode::Right => {
                     if self.cards.len() > 1 {
                         self.index = (self.index + 1) % self.cards.len();
@@ -522,7 +564,7 @@ impl Cards {
                 }
                 KeyCode::Delete => {
                     if !self.cards.is_empty() {
-                        let id = self.cards.remove(self.index);
+                        let (id, _) = self.cards.remove(self.index);
                         db.remove(&id);
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
@@ -532,38 +574,47 @@ impl Cards {
                 }
                 KeyCode::Char('e') => {
                     if !self.cards.is_empty() {
-                        let id = self.cards.get(self.index).copied().unwrap();
-                        return Action::Route(Route::Editor(Some(id)));
+                        let (id, _) = self.cards.get(self.index).unwrap();
+                        return Action::Route(Route::Editor(Some(*id)));
                     }
                 }
                 KeyCode::Char('s') => {
-                    match self.sort {
-                        CardsSort::Newest => self.sort = CardsSort::Oldest,
-                        CardsSort::Oldest => self.sort = CardsSort::Newest,
-                        CardsSort::Search => self.sort = CardsSort::Newest,
+                    if self.search.is_empty() {
+                        match self.sort {
+                            CardSort::Newest => self.sort = CardSort::Oldest,
+                            CardSort::Oldest => self.sort = CardSort::Newest,
+                            CardSort::Search => todo!(),
+                        }
+                    } else {
+                        match self.sort {
+                            CardSort::Newest => self.sort = CardSort::Oldest,
+                            CardSort::Oldest => self.sort = CardSort::Search,
+                            CardSort::Search => self.sort = CardSort::Newest,
+                        }
                     }
-                    self.cards.clear();
                     self.index = 0;
-                    self.on_enter(db);
+                    self.sort_cards();
                     markup.desired_scroll(ScrollMove::Start);
                     return Action::Render;
                 }
                 KeyCode::Char('/') => {
-                    self.state = CardsState::Search;
+                    self.state = CardState::Search;
                     return Action::Render;
                 }
                 _ => {}
             },
-            CardsState::Search => match key {
+            CardState::Search => match key {
                 KeyCode::Enter => {
-                    if self.search.as_str().is_empty() {
-                        //todo: set previous sort
+                    self.cards.clear();
+                    self.index = 0;
+                    self.state = CardState::Browse;
+                    self.sort = if self.search.is_empty() {
+                        CardSort::Newest
                     } else {
-                        self.cards.clear();
-                        self.index = 0;
-                        self.sort = CardsSort::Search;
-                        self.on_enter(db);
-                    }
+                        CardSort::Search
+                    };
+                    self.fetch_cards(db);
+                    self.sort_cards();
                     return Action::Render;
                 }
                 _ => {
@@ -572,7 +623,6 @@ impl Cards {
                     }
                 }
             },
-            CardsState::None => {}
         }
 
         Action::None
@@ -581,22 +631,22 @@ impl Cards {
     pub fn on_exit(&mut self) {
         self.cards.clear();
         self.index = 0;
-        self.state = CardsState::None;
-        self.sort = CardsSort::Newest;
+        self.state = CardState::Browse;
+        self.sort = CardSort::Newest;
         self.search.clear();
     }
 
     pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
         match self.state {
-            CardsState::Browse => shortcuts.extend([
-                SHORTCUT_BROWSE,
-                SHORTCUT_SEARCH,
-                SHORTCUT_SORT,
-                SHORTCUT_EDIT,
-                SHORTCUT_DELETE,
-            ]),
-            CardsState::Search => shortcuts.extend([SHORTCUT_CONFIRM]),
-            CardsState::None => {}
+            CardState::Browse => {
+                shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SEARCH, SHORTCUT_SORT]);
+                if !self.cards.is_empty() {
+                    shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
+                }
+            }
+            CardState::Search => {
+                shortcuts.extend([SHORTCUT_CONFIRM]);
+            }
         }
     }
 }
