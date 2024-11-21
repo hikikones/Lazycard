@@ -224,16 +224,14 @@ pub enum BlockElement<'a> {
 
 pub struct BlockParser<'a> {
     input: &'a str,
-    chars: Peekable<CharIndices<'a>>,
-    prev: Option<char>,
+    chars: CustomCharIter<'a>,
 }
 
 impl<'a> BlockParser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             input,
-            chars: input.char_indices().peekable(),
-            prev: None,
+            chars: CustomCharIter::new(input),
         }
     }
 
@@ -247,33 +245,24 @@ impl<'a> BlockParser<'a> {
             Alignment::Center | Alignment::Right => 1,
         };
         let paragraph_start = start + offset;
+        let paragraph_end = match self.chars.find_consecutive('\n', 2) {
+            Some(i) => i - 1,
+            None => self.input.len(),
+        };
+        let end = paragraph_end + 2;
 
-        loop {
-            if self.chars.find(|&(_, c)| c == '\n').is_none() {
-                return (
-                    BlockElement::Paragraph {
-                        alignment,
-                        text: self.input[paragraph_start..].trim(),
-                    },
-                    start..self.input.len(),
-                );
-            };
-
-            if let Some((end, '\n')) = self.chars.next() {
-                return (
-                    BlockElement::Paragraph {
-                        alignment,
-                        text: self.input[paragraph_start..end - 1].trim(),
-                    },
-                    start..end + 1,
-                );
-            }
-        }
+        return (
+            BlockElement::Paragraph {
+                alignment,
+                text: self.input[paragraph_start..paragraph_end].trim(),
+            },
+            start..end,
+        );
     }
 
     fn parse_code_block(&mut self, start: usize, ticks: usize) -> (BlockElement<'a>, Range<usize>) {
         let lang_start = start + ticks;
-        let Some((i, _)) = self.chars.find(|(_, c)| *c == '\n') else {
+        let Some(i) = self.chars.find('\n') else {
             return (
                 BlockElement::Code {
                     language: self.input[lang_start..].trim(),
@@ -286,7 +275,7 @@ impl<'a> BlockParser<'a> {
         let language = self.input[lang_start..i].trim();
         let code_start = i + 1;
         loop {
-            let Some((code_end, _)) = self.chars.find(|(_, c)| *c == '\n') else {
+            let Some(code_end) = self.chars.find('\n') else {
                 return (
                     BlockElement::Code {
                         language,
@@ -296,7 +285,7 @@ impl<'a> BlockParser<'a> {
                 );
             };
 
-            let end_ticks = self.count_consecutive('`');
+            let end_ticks = self.chars.count_consecutive('`');
             if end_ticks == ticks {
                 let end = code_end + 1 + end_ticks;
                 let mut chars = self.input[end..].chars();
@@ -338,14 +327,6 @@ impl<'a> BlockParser<'a> {
             }
         }
     }
-
-    fn count_consecutive(&mut self, c: char) -> usize {
-        let mut count = 0;
-        while self.chars.next_if(|(_, cc)| *cc == c).is_some() {
-            count += 1;
-        }
-        count
-    }
 }
 
 impl<'a> Iterator for BlockParser<'a> {
@@ -354,57 +335,39 @@ impl<'a> Iterator for BlockParser<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         while let Some((i, c)) = self.chars.next() {
             if c.is_whitespace() {
-                self.prev = Some(c);
                 continue;
             }
 
-            let (block, range) = match c {
-                '|' => {
-                    if let Some('\n') | None = self.prev {
-                        self.parse_paragraph(i, Alignment::Center)
-                    } else {
-                        self.parse_paragraph(i, Alignment::Left)
-                    }
-                }
-                '>' => {
-                    if let Some('\n') | None = self.prev {
-                        self.parse_paragraph(i, Alignment::Right)
-                    } else {
-                        self.parse_paragraph(i, Alignment::Left)
-                    }
-                }
-                '`' => {
-                    if let Some('\n') | None = self.prev {
-                        let ticks = 1 + self.count_consecutive('`');
+            if let Some('\n') | None = self.chars.previous() {
+                let (block, range) = match c {
+                    '|' => self.parse_paragraph(i, Alignment::Center),
+                    '>' => self.parse_paragraph(i, Alignment::Right),
+                    '`' => {
+                        let ticks = 1 + self.chars.count_consecutive('`');
                         if ticks >= 3 {
                             self.parse_code_block(i, ticks)
                         } else {
                             self.parse_paragraph(i, Alignment::Left)
                         }
-                    } else {
-                        self.parse_paragraph(i, Alignment::Left)
                     }
-                }
-                '-' => {
-                    if let Some('\n') | None = self.prev {
-                        let dashes = 1 + self.count_consecutive('-');
+                    '-' => {
+                        let dashes = 1 + self.chars.count_consecutive('-');
                         if dashes == 1 {
                             // todo: list item
                             self.parse_paragraph(i, Alignment::Left)
-                        } else if dashes == 3 && self.count_consecutive('\n') >= 2 {
+                        } else if dashes == 3 && self.chars.count_consecutive('\n') >= 2 {
                             (BlockElement::Break, i..i + dashes + 2)
                         } else {
                             self.parse_paragraph(i, Alignment::Left)
                         }
-                    } else {
-                        self.parse_paragraph(i, Alignment::Left)
                     }
-                }
-                _ => self.parse_paragraph(i, Alignment::Left),
-            };
+                    _ => self.parse_paragraph(i, Alignment::Left),
+                };
 
-            self.prev = None;
-            return Some((block, range));
+                return Some((block, range));
+            } else {
+                return Some(self.parse_paragraph(i, Alignment::Left));
+            }
         }
 
         None
@@ -420,7 +383,7 @@ enum InlineTag {
 
 struct InlineParser<'a> {
     input: &'a str,
-    chars: Peekable<CharIndices<'a>>,
+    chars: CustomCharIter<'a>,
     start: usize,
     tag: InlineTag,
 }
@@ -429,10 +392,16 @@ impl<'a> InlineParser<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             input,
-            chars: input.char_indices().peekable(),
+            chars: CustomCharIter::new(input),
             start: 0,
             tag: InlineTag::Text,
         }
+    }
+
+    fn _continue_with(&mut self, input: &'a str) {
+        self.input = input;
+        self.chars = CustomCharIter::new(input);
+        self.start = 0;
     }
 }
 
@@ -455,7 +424,7 @@ impl<'a> Iterator for InlineParser<'a> {
 
                     match c {
                         '*' => {
-                            if let Some((i, _)) = self.chars.next_if(|&(_, c)| c == '*') {
+                            if let Some((i, _)) = self.chars.next_if_eq('*') {
                                 self.tag = InlineTag::Bold;
                                 let text = &self.input[self.start..i - 1];
                                 self.start = i + 1;
@@ -466,7 +435,7 @@ impl<'a> Iterator for InlineParser<'a> {
                             }
                         }
                         '_' => {
-                            if let Some((i, _)) = self.chars.next_if(|&(_, c)| c == '_') {
+                            if let Some((i, _)) = self.chars.next_if_eq('_') {
                                 self.tag = InlineTag::Italic;
                                 let text = &self.input[self.start..i - 1];
                                 self.start = i + 1;
@@ -479,35 +448,160 @@ impl<'a> Iterator for InlineParser<'a> {
                         _ => {}
                     }
                 },
-                InlineTag::Bold => loop {
-                    if self.chars.find(|&(_, c)| c == '*').is_none() {
-                        let text = &self.input[self.start..];
-                        self.start = self.input.len();
-                        return Some((InlineTag::Bold, text));
+                InlineTag::Bold => {
+                    let (next_start, text_end) = match self.chars.find_consecutive('*', 2) {
+                        Some(i) => {
+                            self.tag = InlineTag::Text;
+                            (i + 1, i - 1)
+                        }
+                        None => (self.input.len(), self.input.len()),
                     };
-
-                    if let Some((i, '*')) = self.chars.next() {
-                        self.tag = InlineTag::Text;
-                        let text = &self.input[self.start..i - 1];
-                        self.start = i + 1;
-                        return Some((InlineTag::Bold, text));
-                    }
-                },
-                InlineTag::Italic => loop {
-                    if self.chars.find(|&(_, c)| c == '_').is_none() {
-                        let text = &self.input[self.start..];
-                        self.start = self.input.len();
-                        return Some((InlineTag::Bold, text));
+                    let text = &self.input[self.start..text_end];
+                    self.start = next_start;
+                    return Some((InlineTag::Bold, text));
+                }
+                InlineTag::Italic => {
+                    let (next_start, text_end) = match self.chars.find_consecutive('_', 2) {
+                        Some(i) => {
+                            self.tag = InlineTag::Text;
+                            (i + 1, i - 1)
+                        }
+                        None => (self.input.len(), self.input.len()),
                     };
-
-                    if let Some((i, '_')) = self.chars.next() {
-                        self.tag = InlineTag::Text;
-                        let text = &self.input[self.start..i - 1];
-                        self.start = i + 1;
-                        return Some((InlineTag::Italic, text));
-                    }
-                },
+                    let text = &self.input[self.start..text_end];
+                    self.start = next_start;
+                    return Some((InlineTag::Italic, text));
+                }
             }
         }
+    }
+}
+
+struct CustomCharIter<'a> {
+    chars: Peekable<CharIndices<'a>>,
+    current: Option<(usize, char)>,
+    previous: Option<char>,
+}
+
+impl<'a> CustomCharIter<'a> {
+    fn new(text: &'a str) -> Self {
+        Self {
+            chars: text.char_indices().peekable(),
+            current: None,
+            previous: None,
+        }
+    }
+
+    fn _current(&self) -> Option<(usize, char)> {
+        self.current
+    }
+
+    fn previous(&self) -> Option<char> {
+        self.previous
+    }
+
+    fn _peek(&mut self) -> Option<char> {
+        self.chars.peek().map(|(_, c)| *c)
+    }
+
+    fn next_if_eq(&mut self, c: char) -> Option<(usize, char)> {
+        if let Some((_, peek)) = self.chars.peek() {
+            if *peek == c {
+                return self.next();
+            }
+        }
+        None
+    }
+
+    fn find(&mut self, c: char) -> Option<usize> {
+        loop {
+            let Some((i, n)) = self.next() else {
+                return None;
+            };
+
+            if n == c {
+                return Some(i);
+            }
+        }
+    }
+
+    fn _find_pattern(&mut self, prev: char, next: char) -> Option<usize> {
+        loop {
+            let Some((i, n)) = self.next() else {
+                return None;
+            };
+
+            if let Some(p) = self.previous() {
+                if p == prev && n == next {
+                    return Some(i);
+                }
+            }
+        }
+    }
+
+    fn _find_pattern_by(&mut self, func: impl Fn(Option<char>, char) -> bool) -> Option<usize> {
+        loop {
+            let Some((i, n)) = self.next() else {
+                return None;
+            };
+
+            if func(self.previous, n) {
+                return Some(i);
+            }
+        }
+    }
+
+    fn find_consecutive(&mut self, c: char, n: usize) -> Option<usize> {
+        match n {
+            0 => None,
+            1 => self.find(c),
+            _ => loop {
+                if self.find(c).is_none() {
+                    return None;
+                };
+
+                let mut count = 1;
+                while let Some((i, _)) = self.next_if_eq(c) {
+                    count += 1;
+                    if count == n {
+                        return Some(i);
+                    }
+                }
+            },
+        }
+    }
+
+    fn _find_and_count_consecutive(&mut self, c: char) -> Option<(usize, usize)> {
+        let Some(i) = self.find(c) else {
+            return None;
+        };
+
+        let count = self.count_consecutive(c);
+        return Some((i + c.len_utf8() * count, 1 + count));
+    }
+
+    fn count_consecutive(&mut self, c: char) -> usize {
+        let mut count = 0;
+        while self.next_if_eq(c).is_some() {
+            count += 1;
+        }
+        count
+    }
+}
+
+impl<'a> Iterator for CustomCharIter<'a> {
+    type Item = (usize, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Some((i, c)) = self.chars.next() else {
+            return None;
+        };
+
+        if let Some((_, p)) = self.current {
+            self.previous = Some(p);
+        }
+
+        self.current = Some((i, c));
+        self.current
     }
 }
