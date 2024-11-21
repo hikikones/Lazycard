@@ -306,7 +306,7 @@ impl CardEditor {
                             let card = db.get_mut(&id).unwrap();
                             card.0 = self.editor.as_str().to_owned();
                             self.editor.clear();
-                            return Action::Route(Route::Review); // todo: go back
+                            return Action::Route(Route::Review);
                         }
                     }
                 } else if !self.preview {

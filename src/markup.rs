@@ -104,16 +104,32 @@ impl Markup {
 
                             for word in span.split_whitespace() {
                                 let word_width = unicode_width::UnicodeWidthStr::width(word);
-                                // todo: word_width > width
-                                if column + word_width > width {
-                                    self.lines.push(line);
-                                    line = Line::default().alignment(alignment);
-                                    column = 0;
-                                }
+                                if word_width > width {
+                                    for c in word.chars() {
+                                        let char_width =
+                                            unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
+                                        if column + char_width > width {
+                                            self.lines.push(line);
+                                            line = Line::default().alignment(alignment);
+                                            column = 0;
+                                        }
 
-                                line.push_span(Span::styled(word.to_owned(), style));
-                                line.push_span(Span::styled(" ", style));
-                                column += word_width + 1;
+                                        line.push_span(Span::styled(c.to_string(), style));
+                                        column += char_width;
+                                    }
+                                    line.push_span(Span::styled(" ", style));
+                                    column += 1;
+                                } else {
+                                    if column + word_width > width {
+                                        self.lines.push(line);
+                                        line = Line::default().alignment(alignment);
+                                        column = 0;
+                                    }
+
+                                    line.push_span(Span::styled(word.to_owned(), style));
+                                    line.push_span(Span::styled(" ", style));
+                                    column += word_width + 1;
+                                }
                             }
 
                             line.spans.pop();
@@ -285,7 +301,7 @@ impl<'a> BlockParser<'a> {
                 );
             };
 
-            let end_ticks = self.chars.count_consecutive('`');
+            let end_ticks = self.chars.count_consecutive('`', usize::MAX);
             if end_ticks == ticks {
                 let end = code_end + 1 + end_ticks;
                 let mut chars = self.input[end..].chars();
@@ -343,7 +359,7 @@ impl<'a> Iterator for BlockParser<'a> {
                     '|' => self.parse_paragraph(i, Alignment::Center),
                     '>' => self.parse_paragraph(i, Alignment::Right),
                     '`' => {
-                        let ticks = 1 + self.chars.count_consecutive('`');
+                        let ticks = 1 + self.chars.count_consecutive('`', usize::MAX);
                         if ticks >= 3 {
                             self.parse_code_block(i, ticks)
                         } else {
@@ -351,11 +367,11 @@ impl<'a> Iterator for BlockParser<'a> {
                         }
                     }
                     '-' => {
-                        let dashes = 1 + self.chars.count_consecutive('-');
+                        let dashes = 1 + self.chars.count_consecutive('-', usize::MAX);
                         if dashes == 1 {
                             // todo: list item
                             self.parse_paragraph(i, Alignment::Left)
-                        } else if dashes == 3 && self.chars.count_consecutive('\n') >= 2 {
+                        } else if dashes == 3 && self.chars.count_consecutive('\n', 2) == 2 {
                             (BlockElement::Break, i..i + dashes + 2)
                         } else {
                             self.parse_paragraph(i, Alignment::Left)
@@ -571,19 +587,17 @@ impl<'a> CustomCharIter<'a> {
         }
     }
 
-    fn _find_and_count_consecutive(&mut self, c: char) -> Option<(usize, usize)> {
-        let Some(i) = self.find(c) else {
-            return None;
-        };
+    fn count_consecutive(&mut self, c: char, max: usize) -> usize {
+        if max == 0 {
+            return 0;
+        }
 
-        let count = self.count_consecutive(c);
-        return Some((i + c.len_utf8() * count, 1 + count));
-    }
-
-    fn count_consecutive(&mut self, c: char) -> usize {
         let mut count = 0;
         while self.next_if_eq(c).is_some() {
             count += 1;
+            if count == max {
+                break;
+            }
         }
         count
     }
