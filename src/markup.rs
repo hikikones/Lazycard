@@ -1,4 +1,5 @@
 use std::{
+    borrow::BorrowMut,
     hash::{DefaultHasher, Hash, Hasher},
     iter::Peekable,
     ops::Range,
@@ -92,100 +93,14 @@ impl Markup {
             for (block, _) in BlockParser::new(text) {
                 match block {
                     BlockElement::Paragraph { alignment, text } => {
-                        let mut line = Line::default().alignment(alignment);
-                        let mut column = 0;
-
-                        for (tag, span) in InlineParser::new(text) {
-                            let style = match tag {
-                                InlineTag::Text => STYLE_NONE,
-                                InlineTag::Bold => STYLE_BOLD,
-                                InlineTag::Italic => STYLE_ITALIC,
-                            };
-
-                            for word in span.split_whitespace() {
-                                let word_width = unicode_width::UnicodeWidthStr::width(word);
-                                if word_width > width {
-                                    for c in word.chars() {
-                                        let char_width =
-                                            unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
-                                        if column + char_width > width {
-                                            self.lines.push(line);
-                                            line = Line::default().alignment(alignment);
-                                            column = 0;
-                                        }
-
-                                        line.push_span(Span::styled(c.to_string(), style));
-                                        column += char_width;
-                                    }
-                                    line.push_span(Span::styled(" ", style));
-                                    column += 1;
-                                } else {
-                                    if column + word_width > width {
-                                        self.lines.push(line);
-                                        line = Line::default().alignment(alignment);
-                                        column = 0;
-                                    }
-
-                                    line.push_span(Span::styled(word.to_owned(), style));
-                                    line.push_span(Span::styled(" ", style));
-                                    column += word_width + 1;
-                                }
-                            }
-
-                            line.spans.pop();
-                            line.push_span(Span::raw(" "));
-                        }
-
-                        self.lines.push(line);
+                        self.parse_text(text, alignment, "", "");
                     }
                     BlockElement::Code { language, text } => {
-                        static SYNTAX_SET: LazyLock<SyntaxSet> =
-                            LazyLock::new(|| SyntaxSet::load_defaults_newlines());
-                        static THEME_SET: LazyLock<ThemeSet> =
-                            LazyLock::new(|| ThemeSet::load_defaults());
-
-                        let syntax = if language.is_empty() {
-                            SYNTAX_SET.find_syntax_plain_text()
-                        } else {
-                            SYNTAX_SET
-                                .find_syntax_by_token(language)
-                                .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
-                        };
-                        let mut highlighter =
-                            HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
-
-                        for code_line in LinesWithEndings::from(text.replace('\t', "    ").as_str())
-                        {
-                            match highlighter.highlight_line(code_line, &SYNTAX_SET) {
-                                Ok(spans) => {
-                                    let mut line = Line::default();
-                                    for (style, span) in spans {
-                                        let mut modifiers = Modifier::empty();
-                                        if style.font_style.contains(FontStyle::BOLD) {
-                                            modifiers.insert(Modifier::BOLD);
-                                        }
-                                        if style.font_style.contains(FontStyle::ITALIC) {
-                                            modifiers.insert(Modifier::ITALIC);
-                                        }
-                                        if style.font_style.contains(FontStyle::UNDERLINE) {
-                                            modifiers.insert(Modifier::UNDERLINED);
-                                        }
-                                        let fg = Color::Rgb(
-                                            style.foreground.r,
-                                            style.foreground.g,
-                                            style.foreground.b,
-                                        );
-                                        line.push_span(Span::styled(
-                                            span.to_owned(),
-                                            Style::new().add_modifier(modifiers).fg(fg),
-                                        ));
-                                    }
-                                    self.lines.push(line);
-                                }
-                                Err(_) => {
-                                    self.lines.push(Line::raw(code_line.to_owned()));
-                                }
-                            }
+                        self.parse_code(language, text);
+                    }
+                    BlockElement::List { items } => {
+                        for item in items {
+                            self.parse_text(item, Alignment::Left, " • ", "   ");
                         }
                     }
                     BlockElement::Break => self
@@ -221,6 +136,131 @@ impl Markup {
         self.desired_scroll = None;
         self.lines.clear();
     }
+
+    fn parse_text(
+        &mut self,
+        text: &str,
+        alignment: Alignment,
+        indent_first: &'static str,
+        indent: &'static str,
+    ) {
+        fn new_line(indent: &'static str, alignment: Alignment) -> (Line<'static>, usize) {
+            let mut line = Line::default().alignment(alignment);
+            let indent_span = Span::raw(indent);
+            let indent_width = indent_span.width();
+            line.push_span(indent_span);
+            (line, indent_width)
+        }
+
+        let width = self.width;
+        let (mut line, mut column) = new_line(indent_first, alignment);
+
+        for (tag, span) in InlineParser::new(text) {
+            let style = match tag {
+                InlineTag::Text => STYLE_NONE,
+                InlineTag::Bold => STYLE_BOLD,
+                InlineTag::Italic => STYLE_ITALIC,
+            };
+
+            for word in span.split_whitespace() {
+                let word_width = unicode_width::UnicodeWidthStr::width(word);
+                if word_width > width {
+                    for c in word.chars() {
+                        let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
+                        if column + char_width > width {
+                            self.lines.push(line);
+                            (line, column) = new_line(indent, alignment);
+                        }
+
+                        line.push_span(Span::styled(c.to_string(), style));
+                        column += char_width;
+                    }
+                    line.push_span(Span::styled(" ", style));
+                    column += 1;
+                } else {
+                    if column + word_width > width {
+                        self.lines.push(line);
+                        (line, column) = new_line(indent, alignment);
+                    }
+
+                    line.push_span(Span::styled(word.to_owned(), style));
+                    line.push_span(Span::styled(" ", style));
+                    column += word_width + 1;
+                }
+            }
+
+            line.spans.pop();
+            line.push_span(Span::raw(" "));
+        }
+
+        self.lines.push(line);
+    }
+
+    fn parse_code(&mut self, language: &str, text: &str) {
+        static SYNTAX_SET: LazyLock<SyntaxSet> =
+            LazyLock::new(|| SyntaxSet::load_defaults_newlines());
+        static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(|| ThemeSet::load_defaults());
+
+        let syntax = if language.is_empty() {
+            SYNTAX_SET.find_syntax_plain_text()
+        } else {
+            SYNTAX_SET
+                .find_syntax_by_token(language)
+                .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
+        };
+        let mut highlighter =
+            HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
+
+        for code_line in LinesWithEndings::from(text.replace('\t', "    ").as_str()) {
+            match highlighter.highlight_line(code_line, &SYNTAX_SET) {
+                Ok(spans) => {
+                    let mut line = Line::default();
+                    for (style, span) in spans {
+                        let mut modifiers = Modifier::empty();
+                        if style.font_style.contains(FontStyle::BOLD) {
+                            modifiers.insert(Modifier::BOLD);
+                        }
+                        if style.font_style.contains(FontStyle::ITALIC) {
+                            modifiers.insert(Modifier::ITALIC);
+                        }
+                        if style.font_style.contains(FontStyle::UNDERLINE) {
+                            modifiers.insert(Modifier::UNDERLINED);
+                        }
+                        let fg =
+                            Color::Rgb(style.foreground.r, style.foreground.g, style.foreground.b);
+                        line.push_span(Span::styled(
+                            span.to_owned(),
+                            Style::new().add_modifier(modifiers).fg(fg),
+                        ));
+                    }
+                    self.lines.push(line);
+                }
+                Err(_) => {
+                    self.lines.push(Line::raw(code_line.to_owned()));
+                }
+            }
+        }
+    }
+}
+
+pub struct BreakParser<'a>(BlockParser<'a>);
+
+impl<'a> BreakParser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self(BlockParser::new(input))
+    }
+}
+
+impl<'a> Iterator for BreakParser<'a> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0
+            .borrow_mut()
+            .filter(|(block, _)| matches!(block, BlockElement::Break))
+            .map(|(_, range)| range.start)
+            .next()
+    }
 }
 
 fn calculate_scroll(scroll: usize, lines: usize, height: usize) -> usize {
@@ -232,19 +272,20 @@ fn calculate_scroll(scroll: usize, lines: usize, height: usize) -> usize {
 }
 
 #[derive(Debug)]
-pub enum BlockElement<'a> {
+enum BlockElement<'a> {
     Paragraph { alignment: Alignment, text: &'a str },
+    List { items: ListItems<'a> },
     Code { language: &'a str, text: &'a str },
     Break,
 }
 
-pub struct BlockParser<'a> {
+struct BlockParser<'a> {
     input: &'a str,
     chars: CustomCharIter<'a>,
 }
 
 impl<'a> BlockParser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    fn new(input: &'a str) -> Self {
         Self {
             input,
             chars: CustomCharIter::new(input),
@@ -261,16 +302,30 @@ impl<'a> BlockParser<'a> {
             Alignment::Center | Alignment::Right => 1,
         };
         let paragraph_start = start + offset;
-        let paragraph_end = match self.chars.find_consecutive('\n', 2) {
-            Some(i) => i - 1,
-            None => self.input.len(),
+        let (paragraph_end, end) = match self.chars.find_consecutive('\n', 2) {
+            Some(i) => (i - 1, i + 1),
+            None => (self.input.len(), self.input.len()),
         };
-        let end = paragraph_end + 2;
 
         return (
             BlockElement::Paragraph {
                 alignment,
                 text: self.input[paragraph_start..paragraph_end].trim(),
+            },
+            start..end,
+        );
+    }
+
+    fn parse_list(&mut self, start: usize) -> (BlockElement<'a>, Range<usize>) {
+        let list_start = start + 1;
+        let (list_end, end) = match self.chars.find_consecutive('\n', 2) {
+            Some(i) => (i - 1, i + 1),
+            None => (self.input.len(), self.input.len()),
+        };
+
+        return (
+            BlockElement::List {
+                items: ListItems::new(self.input[list_start..list_end].trim()),
             },
             start..end,
         );
@@ -369,8 +424,7 @@ impl<'a> Iterator for BlockParser<'a> {
                     '-' => {
                         let dashes = 1 + self.chars.count_consecutive('-', usize::MAX);
                         if dashes == 1 {
-                            // todo: list item
-                            self.parse_paragraph(i, Alignment::Left)
+                            self.parse_list(i)
                         } else if dashes == 3 && self.chars.count_consecutive('\n', 2) == 2 {
                             (BlockElement::Break, i..i + dashes + 2)
                         } else {
@@ -387,6 +441,42 @@ impl<'a> Iterator for BlockParser<'a> {
         }
 
         None
+    }
+}
+
+#[derive(Debug)]
+struct ListItems<'a> {
+    text: &'a str,
+    chars: CustomCharIter<'a>,
+    start: usize,
+}
+
+impl<'a> ListItems<'a> {
+    fn new(text: &'a str) -> Self {
+        Self {
+            text,
+            chars: CustomCharIter::new(text),
+            start: 0,
+        }
+    }
+}
+
+impl<'a> Iterator for ListItems<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start == self.text.len() {
+            return None;
+        }
+
+        let (end, next_start) = match self.chars.find_pattern('\n', '-') {
+            Some(i) => (i - 1, i + 1),
+            None => (self.text.len(), self.text.len()),
+        };
+
+        let item = self.text[self.start..end].trim();
+        self.start = next_start;
+        Some(item)
     }
 }
 
@@ -493,6 +583,7 @@ impl<'a> Iterator for InlineParser<'a> {
     }
 }
 
+#[derive(Debug)]
 struct CustomCharIter<'a> {
     chars: Peekable<CharIndices<'a>>,
     current: Option<(usize, char)>,
@@ -541,7 +632,7 @@ impl<'a> CustomCharIter<'a> {
         }
     }
 
-    fn _find_pattern(&mut self, prev: char, next: char) -> Option<usize> {
+    fn find_pattern(&mut self, prev: char, next: char) -> Option<usize> {
         loop {
             let Some((i, n)) = self.next() else {
                 return None;

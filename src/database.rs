@@ -102,6 +102,10 @@ fn add_test_data(db: &mut BTreeMap<CardId, Card>) {
             r#"
 left paragraph with **bold** and __italic__ text that **should wrap** when line becomes __tooooooooo__ long...
 
+- item 1
+- item 2 with lots of text that can wrap to next line but also keeping the indent so it looks nice ohhh yeah
+- item 3
+
 > right paragraph
 
 | center paragraph
@@ -119,6 +123,14 @@ consectetur adipiscing elit.
 Donec fermentum ipsum nec sagittis feugiat.
 Curabitur pulvinar et orci luctus faucibus.
 In erat justo, placerat et risus quis, cursus elementum mi.
+
+---
+
+another one
+
+---
+
+and another one
 "#,
         ),
     );

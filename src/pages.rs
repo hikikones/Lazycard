@@ -70,13 +70,10 @@ impl Review {
             let card_content = db.get(&id).unwrap().0.as_str();
 
             let mut start = 0;
-            BlockParser::new(card_content)
-                .filter(|(block, _)| matches!(block, BlockElement::Break))
-                .for_each(|(_, range)| {
-                    self.reveals
-                        .push(card_content[start..range.start].to_owned());
-                    start = range.start;
-                });
+            BreakParser::new(card_content).for_each(|i| {
+                self.reveals.push(card_content[start..i].to_owned());
+                start = i;
+            });
             self.reveals.push(card_content[start..].to_owned());
             self.reveals.reverse();
 
@@ -136,6 +133,7 @@ impl Review {
                         db.remove(&id);
                         self.total = self.total.saturating_sub(1);
                         self.next_card(db);
+                        markup.desired_scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                     KeyCode::Char(' ') => {
@@ -163,6 +161,7 @@ impl Review {
                         if !self.due.is_empty() {
                             self.next_card(db);
                             self.due.insert(0, id);
+                            markup.desired_scroll(ScrollMove::Start);
                             return Action::Render;
                         }
                     }
