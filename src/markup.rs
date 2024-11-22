@@ -141,8 +141,8 @@ impl Markup {
         &mut self,
         text: &str,
         alignment: Alignment,
-        indent_first: &'static str,
-        indent: &'static str,
+        first_indent: &'static str,
+        wrap_indent: &'static str,
     ) {
         fn new_line(indent: &'static str, alignment: Alignment) -> (Line<'static>, usize) {
             let mut line = Line::default().alignment(alignment);
@@ -153,7 +153,7 @@ impl Markup {
         }
 
         let width = self.width;
-        let (mut line, mut column) = new_line(indent_first, alignment);
+        let (mut line, mut column) = new_line(first_indent, alignment);
 
         for (tag, span) in InlineParser::new(text) {
             let style = match tag {
@@ -169,7 +169,7 @@ impl Markup {
                         let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
                         if column + char_width > width {
                             self.lines.push(line);
-                            (line, column) = new_line(indent, alignment);
+                            (line, column) = new_line(wrap_indent, alignment);
                         }
 
                         line.push_span(Span::styled(c.to_string(), style));
@@ -180,7 +180,7 @@ impl Markup {
                 } else {
                     if column + word_width > width {
                         self.lines.push(line);
-                        (line, column) = new_line(indent, alignment);
+                        (line, column) = new_line(wrap_indent, alignment);
                     }
 
                     line.push_span(Span::styled(word.to_owned(), style));
@@ -522,7 +522,7 @@ impl<'a> Iterator for InlineParser<'a> {
         loop {
             match self.tag {
                 InlineTag::Text => loop {
-                    let Some((_, c)) = self.chars.next() else {
+                    let Some((i, c)) = self.chars.next() else {
                         let text = &self.input[self.start..];
                         self.start = self.input.len();
                         return Some((InlineTag::Text, text));
@@ -530,35 +530,42 @@ impl<'a> Iterator for InlineParser<'a> {
 
                     match c {
                         '*' => {
-                            if let Some((i, _)) = self.chars.next_if_eq('*') {
-                                self.tag = InlineTag::Bold;
-                                let text = &self.input[self.start..i - 1];
-                                self.start = i + 1;
-                                if text.is_empty() {
-                                    break;
+                            if let Some(p) = self.chars.peek() {
+                                if p != '*' && !p.is_whitespace() {
+                                    self.tag = InlineTag::Bold;
+                                    let text = &self.input[self.start..i];
+                                    self.start = i + 1;
+                                    if text.is_empty() {
+                                        break;
+                                    }
+                                    return Some((InlineTag::Text, text));
                                 }
-                                return Some((InlineTag::Text, text));
                             }
                         }
                         '_' => {
-                            if let Some((i, _)) = self.chars.next_if_eq('_') {
-                                self.tag = InlineTag::Italic;
-                                let text = &self.input[self.start..i - 1];
-                                self.start = i + 1;
-                                if text.is_empty() {
-                                    break;
+                            if let Some(p) = self.chars.peek() {
+                                if p != '_' && !p.is_whitespace() {
+                                    self.tag = InlineTag::Italic;
+                                    let text = &self.input[self.start..i];
+                                    self.start = i + 1;
+                                    if text.is_empty() {
+                                        break;
+                                    }
+                                    return Some((InlineTag::Text, text));
                                 }
-                                return Some((InlineTag::Text, text));
                             }
                         }
                         _ => {}
                     }
                 },
                 InlineTag::Bold => {
-                    let (next_start, text_end) = match self.chars.find_consecutive('*', 2) {
+                    let (text_end, next_start) = match self
+                        .chars
+                        .find_with_previous('*', |p| p != '*' && !p.is_whitespace())
+                    {
                         Some(i) => {
                             self.tag = InlineTag::Text;
-                            (i + 1, i - 1)
+                            (i, i + 1)
                         }
                         None => (self.input.len(), self.input.len()),
                     };
@@ -567,10 +574,13 @@ impl<'a> Iterator for InlineParser<'a> {
                     return Some((InlineTag::Bold, text));
                 }
                 InlineTag::Italic => {
-                    let (next_start, text_end) = match self.chars.find_consecutive('_', 2) {
+                    let (text_end, next_start) = match self
+                        .chars
+                        .find_with_previous('_', |p| p != '_' && !p.is_whitespace())
+                    {
                         Some(i) => {
                             self.tag = InlineTag::Text;
-                            (i + 1, i - 1)
+                            (i, i + 1)
                         }
                         None => (self.input.len(), self.input.len()),
                     };
@@ -607,7 +617,7 @@ impl<'a> CustomCharIter<'a> {
         self.previous
     }
 
-    fn _peek(&mut self) -> Option<char> {
+    fn peek(&mut self) -> Option<char> {
         self.chars.peek().map(|(_, c)| *c)
     }
 
@@ -632,6 +642,22 @@ impl<'a> CustomCharIter<'a> {
         }
     }
 
+    fn find_with_previous(&mut self, c: char, func: impl Fn(char) -> bool) -> Option<usize> {
+        loop {
+            let Some(i) = self.find(c) else {
+                return None;
+            };
+
+            let Some(p) = self.previous else {
+                return None;
+            };
+
+            if func(p) {
+                return Some(i);
+            }
+        }
+    }
+
     fn find_pattern(&mut self, prev: char, next: char) -> Option<usize> {
         loop {
             let Some((i, n)) = self.next() else {
@@ -646,13 +672,17 @@ impl<'a> CustomCharIter<'a> {
         }
     }
 
-    fn _find_pattern_by(&mut self, func: impl Fn(Option<char>, char) -> bool) -> Option<usize> {
+    fn _find_pattern_by(&mut self, func: impl Fn(char, char) -> bool) -> Option<usize> {
         loop {
             let Some((i, n)) = self.next() else {
                 return None;
             };
 
-            if func(self.previous, n) {
+            let Some(p) = self.previous else {
+                return None;
+            };
+
+            if func(p, n) {
                 return Some(i);
             }
         }
