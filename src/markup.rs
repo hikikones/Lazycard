@@ -15,7 +15,7 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-use crate::utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_LABEL, STYLE_NONE};
+use crate::utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_LABEL, STYLE_NONE, STYLE_VERBATIM};
 
 #[derive(Debug)]
 pub struct Markup {
@@ -157,9 +157,10 @@ impl Markup {
 
         for (tag, span) in InlineParser::new(text) {
             let style = match tag {
-                InlineTag::Text => STYLE_NONE,
+                InlineTag::Normal => STYLE_NONE,
                 InlineTag::Bold => STYLE_BOLD,
                 InlineTag::Italic => STYLE_ITALIC,
+                InlineTag::Verbatim => STYLE_VERBATIM,
             };
 
             for word in span.split_whitespace() {
@@ -482,9 +483,10 @@ impl<'a> Iterator for ListItems<'a> {
 
 #[derive(Debug, Clone, Copy)]
 enum InlineTag {
-    Text,
+    Normal,
     Bold,
     Italic,
+    Verbatim,
 }
 
 struct InlineParser<'a> {
@@ -500,7 +502,7 @@ impl<'a> InlineParser<'a> {
             input,
             chars: CustomCharIter::new(input),
             start: 0,
-            tag: InlineTag::Text,
+            tag: InlineTag::Normal,
         }
     }
 
@@ -521,11 +523,11 @@ impl<'a> Iterator for InlineParser<'a> {
 
         loop {
             match self.tag {
-                InlineTag::Text => loop {
+                InlineTag::Normal => loop {
                     let Some((i, c)) = self.chars.next() else {
                         let text = &self.input[self.start..];
                         self.start = self.input.len();
-                        return Some((InlineTag::Text, text));
+                        return Some((InlineTag::Normal, text));
                     };
 
                     match c {
@@ -538,7 +540,7 @@ impl<'a> Iterator for InlineParser<'a> {
                                     if text.is_empty() {
                                         break;
                                     }
-                                    return Some((InlineTag::Text, text));
+                                    return Some((InlineTag::Normal, text));
                                 }
                             }
                         }
@@ -551,7 +553,20 @@ impl<'a> Iterator for InlineParser<'a> {
                                     if text.is_empty() {
                                         break;
                                     }
-                                    return Some((InlineTag::Text, text));
+                                    return Some((InlineTag::Normal, text));
+                                }
+                            }
+                        }
+                        '`' => {
+                            if let Some(p) = self.chars.peek() {
+                                if p != '`' && !p.is_whitespace() {
+                                    self.tag = InlineTag::Verbatim;
+                                    let text = &self.input[self.start..i];
+                                    self.start = i + 1;
+                                    if text.is_empty() {
+                                        break;
+                                    }
+                                    return Some((InlineTag::Normal, text));
                                 }
                             }
                         }
@@ -564,7 +579,7 @@ impl<'a> Iterator for InlineParser<'a> {
                         .find_with_previous('*', |p| p != '*' && !p.is_whitespace())
                     {
                         Some(i) => {
-                            self.tag = InlineTag::Text;
+                            self.tag = InlineTag::Normal;
                             (i, i + 1)
                         }
                         None => (self.input.len(), self.input.len()),
@@ -579,7 +594,7 @@ impl<'a> Iterator for InlineParser<'a> {
                         .find_with_previous('_', |p| p != '_' && !p.is_whitespace())
                     {
                         Some(i) => {
-                            self.tag = InlineTag::Text;
+                            self.tag = InlineTag::Normal;
                             (i, i + 1)
                         }
                         None => (self.input.len(), self.input.len()),
@@ -587,6 +602,21 @@ impl<'a> Iterator for InlineParser<'a> {
                     let text = &self.input[self.start..text_end];
                     self.start = next_start;
                     return Some((InlineTag::Italic, text));
+                }
+                InlineTag::Verbatim => {
+                    let (text_end, next_start) = match self
+                        .chars
+                        .find_with_previous('`', |p| p != '`' && !p.is_whitespace())
+                    {
+                        Some(i) => {
+                            self.tag = InlineTag::Normal;
+                            (i, i + 1)
+                        }
+                        None => (self.input.len(), self.input.len()),
+                    };
+                    let text = &self.input[self.start..text_end];
+                    self.start = next_start;
+                    return Some((InlineTag::Verbatim, text));
                 }
             }
         }
