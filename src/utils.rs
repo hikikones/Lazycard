@@ -7,7 +7,6 @@ use ratatui::{
 pub const STYLE_NONE: Style = Style::new();
 pub const STYLE_BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 pub const STYLE_ITALIC: Style = Style::new().add_modifier(Modifier::ITALIC);
-pub const STYLE_VERBATIM: Style = Style::new().bg(Color::DarkGray);
 pub const STYLE_LABEL: Style = Style::new().fg(Color::Gray);
 pub const STYLE_CURSOR: Style = Style::new().bg(Color::Blue);
 pub const STYLE_SELECTED: Style = Style::new().bg(Color::Blue);

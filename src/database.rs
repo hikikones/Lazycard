@@ -100,7 +100,7 @@ fn add_test_data(db: &mut BTreeMap<CardId, Card>) {
         CardId(1),
         Card::new(
             r#"
-left paragraph with *bold*, _italic_ and `verbatim` text that should wrap when line becomes tooooooooo long...
+left paragraph with *bold*, _italic_ and maybe `verbatim text` that should wrap when line becomes tooooooooo long...
 
 - item 1
 - item 2 with lots of text that can wrap to next line but also keeping the indent so it looks nice ohhh yeah

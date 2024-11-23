@@ -15,7 +15,7 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-use crate::utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_LABEL, STYLE_NONE, STYLE_VERBATIM};
+use crate::utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_LABEL, STYLE_NONE};
 
 #[derive(Debug)]
 pub struct Markup {
@@ -25,6 +25,7 @@ pub struct Markup {
     scroll: usize,
     desired_scroll: Option<usize>,
     lines: Vec<Line<'static>>,
+    word_buffer: Vec<Span<'static>>,
 }
 
 pub enum ScrollMove {
@@ -43,6 +44,7 @@ impl Markup {
             scroll: 0,
             desired_scroll: None,
             lines: Vec::new(),
+            word_buffer: Vec::new(),
         }
     }
 
@@ -155,45 +157,48 @@ impl Markup {
         let width = self.width;
         let (mut line, mut column) = new_line(first_indent, alignment);
 
-        for (tag, span) in InlineParser::new(text) {
-            let style = match tag {
-                InlineTag::Normal => STYLE_NONE,
-                InlineTag::Bold => STYLE_BOLD,
-                InlineTag::Italic => STYLE_ITALIC,
-                InlineTag::Verbatim => STYLE_VERBATIM,
-            };
+        let mut inline_parser = InlineParser::new("");
+        for word in text.split_whitespace() {
+            let mut word_width = 0;
+            for (tag, span) in inline_parser.continue_with(word) {
+                let style = match tag {
+                    InlineTag::Normal => STYLE_NONE,
+                    InlineTag::Bold => STYLE_BOLD,
+                    InlineTag::Italic => STYLE_ITALIC,
+                };
+                let span = Span::styled(span.to_owned(), style);
+                word_width += span.width();
+                self.word_buffer.push(span);
+            }
 
-            for word in span.split_whitespace() {
-                let word_width = unicode_width::UnicodeWidthStr::width(word);
-                if word_width > width {
-                    for c in word.chars() {
+            if word_width > width {
+                for span in self.word_buffer.drain(..) {
+                    for c in span.content.chars() {
                         let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
                         if column + char_width > width {
                             self.lines.push(line);
                             (line, column) = new_line(wrap_indent, alignment);
                         }
 
-                        line.push_span(Span::styled(c.to_string(), style));
+                        line.push_span(Span::styled(c.to_string(), span.style));
                         column += char_width;
                     }
-                    line.push_span(Span::styled(" ", style));
-                    column += 1;
-                } else {
-                    if column + word_width > width {
-                        self.lines.push(line);
-                        (line, column) = new_line(wrap_indent, alignment);
-                    }
-
-                    line.push_span(Span::styled(word.to_owned(), style));
-                    line.push_span(Span::styled(" ", style));
-                    column += word_width + 1;
                 }
+            } else {
+                if column + word_width > width {
+                    self.lines.push(line);
+                    (line, column) = new_line(wrap_indent, alignment);
+                }
+
+                line.extend(self.word_buffer.drain(..));
+                column += word_width;
             }
 
-            line.spans.pop();
             line.push_span(Span::raw(" "));
+            column += 1;
         }
 
+        line.spans.pop();
         self.lines.push(line);
     }
 
@@ -486,7 +491,6 @@ enum InlineTag {
     Normal,
     Bold,
     Italic,
-    Verbatim,
 }
 
 struct InlineParser<'a> {
@@ -506,10 +510,11 @@ impl<'a> InlineParser<'a> {
         }
     }
 
-    fn _continue_with(&mut self, input: &'a str) {
+    fn continue_with(&mut self, input: &'a str) -> &mut Self {
         self.input = input;
         self.chars = CustomCharIter::new(input);
         self.start = 0;
+        self
     }
 }
 
@@ -557,19 +562,6 @@ impl<'a> Iterator for InlineParser<'a> {
                                 }
                             }
                         }
-                        '`' => {
-                            if let Some(p) = self.chars.peek() {
-                                if p != '`' && !p.is_whitespace() {
-                                    self.tag = InlineTag::Verbatim;
-                                    let text = &self.input[self.start..i];
-                                    self.start = i + 1;
-                                    if text.is_empty() {
-                                        break;
-                                    }
-                                    return Some((InlineTag::Normal, text));
-                                }
-                            }
-                        }
                         _ => {}
                     }
                 },
@@ -602,21 +594,6 @@ impl<'a> Iterator for InlineParser<'a> {
                     let text = &self.input[self.start..text_end];
                     self.start = next_start;
                     return Some((InlineTag::Italic, text));
-                }
-                InlineTag::Verbatim => {
-                    let (text_end, next_start) = match self
-                        .chars
-                        .find_with_previous('`', |p| p != '`' && !p.is_whitespace())
-                    {
-                        Some(i) => {
-                            self.tag = InlineTag::Normal;
-                            (i, i + 1)
-                        }
-                        None => (self.input.len(), self.input.len()),
-                    };
-                    let text = &self.input[self.start..text_end];
-                    self.start = next_start;
-                    return Some((InlineTag::Verbatim, text));
                 }
             }
         }
@@ -678,13 +655,11 @@ impl<'a> CustomCharIter<'a> {
                 return None;
             };
 
-            let Some(p) = self.previous else {
-                return None;
+            if let Some(p) = self.previous {
+                if func(p) {
+                    return Some(i);
+                }
             };
-
-            if func(p) {
-                return Some(i);
-            }
         }
     }
 
@@ -694,7 +669,7 @@ impl<'a> CustomCharIter<'a> {
                 return None;
             };
 
-            if let Some(p) = self.previous() {
+            if let Some(p) = self.previous {
                 if p == prev && n == next {
                     return Some(i);
                 }
@@ -708,12 +683,10 @@ impl<'a> CustomCharIter<'a> {
                 return None;
             };
 
-            let Some(p) = self.previous else {
-                return None;
-            };
-
-            if func(p, n) {
-                return Some(i);
+            if let Some(p) = self.previous {
+                if func(p, n) {
+                    return Some(i);
+                }
             }
         }
     }
