@@ -1,5 +1,6 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{prelude::*, widgets::WidgetRef};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::utils::{STYLE_CURSOR, STYLE_LABEL, STYLE_NONE, STYLE_SELECTED};
 
@@ -113,13 +114,13 @@ impl TextEditor {
 
         match cm {
             CursorMove::Forward => {
-                if let Some(c) = self.input[self.cursor_index..].chars().next() {
-                    self.cursor_index += c.len_utf8();
+                if let Some(g) = self.input[self.cursor_index..].graphemes(true).next() {
+                    self.cursor_index += g.len();
                 }
             }
             CursorMove::Back => {
-                if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
-                    self.cursor_index -= c.len_utf8();
+                if let Some(g) = self.input[..self.cursor_index].graphemes(true).rev().next() {
+                    self.cursor_index -= g.len();
                 }
             }
             CursorMove::Up => {
@@ -162,26 +163,26 @@ impl TextEditor {
         match cd {
             CursorDelete::Forward => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
-                None => {
-                    if self.input[self.cursor_index..].chars().next().is_some() {
-                        self.input.remove(self.cursor_index);
+                None => match self.input[self.cursor_index..].graphemes(true).next() {
+                    Some(g) => {
+                        self.input
+                            .replace_range(self.cursor_index..self.cursor_index + g.len(), "");
                         true
-                    } else {
-                        false
                     }
-                }
+                    None => false,
+                },
             },
             CursorDelete::Back => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
-                None => {
-                    if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
-                        self.cursor_index -= c.len_utf8();
-                        self.input.remove(self.cursor_index);
+                None => match self.input[..self.cursor_index].graphemes(true).rev().next() {
+                    Some(g) => {
+                        self.cursor_index -= g.len();
+                        self.input
+                            .replace_range(self.cursor_index..self.cursor_index + g.len(), "");
                         true
-                    } else {
-                        false
                     }
-                }
+                    None => false,
+                },
             },
             CursorDelete::Selection => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
@@ -198,8 +199,8 @@ impl TextEditor {
         self.selection_start = None;
         self.line_width = 0;
         self.line_start_indexes.clear();
-        self.lines.clear();
         self.scroll = 0;
+        self.lines.clear();
     }
 
     fn delete_selection(&mut self, selector: usize) -> bool {
@@ -219,7 +220,7 @@ impl TextEditor {
         self.cursor_line_index = i;
         self.cursor_index = self.line_start_indexes[i];
 
-        let mut chars = self.input[self.cursor_index..].chars();
+        let mut graphemes = self.input[self.cursor_index..].graphemes(true);
         let mut column = 0;
         let mut offset = 0;
 
@@ -228,22 +229,22 @@ impl TextEditor {
                 break;
             }
 
-            let Some(c) = chars.next() else {
+            let Some(g) = graphemes.next() else {
                 break;
             };
 
-            if c == '\n' {
+            if g.contains('\n') {
                 break;
             }
 
-            let char_width = if c.is_whitespace() {
+            let grapheme_width = if g.chars().any(|c| c.is_whitespace()) {
                 1
             } else {
-                unicode_width::UnicodeWidthChar::width(c).unwrap_or(1) as u16
+                unicode_width::UnicodeWidthStr::width(g)
             };
 
-            column += char_width;
-            offset += c.len_utf8();
+            column += grapheme_width as u16;
+            offset += g.len();
         }
 
         self.cursor_column = column;
@@ -264,7 +265,7 @@ impl Widget for &mut TextEditor {
         self.cursor_line_index = 0;
         self.line_width = area.width;
 
-        let mut line_width = 0;
+        let mut column = 0;
         let mut line_index = 0;
         let input_len = self.input.len();
         let selection_start = self
@@ -278,13 +279,13 @@ impl Widget for &mut TextEditor {
         self.line_start_indexes.push(0);
         self.lines.push(Line::default());
 
-        let mut chars = self.input.char_indices();
+        let mut graphemes = self.input.grapheme_indices(true);
 
         loop {
-            let Some((i, c)) = chars.next() else {
+            let Some((i, g)) = graphemes.next() else {
                 if self.cursor_index == input_len {
                     self.cursor_line_index = line_index;
-                    self.cursor_column = line_width;
+                    self.cursor_column = column;
                     self.lines[line_index].push_span(Span::styled(" ", STYLE_CURSOR));
                 }
                 break;
@@ -295,7 +296,7 @@ impl Widget for &mut TextEditor {
 
             let style = if is_cursor {
                 self.cursor_line_index = line_index;
-                self.cursor_column = line_width;
+                self.cursor_column = column;
                 STYLE_CURSOR
             } else if is_selected {
                 STYLE_SELECTED
@@ -303,21 +304,21 @@ impl Widget for &mut TextEditor {
                 STYLE_NONE
             };
 
-            let (is_next_line, span) = if c == '\n' {
+            let (is_next_line, span) = if g.contains('\n') {
                 if is_cursor || (is_selected && i < input_len) {
                     self.lines[line_index].push_span(Span::styled(" ", style));
                 }
                 (true, None)
-            } else if c.is_whitespace() {
+            } else if g.chars().any(|c| c.is_whitespace()) {
                 self.lines[line_index].push_span(Span::styled(" ", style));
-                line_width += 1;
-                (line_width >= area.width, None)
+                column += 1;
+                (column >= area.width, None)
             } else {
-                let span = Span::styled(c.to_string(), style);
-                line_width += span.width() as u16;
-                if line_width > area.width {
+                let span = Span::styled(g.to_string(), style);
+                column += span.width() as u16;
+                if column > area.width {
                     (true, Some(span))
-                } else if line_width == area.width {
+                } else if column == area.width {
                     self.lines[line_index].push_span(span);
                     (true, None)
                 } else {
@@ -327,11 +328,11 @@ impl Widget for &mut TextEditor {
             };
 
             if is_next_line {
-                line_width = 0;
+                column = 0;
                 line_index += 1;
                 self.lines.push(Line::default());
                 if let Some(span) = span {
-                    line_width += span.width() as u16;
+                    column += span.width() as u16;
                     self.lines[line_index].push_span(span);
                     self.line_start_indexes.push(i);
                     if is_cursor {
@@ -339,7 +340,7 @@ impl Widget for &mut TextEditor {
                         self.cursor_column = 0;
                     }
                 } else {
-                    self.line_start_indexes.push(i + c.len_utf8());
+                    self.line_start_indexes.push(i + g.len());
                 }
             }
         }
@@ -466,13 +467,13 @@ impl TextInput {
 
         match cm {
             CursorMove::Forward => {
-                if let Some(c) = self.input[self.cursor_index..].chars().next() {
-                    self.cursor_index += c.len_utf8();
+                if let Some(g) = self.input[self.cursor_index..].graphemes(true).next() {
+                    self.cursor_index += g.len();
                 }
             }
             CursorMove::Back => {
-                if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
-                    self.cursor_index -= c.len_utf8();
+                if let Some(g) = self.input[..self.cursor_index].graphemes(true).rev().next() {
+                    self.cursor_index -= g.len();
                 }
             }
             CursorMove::Up | CursorMove::Start => {
@@ -501,26 +502,26 @@ impl TextInput {
         match cd {
             CursorDelete::Forward => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
-                None => {
-                    if self.input[self.cursor_index..].chars().next().is_some() {
-                        self.input.remove(self.cursor_index);
+                None => match self.input[self.cursor_index..].graphemes(true).next() {
+                    Some(g) => {
+                        self.input
+                            .replace_range(self.cursor_index..self.cursor_index + g.len(), "");
                         true
-                    } else {
-                        false
                     }
-                }
+                    None => false,
+                },
             },
             CursorDelete::Back => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
-                None => {
-                    if let Some(c) = self.input[..self.cursor_index].chars().rev().next() {
-                        self.cursor_index -= c.len_utf8();
-                        self.input.remove(self.cursor_index);
+                None => match self.input[..self.cursor_index].graphemes(true).rev().next() {
+                    Some(g) => {
+                        self.cursor_index -= g.len();
+                        self.input
+                            .replace_range(self.cursor_index..self.cursor_index + g.len(), "");
                         true
-                    } else {
-                        false
                     }
-                }
+                    None => false,
+                },
             },
             CursorDelete::Selection => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
@@ -568,19 +569,16 @@ impl Widget for &mut TextInput {
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
 
-        let mut chars =
-            self.input.char_indices().map(
-                |(i, c)| {
-                    if c.is_whitespace() {
-                        (i, ' ')
-                    } else {
-                        (i, c)
-                    }
-                },
-            );
+        let mut graphemes = self.input.grapheme_indices(true).map(|(i, g)| {
+            if g.chars().any(|c| c.is_whitespace()) {
+                (i, " ")
+            } else {
+                (i, g)
+            }
+        });
 
         loop {
-            let Some((i, c)) = chars.next() else {
+            let Some((i, g)) = graphemes.next() else {
                 if self.cursor_index == input_len {
                     self.cursor_column = total_width;
                     self.spans.push(Span::styled(" ", STYLE_CURSOR));
@@ -600,17 +598,16 @@ impl Widget for &mut TextInput {
                 STYLE_NONE
             };
 
-            let span = Span::styled(c.to_string(), style);
+            let span = Span::styled(g.to_string(), style);
             total_width += span.width();
             self.spans.push(span);
         }
 
         if self.input.is_empty() {
-            self.spans.extend(
-                self.placeholder.chars().map(|c| {
-                    Span::styled(c.to_string(), STYLE_LABEL.add_modifier(Modifier::ITALIC))
-                }),
-            );
+            self.spans.push(Span::styled(
+                self.placeholder,
+                STYLE_LABEL.add_modifier(Modifier::ITALIC),
+            ));
         }
 
         let line_width = area.width as usize;
@@ -632,7 +629,7 @@ impl Widget for &mut TextInput {
         for span in self.spans.iter() {
             let span_width = span.width();
             skip_width += span_width;
-            if skip_width > self.scroll && input_width < line_width {
+            if skip_width > self.scroll && input_width <= line_width {
                 input_width += span_width;
                 span_area.width = span_width as u16;
                 span.render_ref(span_area, buf);
