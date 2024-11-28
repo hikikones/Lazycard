@@ -2,10 +2,14 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{prelude::*, widgets::WidgetRef};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::utils::{STYLE_CURSOR, STYLE_LABEL, STYLE_NONE, STYLE_SELECTED};
+use crate::{
+    app::Colors,
+    utils::{STYLE_ITALIC, STYLE_NONE},
+};
 
 pub struct TextEditor {
     input: String,
+    placeholder: &'static str,
     line_width: u16,
     cursor_index: usize,
     cursor_column: u16,
@@ -28,13 +32,14 @@ pub enum CursorMove {
 pub enum CursorDelete {
     Forward,
     Back,
-    Selection,
+    _Selection,
 }
 
 impl TextEditor {
     pub const fn new() -> Self {
         Self {
             input: String::new(),
+            placeholder: "",
             line_width: 0,
             cursor_index: 0,
             cursor_column: 0,
@@ -44,6 +49,11 @@ impl TextEditor {
             scroll: 0,
             lines: Vec::new(),
         }
+    }
+
+    pub const fn with_placeholder(mut self, s: &'static str) -> Self {
+        self.placeholder = s;
+        self
     }
 
     pub fn as_str(&self) -> &str {
@@ -184,7 +194,7 @@ impl TextEditor {
                     None => false,
                 },
             },
-            CursorDelete::Selection => match self.selection_start.take() {
+            CursorDelete::_Selection => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
                 None => false,
             },
@@ -252,13 +262,8 @@ impl TextEditor {
 
         self.cursor_index != old_cursor
     }
-}
 
-impl Widget for &mut TextEditor {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {
         self.lines.clear();
         self.line_start_indexes.clear();
         self.cursor_column = 0;
@@ -275,6 +280,8 @@ impl Widget for &mut TextEditor {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
+        let cursor_style = STYLE_NONE.bg(colors.accent);
+        let selector_style = STYLE_NONE.bg(colors.accent);
 
         self.line_start_indexes.push(0);
         self.lines.push(Line::default());
@@ -286,7 +293,7 @@ impl Widget for &mut TextEditor {
                 if self.cursor_index == input_len {
                     self.cursor_line_index = line_index;
                     self.cursor_column = column;
-                    self.lines[line_index].push_span(Span::styled(" ", STYLE_CURSOR));
+                    self.lines[line_index].push_span(Span::styled(" ", cursor_style));
                 }
                 break;
             };
@@ -297,9 +304,9 @@ impl Widget for &mut TextEditor {
             let style = if is_cursor {
                 self.cursor_line_index = line_index;
                 self.cursor_column = column;
-                STYLE_CURSOR
+                cursor_style
             } else if is_selected {
-                STYLE_SELECTED
+                selector_style
             } else {
                 STYLE_NONE
             };
@@ -343,6 +350,13 @@ impl Widget for &mut TextEditor {
                     self.line_start_indexes.push(i + g.len());
                 }
             }
+        }
+
+        if self.input.is_empty() {
+            self.lines[0].push_span(Span::styled(
+                self.placeholder,
+                STYLE_ITALIC.fg(colors.neutral),
+            ));
         }
 
         let height = area.height as usize;
@@ -446,7 +460,7 @@ impl TextInput {
         self.cursor_index += c.len_utf8();
     }
 
-    pub fn push_str(&mut self, s: &str) {
+    pub fn _push_str(&mut self, s: &str) {
         if let Some(start) = self.selection_start.take() {
             self.delete_selection(start);
         }
@@ -523,7 +537,7 @@ impl TextInput {
                     None => false,
                 },
             },
-            CursorDelete::Selection => match self.selection_start.take() {
+            CursorDelete::_Selection => match self.selection_start.take() {
                 Some(selector) => self.delete_selection(selector),
                 None => false,
             },
@@ -549,13 +563,8 @@ impl TextInput {
         self.cursor_index = start;
         start != end
     }
-}
 
-impl Widget for &mut TextInput {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {
         self.spans.clear();
         self.cursor_column = 0;
 
@@ -568,6 +577,8 @@ impl Widget for &mut TextInput {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
+        let cursor_style = STYLE_NONE.bg(colors.accent);
+        let selector_style = STYLE_NONE.bg(colors.accent);
 
         let mut graphemes = self.input.grapheme_indices(true).map(|(i, g)| {
             if g.chars().any(|c| c.is_whitespace()) {
@@ -581,7 +592,7 @@ impl Widget for &mut TextInput {
             let Some((i, g)) = graphemes.next() else {
                 if self.cursor_index == input_len {
                     self.cursor_column = total_width;
-                    self.spans.push(Span::styled(" ", STYLE_CURSOR));
+                    self.spans.push(Span::styled(" ", cursor_style));
                 }
                 break;
             };
@@ -591,9 +602,9 @@ impl Widget for &mut TextInput {
 
             let style = if is_cursor {
                 self.cursor_column = total_width;
-                STYLE_CURSOR
+                cursor_style
             } else if is_selected {
-                STYLE_SELECTED
+                selector_style
             } else {
                 STYLE_NONE
             };
@@ -606,7 +617,7 @@ impl Widget for &mut TextInput {
         if self.input.is_empty() {
             self.spans.push(Span::styled(
                 self.placeholder,
-                STYLE_LABEL.add_modifier(Modifier::ITALIC),
+                STYLE_ITALIC.fg(colors.neutral),
             ));
         }
 

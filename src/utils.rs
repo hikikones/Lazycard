@@ -7,9 +7,6 @@ use ratatui::{
 pub const STYLE_NONE: Style = Style::new();
 pub const STYLE_BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 pub const STYLE_ITALIC: Style = Style::new().add_modifier(Modifier::ITALIC);
-pub const STYLE_LABEL: Style = Style::new().fg(Color::Gray);
-pub const STYLE_CURSOR: Style = Style::new().bg(Color::Blue);
-pub const STYLE_SELECTED: Style = Style::new().bg(Color::Blue);
 
 pub const SHORTCUT_QUIT: Shortcut = Shortcut::new("Quit", "Esc");
 pub const SHORTCUT_NEXT: Shortcut = Shortcut::new("Next", "Tab");
@@ -41,10 +38,10 @@ impl<'a> Shortcut<'a> {
         Self { name, key }
     }
 
-    pub fn as_spans(self) -> [Span<'a>; 5] {
+    pub fn as_spans(self, accent_color: Color) -> [Span<'a>; 5] {
         [
             Span::raw(" "),
-            Span::styled(self.key, STYLE_LABEL),
+            Span::styled(self.key, accent_color),
             Span::raw(" "),
             Span::raw(self.name),
             Span::raw(" "),

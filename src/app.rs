@@ -8,8 +8,15 @@ pub struct App {
     route: Route,
     pages: Pages,
     db: Database,
+    colors: Colors,
     markup: Markup,
     shortcuts: Shortcuts<'static>,
+}
+
+pub struct Colors {
+    pub accent: Color,
+    pub neutral: Color,
+    pub syntax_highlighting: &'static str,
 }
 
 pub enum Action {
@@ -21,11 +28,28 @@ pub enum Action {
 
 impl App {
     pub fn new() -> Self {
+        let colors =
+            match terminal_colorsaurus::color_scheme(terminal_colorsaurus::QueryOptions::default())
+                .unwrap_or_default()
+            {
+                terminal_colorsaurus::ColorScheme::Dark => Colors {
+                    accent: Color::Yellow,
+                    neutral: Color::DarkGray,
+                    syntax_highlighting: "base16-eighties.dark",
+                },
+                terminal_colorsaurus::ColorScheme::Light => Colors {
+                    accent: Color::LightBlue,
+                    neutral: Color::DarkGray,
+                    syntax_highlighting: "InspiredGitHub",
+                },
+            };
+
         Self {
             running: true,
             route: Route::Review,
             pages: Pages::new(),
             db: Database::new(),
+            colors,
             markup: Markup::new(),
             shortcuts: Shortcuts::new(),
         }
@@ -132,7 +156,7 @@ impl App {
 
             // Title
             let mut title_line = Line::default().alignment(Alignment::Center);
-            title_line.push_span(Span::styled("lazycard", STYLE_LABEL));
+            title_line.push_span(Span::styled("lazycard", STYLE_NONE.fg(self.colors.neutral)));
             title_line.render(title, buf);
 
             // Navigation
@@ -144,9 +168,9 @@ impl App {
                     Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
                 };
                 let style = if is_current {
-                    Style::new().bold()
+                    STYLE_BOLD.fg(self.colors.accent)
                 } else {
-                    Style::new()
+                    STYLE_NONE
                 };
                 nav_line.push_span(Span::styled(name, style));
                 nav_line.push_span(Span::raw("   "));
@@ -158,17 +182,21 @@ impl App {
             let body = layout_center_horizontal(body, Constraint::Length(64));
             match self.route {
                 Route::Review => {
-                    self.pages.review.on_render(body, buf, &mut self.markup);
+                    self.pages
+                        .review
+                        .on_render(body, buf, &self.colors, &mut self.markup);
                     self.pages.review.shortcuts(&mut self.shortcuts);
                 }
                 Route::Editor(_) => {
-                    self.pages.editor.on_render(body, buf, &mut self.markup);
+                    self.pages
+                        .editor
+                        .on_render(body, buf, &self.colors, &mut self.markup);
                     self.pages.editor.shortcuts(&mut self.shortcuts);
                 }
                 Route::Cards => {
                     self.pages
                         .cards
-                        .on_render(body, buf, &mut self.markup, &self.db);
+                        .on_render(body, buf, &self.colors, &mut self.markup, &self.db);
                     self.pages.cards.shortcuts(&mut self.shortcuts);
                 }
             }
@@ -176,15 +204,15 @@ impl App {
             // Shortcuts
             let mut shortcuts_line = Line::default().alignment(Alignment::Center);
             for shortcut in self.shortcuts.drain(..) {
-                shortcuts_line.extend(shortcut.as_spans());
+                shortcuts_line.extend(shortcut.as_spans(self.colors.accent));
             }
             shortcuts_line.render(shortcuts, buf);
 
             // Footer
             let mut footer_line = Line::default().alignment(Alignment::Center);
-            footer_line.extend(SHORTCUT_NEXT.as_spans());
-            footer_line.extend(SHORTCUT_PREV.as_spans());
-            footer_line.extend(SHORTCUT_QUIT.as_spans());
+            footer_line.extend(SHORTCUT_NEXT.as_spans(self.colors.accent));
+            footer_line.extend(SHORTCUT_PREV.as_spans(self.colors.accent));
+            footer_line.extend(SHORTCUT_QUIT.as_spans(self.colors.accent));
             footer_line.render(footer, buf);
         })
     }

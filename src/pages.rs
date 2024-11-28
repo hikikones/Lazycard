@@ -1,7 +1,13 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 
-use crate::{app::Action, database::*, editor::*, markup::*, utils::*};
+use crate::{
+    app::{Action, Colors},
+    database::*,
+    editor::*,
+    markup::*,
+    utils::*,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -90,7 +96,13 @@ impl Review {
         }
     }
 
-    pub fn on_render(&mut self, mut area: Rect, buf: &mut Buffer, markup: &mut Markup) {
+    pub fn on_render(
+        &mut self,
+        mut area: Rect,
+        buf: &mut Buffer,
+        colors: &Colors,
+        markup: &mut Markup,
+    ) {
         match self.state {
             ReviewState::None => {
                 Line::raw("no cards to review...")
@@ -104,11 +116,11 @@ impl Review {
                 let mut progress_line = Line::default().alignment(Alignment::Center);
                 progress_line.push_span(Span::styled(
                     format!("{} / {}", self.progress, self.total),
-                    STYLE_LABEL,
+                    STYLE_NONE.fg(colors.neutral),
                 ));
                 progress_line.render(area, buf);
 
-                markup.render_markup(&self.text, area.inner(MARGIN_CONTENT), buf);
+                markup.render(&self.text, area.inner(MARGIN_CONTENT), buf, colors);
             }
             ReviewState::Done => {
                 Line::raw("done")
@@ -215,7 +227,7 @@ enum CardEditorState {
 impl CardEditor {
     pub fn new() -> Self {
         Self {
-            editor: TextEditor::new(),
+            editor: TextEditor::new().with_placeholder("card content..."),
             state: CardEditorState::New,
             preview: false,
         }
@@ -236,7 +248,13 @@ impl CardEditor {
         }
     }
 
-    pub fn on_render(&mut self, mut area: Rect, buf: &mut Buffer, markup: &mut Markup) {
+    pub fn on_render(
+        &mut self,
+        mut area: Rect,
+        buf: &mut Buffer,
+        colors: &Colors,
+        markup: &mut Markup,
+    ) {
         let title = match self.state {
             CardEditorState::New => "New Card",
             CardEditorState::Edit(_) => "Edit Card",
@@ -250,9 +268,14 @@ impl CardEditor {
             .render(area, buf);
 
         if self.preview {
-            markup.render_markup(self.editor.as_str(), area.inner(MARGIN_CONTENT), buf);
+            markup.render(
+                self.editor.as_str(),
+                area.inner(MARGIN_CONTENT),
+                buf,
+                colors,
+            );
         } else {
-            self.editor.render(area.inner(MARGIN_CONTENT), buf);
+            self.editor.render(area.inner(MARGIN_CONTENT), buf, colors);
         }
     }
 
@@ -413,6 +436,7 @@ impl Cards {
         &mut self,
         mut area: Rect,
         buf: &mut Buffer,
+        colors: &Colors,
         markup: &mut Markup,
         db: &Database,
     ) {
@@ -423,7 +447,7 @@ impl Cards {
         menu.extend([
             Span::styled(
                 format!("{} / {}", self.index + 1, self.cards.len()),
-                STYLE_LABEL,
+                STYLE_NONE.fg(colors.neutral),
             ),
             Span::raw("   "),
             Span::styled(
@@ -432,7 +456,7 @@ impl Cards {
                     CardSort::Oldest => "Oldest",
                     CardSort::Search => "Search",
                 },
-                STYLE_LABEL,
+                STYLE_NONE.fg(colors.neutral),
             ),
         ]);
         menu.render(area, buf);
@@ -447,7 +471,7 @@ impl Cards {
                 x: area.x + area.width / 4,
                 y: area.y,
             };
-            self.search.render(search_area, buf);
+            self.search.render(search_area, buf, colors);
             return;
         }
 
@@ -458,7 +482,7 @@ impl Cards {
             let mut bar = Line::default().alignment(Alignment::Center);
             bar.push_span(Span::styled(
                 self.search.as_str(),
-                STYLE_LABEL.add_modifier(Modifier::ITALIC),
+                STYLE_ITALIC.fg(colors.neutral),
             ));
             bar.render(Rect { height: 1, ..area }, buf);
         }
@@ -479,7 +503,7 @@ impl Cards {
             return;
         };
 
-        markup.render_markup(&card.0, area, buf);
+        markup.render(&card.0, area, buf, colors);
     }
 
     pub fn on_input(

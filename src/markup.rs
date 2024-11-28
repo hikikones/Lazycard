@@ -14,8 +14,12 @@ use syntect::{
     parsing::SyntaxSet,
     util::LinesWithEndings,
 };
+use unicode_segmentation::UnicodeSegmentation;
 
-use crate::utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_LABEL, STYLE_NONE};
+use crate::{
+    app::Colors,
+    utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_NONE},
+};
 
 #[derive(Debug)]
 pub struct Markup {
@@ -78,7 +82,7 @@ impl Markup {
         }
     }
 
-    pub fn render_markup(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
+    pub fn render(&mut self, text: &str, area: Rect, buf: &mut Buffer, colors: &Colors) {
         let width = area.width as usize;
         self.height = area.height as usize;
 
@@ -98,16 +102,17 @@ impl Markup {
                         self.parse_text(text, alignment, "", "");
                     }
                     BlockElement::Code { language, text } => {
-                        self.parse_code(language, text);
+                        self.parse_code(language, text, colors);
                     }
                     BlockElement::List { items } => {
                         for item in items {
                             self.parse_text(item, Alignment::Left, " • ", "   ");
                         }
                     }
-                    BlockElement::Break => self
-                        .lines
-                        .push(Line::styled("——————————", STYLE_LABEL).alignment(Alignment::Center)),
+                    BlockElement::Break => self.lines.push(
+                        Line::styled("——————————", STYLE_NONE.fg(colors.neutral))
+                            .alignment(Alignment::Center),
+                    ),
                 }
                 self.lines.push(Line::default());
             }
@@ -173,15 +178,15 @@ impl Markup {
 
             if word_width > width {
                 for span in self.word_buffer.drain(..) {
-                    for c in span.content.chars() {
-                        let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(1);
-                        if column + char_width > width {
+                    for g in span.content.graphemes(true) {
+                        let grapheme_width = unicode_width::UnicodeWidthStr::width(g);
+                        if column + grapheme_width > width {
                             self.lines.push(line);
                             (line, column) = new_line(wrap_indent, alignment);
                         }
 
-                        line.push_span(Span::styled(c.to_string(), span.style));
-                        column += char_width;
+                        line.push_span(Span::styled(g.to_string(), span.style));
+                        column += grapheme_width;
                     }
                 }
             } else {
@@ -202,7 +207,7 @@ impl Markup {
         self.lines.push(line);
     }
 
-    fn parse_code(&mut self, language: &str, text: &str) {
+    fn parse_code(&mut self, language: &str, text: &str, colors: &Colors) {
         static SYNTAX_SET: LazyLock<SyntaxSet> =
             LazyLock::new(|| SyntaxSet::load_defaults_newlines());
         static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(|| ThemeSet::load_defaults());
@@ -215,7 +220,7 @@ impl Markup {
                 .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
         };
         let mut highlighter =
-            HighlightLines::new(syntax, &THEME_SET.themes["base16-eighties.dark"]);
+            HighlightLines::new(syntax, &THEME_SET.themes[colors.syntax_highlighting]);
 
         for code_line in LinesWithEndings::from(text.replace('\t', "    ").as_str()) {
             match highlighter.highlight_line(code_line, &SYNTAX_SET) {
@@ -303,11 +308,11 @@ impl<'a> BlockParser<'a> {
         start: usize,
         alignment: Alignment,
     ) -> (BlockElement<'a>, Range<usize>) {
-        let offset = match alignment {
+        let start_offset = match alignment {
             Alignment::Left => 0,
             Alignment::Center | Alignment::Right => 1,
         };
-        let paragraph_start = start + offset;
+        let paragraph_start = start + start_offset;
         let (paragraph_end, end) = match self.chars.find_consecutive('\n', 2) {
             Some(i) => (i - 1, i + 1),
             None => (self.input.len(), self.input.len()),
@@ -731,15 +736,15 @@ impl<'a> Iterator for CustomCharIter<'a> {
     type Item = (usize, char);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some((i, c)) = self.chars.next() else {
+        let Some((i, n)) = self.chars.next() else {
             return None;
         };
 
-        if let Some((_, p)) = self.current {
-            self.previous = Some(p);
+        if let Some((_, c)) = self.current {
+            self.previous = Some(c);
         }
 
-        self.current = Some((i, c));
+        self.current = Some((i, n));
         self.current
     }
 }
