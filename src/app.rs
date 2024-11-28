@@ -15,6 +15,7 @@ pub struct App {
 
 pub struct Colors {
     pub accent: Color,
+    pub on_accent: Color,
     pub neutral: Color,
     pub syntax_highlighting: &'static str,
 }
@@ -34,11 +35,13 @@ impl App {
             {
                 terminal_colorsaurus::ColorScheme::Dark => Colors {
                     accent: Color::Yellow,
+                    on_accent: Color::Black,
                     neutral: Color::DarkGray,
                     syntax_highlighting: "base16-eighties.dark",
                 },
                 terminal_colorsaurus::ColorScheme::Light => Colors {
                     accent: Color::LightBlue,
+                    on_accent: Color::Black,
                     neutral: Color::DarkGray,
                     syntax_highlighting: "InspiredGitHub",
                 },

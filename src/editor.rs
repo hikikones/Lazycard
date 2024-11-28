@@ -280,8 +280,8 @@ impl TextEditor {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
-        let cursor_style = STYLE_NONE.bg(colors.accent);
-        let selector_style = STYLE_NONE.bg(colors.accent);
+        let cursor_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
+        let selector_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
 
         self.line_start_indexes.push(0);
         self.lines.push(Line::default());
@@ -577,8 +577,8 @@ impl TextInput {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
-        let cursor_style = STYLE_NONE.bg(colors.accent);
-        let selector_style = STYLE_NONE.bg(colors.accent);
+        let cursor_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
+        let selector_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
 
         let mut graphemes = self.input.grapheme_indices(true).map(|(i, g)| {
             if g.chars().any(|c| c.is_whitespace()) {

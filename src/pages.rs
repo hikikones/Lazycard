@@ -227,7 +227,7 @@ enum CardEditorState {
 impl CardEditor {
     pub fn new() -> Self {
         Self {
-            editor: TextEditor::new().with_placeholder("card content..."),
+            editor: TextEditor::new().with_placeholder("content..."),
             state: CardEditorState::New,
             preview: false,
         }
