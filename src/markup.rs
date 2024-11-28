@@ -161,49 +161,54 @@ impl Markup {
 
         let width = self.width;
         let (mut line, mut column) = new_line(first_indent, alignment);
+        let mut word_width = 0;
 
-        let mut inline_parser = InlineParser::new("");
-        for word in text.split_whitespace() {
-            let mut word_width = 0;
-            for (tag, span) in inline_parser.continue_with(word) {
-                let style = match tag {
-                    InlineTag::Normal => STYLE_NONE,
-                    InlineTag::Bold => STYLE_BOLD,
-                    InlineTag::Italic => STYLE_ITALIC,
-                };
-                let span = Span::styled(span.to_owned(), style);
-                word_width += span.width();
-                self.word_buffer.push(span);
-            }
-
-            if word_width > width {
-                for span in self.word_buffer.drain(..) {
-                    for g in span.content.graphemes(true) {
-                        let grapheme_width = unicode_width::UnicodeWidthStr::width(g);
-                        if column + grapheme_width > width {
+        for (tag, span) in InlineParser::new(text) {
+            let style = match tag {
+                InlineTag::Normal => STYLE_NONE,
+                InlineTag::Bold => STYLE_BOLD,
+                InlineTag::Italic => STYLE_ITALIC,
+            };
+            for g in span.graphemes(true) {
+                if g.chars().any(|c| c.is_whitespace()) {
+                    if self.word_buffer.is_empty() {
+                        if column + 1 > width {
+                            self.lines.push(line);
+                            (line, column) = new_line(wrap_indent, alignment);
+                        } else {
+                            line.push_span(Span::styled(" ", style));
+                            column += 1;
+                        }
+                    } else {
+                        // todo: break word when word_width > width
+                        if column + word_width > width {
                             self.lines.push(line);
                             (line, column) = new_line(wrap_indent, alignment);
                         }
 
-                        line.push_span(Span::styled(g.to_string(), span.style));
-                        column += grapheme_width;
+                        line.extend(self.word_buffer.drain(..));
+                        line.push_span(Span::styled(" ", style));
+                        column += word_width + 1;
                     }
+                    word_width = 0;
+                } else {
+                    let g_span = Span::styled(g.to_string(), style);
+                    word_width += g_span.width();
+                    self.word_buffer.push(g_span);
                 }
-            } else {
-                if column + word_width > width {
-                    self.lines.push(line);
-                    (line, column) = new_line(wrap_indent, alignment);
-                }
-
-                line.extend(self.word_buffer.drain(..));
-                column += word_width;
             }
-
-            line.push_span(Span::raw(" "));
-            column += 1;
         }
 
-        line.spans.pop();
+        if !self.word_buffer.is_empty() {
+            // todo: break word when word_width > width
+            if column + word_width > width {
+                self.lines.push(line);
+                (line, _) = new_line(wrap_indent, alignment);
+            }
+
+            line.extend(self.word_buffer.drain(..));
+        }
+
         self.lines.push(line);
     }
 
@@ -515,7 +520,7 @@ impl<'a> InlineParser<'a> {
         }
     }
 
-    fn continue_with(&mut self, input: &'a str) -> &mut Self {
+    fn _continue_with(&mut self, input: &'a str) -> &mut Self {
         self.input = input;
         self.chars = CustomCharIter::new(input);
         self.start = 0;
