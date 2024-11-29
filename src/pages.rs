@@ -60,7 +60,7 @@ impl Review {
     }
 
     pub fn on_enter(&mut self, db: &Database) {
-        self.due.extend(db.iter().rev().map(|(id, _)| id));
+        self.due.extend(db.due().map(|(id, _)| id));
         self.total = self.due.len();
 
         if !self.due.is_empty() {
@@ -73,7 +73,7 @@ impl Review {
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
-            let card_content = db.get(&id).unwrap().0.as_str();
+            let card_content = db.get(&id).unwrap().get_content();
 
             let mut start = 0;
             BreakParser::new(card_content).for_each(|i| {
@@ -138,48 +138,50 @@ impl Review {
         db: &mut Database,
     ) -> Action {
         match self.state {
-            ReviewState::Review(id) => {
-                match key {
-                    KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
-                    KeyCode::Delete => {
-                        db.remove(&id);
-                        self.total = self.total.saturating_sub(1);
+            ReviewState::Review(id) => match key {
+                KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
+                KeyCode::Delete => {
+                    db.remove(&id);
+                    self.total = self.total.saturating_sub(1);
+                    self.next_card(db);
+                    markup.desired_scroll(ScrollMove::Start);
+                    return Action::Render;
+                }
+                KeyCode::Char(' ') => {
+                    if !self.reveals.is_empty() {
+                        self.reveal_next();
+                        markup.desired_scroll(ScrollMove::End);
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Char('y' | 'n') => {
+                    let success = key == KeyCode::Char('y');
+                    db.schedule(id, success);
+                    self.progress += 1;
+                    self.next_card(db);
+                    markup.desired_scroll(ScrollMove::Start);
+                    return Action::Render;
+                }
+                KeyCode::Up => {
+                    if markup.scroll(ScrollMove::Up(1)) {
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Down => {
+                    if markup.scroll(ScrollMove::Down(1)) {
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Right => {
+                    if !self.due.is_empty() {
                         self.next_card(db);
+                        self.due.insert(0, id);
                         markup.desired_scroll(ScrollMove::Start);
                         return Action::Render;
                     }
-                    KeyCode::Char(' ') => {
-                        if !self.reveals.is_empty() {
-                            self.reveal_next();
-                            markup.desired_scroll(ScrollMove::End);
-                            return Action::Render;
-                        }
-                    }
-                    KeyCode::Up => {
-                        // todo: successful recall
-                        // fixme: activates when scrolling with touchpad?
-                        if markup.scroll(ScrollMove::Up(1)) {
-                            return Action::Render;
-                        }
-                    }
-                    KeyCode::Down => {
-                        // todo: unsuccessful recall
-                        // fixme: activates when scrolling with touchpad?
-                        if markup.scroll(ScrollMove::Down(1)) {
-                            return Action::Render;
-                        }
-                    }
-                    KeyCode::Right => {
-                        if !self.due.is_empty() {
-                            self.next_card(db);
-                            self.due.insert(0, id);
-                            markup.desired_scroll(ScrollMove::Start);
-                            return Action::Render;
-                        }
-                    }
-                    _ => {}
                 }
-            }
+                _ => {}
+            },
             ReviewState::None | ReviewState::Done => {}
         }
 
@@ -238,7 +240,7 @@ impl CardEditor {
             Some(id) => {
                 let card = db.get(&id).unwrap();
                 self.editor.clear();
-                self.editor.push_str(card.0.as_str());
+                self.editor.push_str(card.get_content());
                 self.editor.move_cursor(CursorMove::Start, false);
                 self.state = CardEditorState::Edit(id);
             }
@@ -326,9 +328,9 @@ impl CardEditor {
                         }
                         CardEditorState::Edit(id) => {
                             let card = db.get_mut(&id).unwrap();
-                            card.0 = self.editor.as_str().to_owned();
+                            card.set_content(self.editor.as_str());
                             self.editor.clear();
-                            return Action::Route(Route::Review);
+                            return Action::Route(Route::Review); // todo: go back?
                         }
                     }
                 } else if !self.preview {
@@ -401,7 +403,7 @@ impl Cards {
 
     fn fetch_cards(&mut self, db: &mut Database) {
         if self.search.is_empty() {
-            let all_cards = db.iter().map(|(id, _)| (*id, MatchScore(0)));
+            let all_cards = db.iter().map(|(id, _)| (*id, MatchScore::default()));
             self.cards.extend(all_cards);
         } else {
             let matched_cards = db
@@ -415,14 +417,14 @@ impl Cards {
         match self.sort {
             CardSort::Newest => {
                 self.cards
-                    .sort_unstable_by_key(|(id, _)| std::cmp::Reverse(id.0));
+                    .sort_unstable_by_key(|(id, _)| std::cmp::Reverse(*id));
             }
             CardSort::Oldest => {
-                self.cards.sort_unstable_by_key(|(id, _)| id.0);
+                self.cards.sort_unstable_by_key(|(id, _)| *id);
             }
             CardSort::Search => {
                 self.cards
-                    .sort_by_key(|(_, score)| std::cmp::Reverse(score.0));
+                    .sort_by_key(|(_, score)| std::cmp::Reverse(*score));
             }
         }
     }
@@ -503,7 +505,7 @@ impl Cards {
             return;
         };
 
-        markup.render(&card.0, area, buf, colors);
+        markup.render(card.get_content(), area, buf, colors);
     }
 
     pub fn on_input(

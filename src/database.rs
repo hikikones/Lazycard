@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 pub struct Database {
     btree: BTreeMap<CardId, Card>,
     matcher: Matcher,
+    fsrs: fsrs::FSRS,
 }
 
 impl Database {
@@ -13,6 +14,7 @@ impl Database {
         Self {
             btree,
             matcher: Matcher::new(),
+            fsrs: fsrs::FSRS::new(Some(&fsrs::DEFAULT_PARAMETERS)).unwrap(),
         }
     }
 
@@ -21,29 +23,127 @@ impl Database {
         self.insert(CardId(last_id + 1), card);
     }
 
+    pub fn due(&self) -> impl Iterator<Item = (CardId, &Card)> {
+        let now = UnixTime::now();
+        self.btree
+            .iter()
+            .filter(move |(_, card)| {
+                let review_time = card.review_time.unwrap_or(card.creation_time);
+                let due_time = review_time.add_days(card.interval);
+                due_time <= now
+            })
+            .map(|(id, card)| (*id, card))
+    }
+
     pub fn search(&mut self, pattern: &str) -> impl Iterator<Item = (CardId, &Card, MatchScore)> {
         self.matcher.pattern(pattern);
         self.btree.iter().filter_map(|(id, card)| {
             self.matcher
-                .score(&card.0)
+                .score(card.content.as_str())
                 .map(|score| (*id, card, MatchScore(score)))
         })
+    }
+
+    pub fn schedule(&mut self, id: CardId, success: bool) {
+        const DESIRED_RETENTION: f32 = 0.80;
+
+        if let Some(card) = self.btree.get_mut(&id) {
+            let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
+                None
+            } else {
+                Some(fsrs::MemoryState {
+                    stability: card.stability,
+                    difficulty: card.difficulty,
+                })
+            };
+            let now = UnixTime::now();
+            let days_since_last_review = if let Some(last_review_time) = card.review_time {
+                now.days_since(last_review_time)
+            } else {
+                0
+            };
+            let next_states = self
+                .fsrs
+                .next_states(
+                    current_memory_state,
+                    DESIRED_RETENTION,
+                    days_since_last_review,
+                )
+                .unwrap();
+            let next_review_state = if success {
+                next_states.good
+            } else {
+                next_states.again
+            };
+
+            card.review_time = Some(now);
+            card.interval = next_review_state.interval;
+            card.stability = next_review_state.memory.stability;
+            card.difficulty = next_review_state.memory.difficulty;
+        }
     }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CardId(pub u64);
+pub struct CardId(u64);
 
-#[derive(Debug, Default, Clone)]
-pub struct Card(pub String);
+#[derive(Debug, Clone)]
+pub struct Card {
+    content: String,
+    creation_time: UnixTime,
+    review_time: Option<UnixTime>,
+    interval: f32,
+    stability: f32,
+    difficulty: f32,
+}
 
 impl Card {
     pub fn new(content: impl Into<String>) -> Self {
-        Self(content.into())
+        Self {
+            content: content.into(),
+            creation_time: UnixTime::now(),
+            review_time: None,
+            interval: 0.0,
+            stability: 0.0,
+            difficulty: 0.0,
+        }
+    }
+
+    pub fn get_content(&self) -> &str {
+        self.content.as_str()
+    }
+
+    pub fn set_content(&mut self, content: impl Into<String>) {
+        self.content = content.into();
     }
 }
 
-pub struct MatchScore(pub u32);
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct UnixTime(u64);
+
+impl UnixTime {
+    const SECONDS_PER_DAY: u64 = 86400;
+
+    fn now() -> Self {
+        let secs_since_unix_epoch = std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        Self(secs_since_unix_epoch)
+    }
+
+    const fn days_since(&self, other: Self) -> u32 {
+        (self.0.abs_diff(other.0) / Self::SECONDS_PER_DAY) as u32
+    }
+
+    const fn add_days(self, days: f32) -> Self {
+        let days_in_secs = days * Self::SECONDS_PER_DAY as f32;
+        Self(self.0 + days_in_secs as u64)
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MatchScore(u32);
 
 struct Matcher {
     matcher: nucleo_matcher::Matcher,
