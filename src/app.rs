@@ -31,10 +31,15 @@ pub enum Action {
 
 impl App {
     pub fn new() -> Self {
+        let dirs = directories::ProjectDirs::from("com", "hikikones", "lazycard").unwrap();
+
+        // todo: read settings file from dirs.config
+
         let settings = Settings {
-            database: std::path::PathBuf::from("/some/path/to/db.ron"),
+            database: dirs.data_dir().join("database.ron"),
             desired_retention: 0.8,
         };
+
         let colors =
             match terminal_colorsaurus::color_scheme(terminal_colorsaurus::QueryOptions::default())
                 .unwrap_or_default()
