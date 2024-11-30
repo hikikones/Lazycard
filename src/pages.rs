@@ -6,6 +6,7 @@ use crate::{
     database::*,
     editor::*,
     markup::*,
+    settings::Settings,
     utils::*,
 };
 
@@ -14,28 +15,32 @@ pub enum Route {
     Review,
     Editor(Option<CardId>),
     Cards,
+    Settings,
 }
 
 pub struct Pages {
-    pub review: Review,
-    pub editor: CardEditor,
-    pub cards: Cards,
+    pub review: ReviewPage,
+    pub editor: CardEditorPage,
+    pub cards: CardsPage,
+    pub settings: SettingsPage,
 }
 
 impl Pages {
     pub fn new() -> Self {
         Self {
-            review: Review::new(),
-            editor: CardEditor::new(),
-            cards: Cards::new(),
+            review: ReviewPage::new(),
+            editor: CardEditorPage::new(),
+            cards: CardsPage::new(),
+            settings: SettingsPage::new(),
         }
     }
 }
 
-pub struct Review {
+pub struct ReviewPage {
     due: Vec<CardId>,
     total: usize,
     progress: usize,
+    desired_retention: f32,
     state: ReviewState,
     reveals: Vec<String>,
     text: String,
@@ -47,21 +52,23 @@ enum ReviewState {
     Done,
 }
 
-impl Review {
+impl ReviewPage {
     pub const fn new() -> Self {
         Self {
             due: Vec::new(),
             total: 0,
             progress: 0,
+            desired_retention: 0.0,
             state: ReviewState::None,
             reveals: Vec::new(),
             text: String::new(),
         }
     }
 
-    pub fn on_enter(&mut self, db: &Database) {
+    pub fn on_enter(&mut self, db: &Database, desired_retention: f32) {
         self.due.extend(db.due().map(|(id, _)| id));
         self.total = self.due.len();
+        self.desired_retention = desired_retention;
 
         if !self.due.is_empty() {
             self.next_card(db);
@@ -98,10 +105,12 @@ impl Review {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
+        area: Rect,
         buf: &mut Buffer,
+        menu: &mut Menu,
         colors: &Colors,
         markup: &mut Markup,
+        shortcuts: &mut Shortcuts,
     ) {
         match self.state {
             ReviewState::None => {
@@ -110,17 +119,22 @@ impl Review {
                     .render(area.inner(MARGIN_CONTENT), buf);
             }
             ReviewState::Review(_) => {
-                area.y += 1;
-                area.height -= 1;
-
-                let mut progress_line = Line::default().alignment(Alignment::Center);
-                progress_line.push_span(Span::styled(
+                menu.push_span(Span::styled(
                     format!("{} / {}", self.progress, self.total),
                     STYLE_NONE.fg(colors.neutral),
                 ));
-                progress_line.render(area, buf);
 
-                markup.render(&self.text, area.inner(MARGIN_CONTENT), buf, colors);
+                markup.render(&self.text, area, buf, colors);
+
+                if !self.reveals.is_empty() {
+                    shortcuts.extend([SHORTCUT_SHOW]);
+                } else {
+                    shortcuts.extend([SHORTCUT_YES, SHORTCUT_NO]);
+                }
+                if !self.due.is_empty() {
+                    shortcuts.extend([SHORTCUT_SKIP]);
+                }
+                shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
             }
             ReviewState::Done => {
                 Line::raw("done")
@@ -156,7 +170,7 @@ impl Review {
                 }
                 KeyCode::Char('y' | 'n') => {
                     let success = key == KeyCode::Char('y');
-                    db.schedule(id, success);
+                    db.schedule(id, success, self.desired_retention);
                     self.progress += 1;
                     self.next_card(db);
                     markup.desired_scroll(ScrollMove::Start);
@@ -192,30 +206,14 @@ impl Review {
         self.due.clear();
         self.total = 0;
         self.progress = 0;
+        self.desired_retention = 0.0;
         self.state = ReviewState::None;
         self.reveals.clear();
         self.text.clear();
     }
-
-    pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
-        match self.state {
-            ReviewState::Review(_) => {
-                if !self.reveals.is_empty() {
-                    shortcuts.extend([SHORTCUT_SHOW]);
-                } else {
-                    shortcuts.extend([SHORTCUT_YES, SHORTCUT_NO]);
-                }
-                if !self.due.is_empty() {
-                    shortcuts.extend([SHORTCUT_SKIP]);
-                }
-                shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
-            }
-            ReviewState::None | ReviewState::Done => {}
-        }
-    }
 }
 
-pub struct CardEditor {
+pub struct CardEditorPage {
     editor: TextEditor,
     state: CardEditorState,
     preview: bool,
@@ -226,7 +224,7 @@ enum CardEditorState {
     Edit(CardId),
 }
 
-impl CardEditor {
+impl CardEditorPage {
     pub fn new() -> Self {
         Self {
             editor: TextEditor::new().with_placeholder("content..."),
@@ -252,33 +250,26 @@ impl CardEditor {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
+        area: Rect,
         buf: &mut Buffer,
+        menu: &mut Menu,
         colors: &Colors,
         markup: &mut Markup,
+        shortcuts: &mut Shortcuts,
     ) {
         let title = match self.state {
             CardEditorState::New => "New Card",
             CardEditorState::Edit(_) => "Edit Card",
         };
-
-        area.y += 1;
-        area.height -= 1;
-
-        Line::raw(title)
-            .alignment(Alignment::Center)
-            .render(area, buf);
+        menu.push_span(Span::raw(title));
 
         if self.preview {
-            markup.render(
-                self.editor.as_str(),
-                area.inner(MARGIN_CONTENT),
-                buf,
-                colors,
-            );
+            markup.render(self.editor.as_str(), area, buf, colors);
         } else {
-            self.editor.render(area.inner(MARGIN_CONTENT), buf, colors);
+            self.editor.render(area, buf, colors);
         }
+
+        shortcuts.extend([SHORTCUT_SAVE, SHORTCUT_PREVIEW]);
     }
 
     pub fn on_input(
@@ -365,13 +356,9 @@ impl CardEditor {
             self.editor.clear();
         }
     }
-
-    pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
-        shortcuts.extend([SHORTCUT_SAVE, SHORTCUT_PREVIEW]);
-    }
 }
 
-pub struct Cards {
+pub struct CardsPage {
     cards: Vec<(CardId, MatchScore)>,
     index: usize,
     state: CardState,
@@ -390,7 +377,7 @@ enum CardSort {
     Search,
 }
 
-impl Cards {
+impl CardsPage {
     pub fn new() -> Self {
         Self {
             cards: Vec::new(),
@@ -436,16 +423,14 @@ impl Cards {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
+        area: Rect,
         buf: &mut Buffer,
+        menu: &mut Menu,
         colors: &Colors,
         markup: &mut Markup,
         db: &Database,
+        shortcuts: &mut Shortcuts,
     ) {
-        area.y += 1;
-        area.height -= 1;
-
-        let mut menu = Line::default().alignment(Alignment::Center);
         menu.extend([
             Span::styled(
                 format!("{} / {}", self.index + 1, self.cards.len()),
@@ -461,51 +446,47 @@ impl Cards {
                 STYLE_NONE.fg(colors.neutral),
             ),
         ]);
-        menu.render(area, buf);
 
-        if let CardState::Search = self.state {
-            area.y += 2;
-            area.height -= 2;
+        match self.state {
+            CardState::Browse => {
+                if !self.search.is_empty() {
+                    menu.extend([
+                        Span::raw("   "),
+                        Span::styled(
+                            self.search.as_str().to_owned(),
+                            STYLE_ITALIC.fg(colors.neutral),
+                        ),
+                    ]);
+                }
 
-            let search_area = Rect {
-                height: 1,
-                width: area.width / 2,
-                x: area.x + area.width / 4,
-                y: area.y,
-            };
-            self.search.render(search_area, buf, colors);
-            return;
+                match self.cards.get(self.index) {
+                    Some((id, _)) => {
+                        let card = db.get(id).unwrap();
+                        markup.render(card.get_content(), area, buf, colors);
+
+                        shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SEARCH, SHORTCUT_SORT]);
+                        if !self.cards.is_empty() {
+                            shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
+                        }
+                    }
+                    None => {
+                        Line::raw("no cards")
+                            .alignment(Alignment::Center)
+                            .render(area, buf);
+                    }
+                }
+            }
+            CardState::Search => {
+                let search_area = Rect {
+                    height: 1,
+                    width: area.width / 2,
+                    x: area.x + area.width / 4,
+                    y: area.y,
+                };
+                self.search.render(search_area, buf, colors);
+                shortcuts.extend([SHORTCUT_CONFIRM]);
+            }
         }
-
-        if !self.search.is_empty() {
-            area.y += 2;
-            area.height -= 2;
-
-            let mut bar = Line::default().alignment(Alignment::Center);
-            bar.push_span(Span::styled(
-                self.search.as_str(),
-                STYLE_ITALIC.fg(colors.neutral),
-            ));
-            bar.render(Rect { height: 1, ..area }, buf);
-        }
-
-        let area = area.inner(MARGIN_CONTENT);
-
-        let Some((id, _)) = self.cards.get(self.index) else {
-            Line::raw("no cards")
-                .alignment(Alignment::Center)
-                .render(area, buf);
-            return;
-        };
-
-        let Some(card) = db.get(id) else {
-            Line::raw("todo: card not found in database")
-                .alignment(Alignment::Center)
-                .render(area, buf);
-            return;
-        };
-
-        markup.render(card.get_content(), area, buf, colors);
     }
 
     pub fn on_input(
@@ -618,18 +599,139 @@ impl Cards {
         self.sort = CardSort::Newest;
         self.search.clear();
     }
+}
 
-    pub fn shortcuts(&self, shortcuts: &mut Shortcuts) {
+pub struct SettingsPage {
+    state: SettingsState,
+    text: String,
+}
+
+enum SettingsState {
+    Database,
+    Retention,
+}
+
+impl SettingsState {
+    fn next(&mut self) {
+        *self = match self {
+            Self::Database => Self::Retention,
+            Self::Retention => Self::Database,
+        };
+    }
+
+    fn prev(&mut self) {
+        *self = match self {
+            Self::Database => Self::Retention,
+            Self::Retention => Self::Database,
+        };
+    }
+}
+
+impl SettingsPage {
+    pub const fn new() -> Self {
+        Self {
+            state: SettingsState::Database,
+            text: String::new(),
+        }
+    }
+
+    fn update_text(&mut self, settings: &Settings) {
+        self.text.clear();
+
         match self.state {
-            CardState::Browse => {
-                shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SEARCH, SHORTCUT_SORT]);
-                if !self.cards.is_empty() {
-                    shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
-                }
+            SettingsState::Database => {
+                self.text.extend([
+                    "The path for your database file.\n\n|_",
+                    &settings.database.to_string_lossy(),
+                    "_\n\nThis is where all your cards are stored. ",
+                    "You can move the file by setting a new value, ",
+                    "or open another database file.",
+                ]);
             }
-            CardState::Search => {
-                shortcuts.extend([SHORTCUT_CONFIRM]);
+            SettingsState::Retention => {
+                self.text.extend([
+                    "The desired retention for your cards.\n\n|*",
+                    &format!("{:.0}", settings.desired_retention * 100.0),
+                    "%*\n\nA higher retention leads to shorter intervals and more reviews per day. ",
+                    "The default value is 80%."
+                ]);
             }
         }
     }
+
+    pub fn on_enter(&mut self, settings: &Settings) {
+        self.update_text(settings);
+    }
+
+    pub fn on_render(
+        &mut self,
+        area: Rect,
+        buf: &mut Buffer,
+        menu: &mut Menu,
+        colors: &Colors,
+        markup: &mut Markup,
+        shortcuts: &mut Shortcuts,
+    ) {
+        shortcuts.push(SHORTCUT_BROWSE_HORIZONTAL);
+
+        match &self.state {
+            SettingsState::Database => {
+                menu.push_span(Span::raw("Database"));
+                markup.render(&self.text, area, buf, colors);
+            }
+            SettingsState::Retention => {
+                menu.push_span(Span::raw("Desired Retention"));
+                markup.render(&self.text, area, buf, colors);
+                shortcuts.push(SHORTCUT_ADJUST);
+            }
+        }
+    }
+
+    pub fn on_input(
+        &mut self,
+        key: KeyCode,
+        _modifiers: KeyModifiers,
+        settings: &mut Settings,
+    ) -> Action {
+        match &self.state {
+            SettingsState::Database => match key {
+                KeyCode::Right => {
+                    self.state.next();
+                    self.update_text(settings);
+                    Action::Render
+                }
+                KeyCode::Left => {
+                    self.state.prev();
+                    self.update_text(settings);
+                    Action::Render
+                }
+                _ => Action::None,
+            },
+            SettingsState::Retention => match key {
+                KeyCode::Right => {
+                    self.state.next();
+                    self.update_text(settings);
+                    Action::Render
+                }
+                KeyCode::Left => {
+                    self.state.prev();
+                    self.update_text(settings);
+                    Action::Render
+                }
+                KeyCode::Up => {
+                    settings.desired_retention += 0.01; // todo: clamp, also maybe u8?
+                    self.update_text(settings);
+                    Action::Render
+                }
+                KeyCode::Down => {
+                    settings.desired_retention -= 0.01; // todo: clamp, also maybe u8?
+                    self.update_text(settings);
+                    Action::Render
+                }
+                _ => Action::None,
+            },
+        }
+    }
+
+    pub fn on_exit(&mut self) {}
 }

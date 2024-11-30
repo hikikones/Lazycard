@@ -1,15 +1,17 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind};
-use ratatui::{prelude::*, CompletedFrame, DefaultTerminal};
+use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame, DefaultTerminal};
 
-use crate::{database::*, markup::Markup, pages::*, utils::*};
+use crate::{database::*, markup::Markup, pages::*, settings::Settings, utils::*};
 
 pub struct App {
+    settings: Settings,
     running: bool,
     route: Route,
     pages: Pages,
     db: Database,
     colors: Colors,
     markup: Markup,
+    menu: Menu<'static>,
     shortcuts: Shortcuts<'static>,
 }
 
@@ -29,6 +31,10 @@ pub enum Action {
 
 impl App {
     pub fn new() -> Self {
+        let settings = Settings {
+            database: std::path::PathBuf::from("/some/path/to/db.ron"),
+            desired_retention: 0.8,
+        };
         let colors =
             match terminal_colorsaurus::color_scheme(terminal_colorsaurus::QueryOptions::default())
                 .unwrap_or_default()
@@ -48,18 +54,22 @@ impl App {
             };
 
         Self {
+            settings,
             running: true,
             route: Route::Review,
             pages: Pages::new(),
             db: Database::new(),
             colors,
             markup: Markup::new(),
+            menu: Menu::new(),
             shortcuts: Shortcuts::new(),
         }
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
-        self.pages.review.on_enter(&self.db);
+        self.pages
+            .review
+            .on_enter(&self.db, self.settings.desired_retention);
         self.render(&mut terminal)?;
 
         while self.running {
@@ -71,12 +81,14 @@ impl App {
                             KeyCode::Tab => match self.route {
                                 Route::Review => Action::Route(Route::Editor(None)),
                                 Route::Editor(_) => Action::Route(Route::Cards),
-                                Route::Cards => Action::Route(Route::Review),
+                                Route::Cards => Action::Route(Route::Settings),
+                                Route::Settings => Action::Route(Route::Review),
                             },
                             KeyCode::BackTab => match self.route {
-                                Route::Review => Action::Route(Route::Cards),
+                                Route::Review => Action::Route(Route::Settings),
                                 Route::Editor(_) => Action::Route(Route::Review),
                                 Route::Cards => Action::Route(Route::Editor(None)),
+                                Route::Settings => Action::Route(Route::Cards),
                             },
                             _ => match self.route {
                                 Route::Review => self.pages.review.on_input(
@@ -96,6 +108,11 @@ impl App {
                                     key.modifiers,
                                     &mut self.markup,
                                     &mut self.db,
+                                ),
+                                Route::Settings => self.pages.settings.on_input(
+                                    key.code,
+                                    key.modifiers,
+                                    &mut self.settings,
                                 ),
                             },
                         }
@@ -117,15 +134,20 @@ impl App {
                         Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
                         Route::Cards => self.pages.cards.on_exit(),
+                        Route::Settings => self.pages.settings.on_exit(),
                     }
 
                     self.route = route;
                     self.markup.clear();
 
                     match route {
-                        Route::Review => self.pages.review.on_enter(&self.db),
+                        Route::Review => self
+                            .pages
+                            .review
+                            .on_enter(&self.db, self.settings.desired_retention),
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
                         Route::Cards => self.pages.cards.on_enter(&mut self.db),
+                        Route::Settings => self.pages.settings.on_enter(&self.settings),
                     }
 
                     self.render(&mut terminal)?;
@@ -147,7 +169,9 @@ impl App {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let [title, _, nav, body, shortcuts, footer] = Layout::vertical([
+            let [title, _, nav, _, menu, body, shortcuts, footer] = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
@@ -164,11 +188,17 @@ impl App {
 
             // Navigation
             let mut nav_line = Line::default().alignment(Alignment::Center);
-            for route in [Route::Review, Route::Editor(None), Route::Cards] {
+            for route in [
+                Route::Review,
+                Route::Editor(None),
+                Route::Cards,
+                Route::Settings,
+            ] {
                 let (name, is_current) = match route {
                     Route::Review => ("Review", matches!(self.route, Route::Review)),
                     Route::Editor(_) => ("Editor", matches!(self.route, Route::Editor(_))),
                     Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
+                    Route::Settings => ("Settings", matches!(self.route, Route::Settings)),
                 };
                 let style = if is_current {
                     STYLE_BOLD.fg(self.colors.accent)
@@ -183,26 +213,54 @@ impl App {
 
             // Body
             let body = layout_center_horizontal(body, Constraint::Length(64));
+            let body = body.inner(MARGIN_CONTENT);
             match self.route {
                 Route::Review => {
-                    self.pages
-                        .review
-                        .on_render(body, buf, &self.colors, &mut self.markup);
-                    self.pages.review.shortcuts(&mut self.shortcuts);
+                    self.pages.review.on_render(
+                        body,
+                        buf,
+                        &mut self.menu,
+                        &self.colors,
+                        &mut self.markup,
+                        &mut self.shortcuts,
+                    );
                 }
                 Route::Editor(_) => {
-                    self.pages
-                        .editor
-                        .on_render(body, buf, &self.colors, &mut self.markup);
-                    self.pages.editor.shortcuts(&mut self.shortcuts);
+                    self.pages.editor.on_render(
+                        body,
+                        buf,
+                        &mut self.menu,
+                        &self.colors,
+                        &mut self.markup,
+                        &mut self.shortcuts,
+                    );
                 }
                 Route::Cards => {
-                    self.pages
-                        .cards
-                        .on_render(body, buf, &self.colors, &mut self.markup, &self.db);
-                    self.pages.cards.shortcuts(&mut self.shortcuts);
+                    self.pages.cards.on_render(
+                        body,
+                        buf,
+                        &mut self.menu,
+                        &self.colors,
+                        &mut self.markup,
+                        &self.db,
+                        &mut self.shortcuts,
+                    );
+                }
+                Route::Settings => {
+                    self.pages.settings.on_render(
+                        body,
+                        buf,
+                        &mut self.menu,
+                        &self.colors,
+                        &mut self.markup,
+                        &mut self.shortcuts,
+                    );
                 }
             }
+
+            // Menu
+            self.menu.render_ref(menu, buf);
+            self.menu.spans.clear();
 
             // Shortcuts
             let mut shortcuts_line = Line::default().alignment(Alignment::Center);

@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
-    text::Span,
+    text::{Line, Span},
 };
 
 pub const STYLE_NONE: Style = Style::new();
@@ -19,14 +19,37 @@ pub const SHORTCUT_DELETE: Shortcut = Shortcut::new("Delete", "Del");
 pub const SHORTCUT_SAVE: Shortcut = Shortcut::new("Save", "^s");
 pub const _SHORTCUT_CANCEL: Shortcut = Shortcut::new("Cancel", "^c");
 pub const SHORTCUT_PREVIEW: Shortcut = Shortcut::new("Preview", "^p");
-pub const _SHORTCUT_SCROLL: Shortcut = Shortcut::new("Scroll", "⇅");
 pub const SHORTCUT_SKIP: Shortcut = Shortcut::new("Skip", "➝");
 pub const SHORTCUT_BROWSE: Shortcut = Shortcut::new("Browse", "⇄");
+pub const SHORTCUT_ADJUST: Shortcut = Shortcut::new("Adjust", "⇅");
+pub const SHORTCUT_BROWSE_HORIZONTAL: Shortcut = Shortcut::new("Browse", "⇄");
 pub const SHORTCUT_SORT: Shortcut = Shortcut::new("Sort", "s");
 pub const SHORTCUT_SEARCH: Shortcut = Shortcut::new("Search", "/");
 pub const SHORTCUT_CONFIRM: Shortcut = Shortcut::new("Confirm", "↵");
 
 pub const MARGIN_CONTENT: Margin = Margin::new(2, 2);
+
+pub struct Menu<'a>(Line<'a>);
+
+impl<'a> Menu<'a> {
+    pub fn new() -> Self {
+        Self(Line::default().centered())
+    }
+}
+
+impl<'a> std::ops::Deref for Menu<'a> {
+    type Target = Line<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> std::ops::DerefMut for Menu<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 pub struct Shortcut<'a> {
     pub name: &'a str,

@@ -44,43 +44,40 @@ impl Database {
         })
     }
 
-    pub fn schedule(&mut self, id: CardId, success: bool) {
-        const DESIRED_RETENTION: f32 = 0.80;
+    pub fn schedule(&mut self, id: CardId, success: bool, desired_retention: f32) {
+        let card = self.btree.get_mut(&id).unwrap();
+        let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
+            None
+        } else {
+            Some(fsrs::MemoryState {
+                stability: card.stability,
+                difficulty: card.difficulty,
+            })
+        };
+        let now = UnixTime::now();
+        let days_since_last_review = if let Some(last_review_time) = card.review_time {
+            now.days_since(last_review_time)
+        } else {
+            0
+        };
+        let next_states = self
+            .fsrs
+            .next_states(
+                current_memory_state,
+                desired_retention,
+                days_since_last_review,
+            )
+            .unwrap();
+        let next_review_state = if success {
+            next_states.good
+        } else {
+            next_states.again
+        };
 
-        if let Some(card) = self.btree.get_mut(&id) {
-            let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
-                None
-            } else {
-                Some(fsrs::MemoryState {
-                    stability: card.stability,
-                    difficulty: card.difficulty,
-                })
-            };
-            let now = UnixTime::now();
-            let days_since_last_review = if let Some(last_review_time) = card.review_time {
-                now.days_since(last_review_time)
-            } else {
-                0
-            };
-            let next_states = self
-                .fsrs
-                .next_states(
-                    current_memory_state,
-                    DESIRED_RETENTION,
-                    days_since_last_review,
-                )
-                .unwrap();
-            let next_review_state = if success {
-                next_states.good
-            } else {
-                next_states.again
-            };
-
-            card.review_time = Some(now);
-            card.interval = next_review_state.interval;
-            card.stability = next_review_state.memory.stability;
-            card.difficulty = next_review_state.memory.difficulty;
-        }
+        card.review_time = Some(now);
+        card.interval = next_review_state.interval;
+        card.stability = next_review_state.memory.stability;
+        card.difficulty = next_review_state.memory.difficulty;
     }
 }
 
@@ -132,7 +129,7 @@ impl UnixTime {
         Self(secs_since_unix_epoch)
     }
 
-    const fn days_since(&self, other: Self) -> u32 {
+    const fn days_since(self, other: Self) -> u32 {
         (self.0.abs_diff(other.0) / Self::SECONDS_PER_DAY) as u32
     }
 

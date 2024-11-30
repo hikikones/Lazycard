@@ -3,6 +3,7 @@ mod database;
 mod editor;
 mod markup;
 mod pages;
+mod settings;
 mod utils;
 
 fn main() -> std::io::Result<()> {
