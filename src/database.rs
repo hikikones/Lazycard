@@ -1,9 +1,14 @@
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
 pub struct Database {
     btree: BTreeMap<CardId, Card>,
+    #[serde(skip)]
     matcher: Matcher,
-    fsrs: fsrs::FSRS,
+    #[serde(skip)]
+    scheduler: Scheduler,
 }
 
 impl Database {
@@ -14,7 +19,7 @@ impl Database {
         Self {
             btree,
             matcher: Matcher::new(),
-            fsrs: fsrs::FSRS::new(Some(&fsrs::DEFAULT_PARAMETERS)).unwrap(),
+            scheduler: Scheduler::new(),
         }
     }
 
@@ -28,7 +33,7 @@ impl Database {
         self.btree
             .iter()
             .filter(move |(_, card)| {
-                let review_time = card.review_time.unwrap_or(card.creation_time);
+                let review_time = card.last_review.unwrap_or(card.creation_time);
                 let due_time = review_time.add_days(card.interval);
                 due_time <= now
             })
@@ -46,49 +51,38 @@ impl Database {
 
     pub fn schedule(&mut self, id: CardId, success: bool, desired_retention: f32) {
         let card = self.btree.get_mut(&id).unwrap();
-        let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
-            None
-        } else {
-            Some(fsrs::MemoryState {
-                stability: card.stability,
-                difficulty: card.difficulty,
-            })
-        };
-        let now = UnixTime::now();
-        let days_since_last_review = if let Some(last_review_time) = card.review_time {
-            now.days_since(last_review_time)
-        } else {
-            0
-        };
-        let next_states = self
-            .fsrs
-            .next_states(
-                current_memory_state,
-                desired_retention,
-                days_since_last_review,
-            )
-            .unwrap();
-        let next_review_state = if success {
-            next_states.good
-        } else {
-            next_states.again
-        };
-
-        card.review_time = Some(now);
+        let next_review_state = self.scheduler.schedule(card, success, desired_retention);
+        card.last_review = Some(UnixTime::now());
         card.interval = next_review_state.interval;
-        card.stability = next_review_state.memory.stability;
-        card.difficulty = next_review_state.memory.difficulty;
+        card.stability = next_review_state.stability;
+        card.difficulty = next_review_state.difficulty;
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+impl std::ops::Deref for Database {
+    type Target = BTreeMap<CardId, Card>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.btree
+    }
+}
+
+impl std::ops::DerefMut for Database {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.btree
+    }
+}
+
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub struct CardId(u64);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Card {
     content: String,
     creation_time: UnixTime,
-    review_time: Option<UnixTime>,
+    last_review: Option<UnixTime>,
     interval: f32,
     stability: f32,
     difficulty: f32,
@@ -99,7 +93,7 @@ impl Card {
         Self {
             content: content.into(),
             creation_time: UnixTime::now(),
-            review_time: None,
+            last_review: None,
             interval: 0.0,
             stability: 0.0,
             difficulty: 0.0,
@@ -115,7 +109,64 @@ impl Card {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct Scheduler(fsrs::FSRS);
+
+impl Scheduler {
+    fn new() -> Self {
+        Self(fsrs::FSRS::new(Some(&fsrs::DEFAULT_PARAMETERS)).unwrap())
+    }
+
+    fn schedule(&mut self, card: &Card, success: bool, desired_retention: f32) -> ReviewState {
+        let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
+            None
+        } else {
+            Some(fsrs::MemoryState {
+                stability: card.stability,
+                difficulty: card.difficulty,
+            })
+        };
+        let days_since_last_review = if let Some(last_review_time) = card.last_review {
+            last_review_time.days_since(UnixTime::now())
+        } else {
+            0
+        };
+        let next_states = self
+            .0
+            .next_states(
+                current_memory_state,
+                desired_retention,
+                days_since_last_review,
+            )
+            .unwrap();
+        let next_review_state = if success {
+            next_states.good
+        } else {
+            next_states.again
+        };
+
+        ReviewState {
+            interval: next_review_state.interval,
+            stability: next_review_state.memory.stability,
+            difficulty: next_review_state.memory.difficulty,
+        }
+    }
+}
+
+impl Default for Scheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+struct ReviewState {
+    interval: f32,
+    stability: f32,
+    difficulty: f32,
+}
+
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 struct UnixTime(u64);
 
 impl UnixTime {
@@ -178,17 +229,9 @@ impl Matcher {
     }
 }
 
-impl std::ops::Deref for Database {
-    type Target = BTreeMap<CardId, Card>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.btree
-    }
-}
-
-impl std::ops::DerefMut for Database {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.btree
+impl Default for Matcher {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
