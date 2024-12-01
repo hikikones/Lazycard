@@ -509,19 +509,17 @@ impl CardsPage {
                     }
                 }
                 KeyCode::Char('s') => {
-                    if self.search.is_empty() {
-                        match self.sort {
-                            CardSort::Newest => self.sort = CardSort::Oldest,
-                            CardSort::Oldest => self.sort = CardSort::Newest,
-                            CardSort::Search => todo!(),
+                    self.sort = match self.sort {
+                        CardSort::Newest => CardSort::Oldest,
+                        CardSort::Oldest => {
+                            if self.search.is_empty() {
+                                CardSort::Newest
+                            } else {
+                                CardSort::Search
+                            }
                         }
-                    } else {
-                        match self.sort {
-                            CardSort::Newest => self.sort = CardSort::Oldest,
-                            CardSort::Oldest => self.sort = CardSort::Search,
-                            CardSort::Search => self.sort = CardSort::Newest,
-                        }
-                    }
+                        CardSort::Search => CardSort::Newest,
+                    };
                     self.index = 0;
                     self.sort_cards();
                     markup.desired_scroll(ScrollMove::Start);
