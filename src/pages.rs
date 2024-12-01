@@ -6,7 +6,6 @@ use crate::{
     database::*,
     editor::*,
     markup::*,
-    settings::Settings,
     utils::*,
 };
 
@@ -15,14 +14,12 @@ pub enum Route {
     Review,
     Editor(Option<CardId>),
     Cards,
-    Settings,
 }
 
 pub struct Pages {
     pub review: ReviewPage,
     pub editor: CardEditorPage,
     pub cards: CardsPage,
-    pub settings: SettingsPage,
 }
 
 impl Pages {
@@ -31,7 +28,6 @@ impl Pages {
             review: ReviewPage::new(),
             editor: CardEditorPage::new(),
             cards: CardsPage::new(),
-            settings: SettingsPage::new(),
         }
     }
 }
@@ -40,7 +36,6 @@ pub struct ReviewPage {
     due: Vec<CardId>,
     total: usize,
     progress: usize,
-    desired_retention: f32,
     state: ReviewState,
     reveals: Vec<String>,
     text: String,
@@ -58,17 +53,15 @@ impl ReviewPage {
             due: Vec::new(),
             total: 0,
             progress: 0,
-            desired_retention: 0.0,
             state: ReviewState::None,
             reveals: Vec::new(),
             text: String::new(),
         }
     }
 
-    pub fn on_enter(&mut self, db: &Database, desired_retention: f32) {
+    pub fn on_enter(&mut self, db: &Database) {
         self.due.extend(db.due().map(|(id, _)| id));
         self.total = self.due.len();
-        self.desired_retention = desired_retention;
 
         if !self.due.is_empty() {
             self.next_card(db);
@@ -170,7 +163,7 @@ impl ReviewPage {
                 }
                 KeyCode::Char('y' | 'n') => {
                     let success = key == KeyCode::Char('y');
-                    db.schedule(id, success, self.desired_retention);
+                    db.schedule(id, success);
                     self.progress += 1;
                     self.next_card(db);
                     markup.desired_scroll(ScrollMove::Start);
@@ -206,7 +199,6 @@ impl ReviewPage {
         self.due.clear();
         self.total = 0;
         self.progress = 0;
-        self.desired_retention = 0.0;
         self.state = ReviewState::None;
         self.reveals.clear();
         self.text.clear();
@@ -599,139 +591,4 @@ impl CardsPage {
         self.sort = CardSort::Newest;
         self.search.clear();
     }
-}
-
-pub struct SettingsPage {
-    state: SettingsState,
-    text: String,
-}
-
-enum SettingsState {
-    Database,
-    Retention,
-}
-
-impl SettingsState {
-    fn next(&mut self) {
-        *self = match self {
-            Self::Database => Self::Retention,
-            Self::Retention => Self::Database,
-        };
-    }
-
-    fn prev(&mut self) {
-        *self = match self {
-            Self::Database => Self::Retention,
-            Self::Retention => Self::Database,
-        };
-    }
-}
-
-impl SettingsPage {
-    pub const fn new() -> Self {
-        Self {
-            state: SettingsState::Database,
-            text: String::new(),
-        }
-    }
-
-    fn update_text(&mut self, settings: &Settings) {
-        self.text.clear();
-
-        match self.state {
-            SettingsState::Database => {
-                self.text.extend([
-                    "The path for your database file.\n\n|_",
-                    &settings.database.to_string_lossy(),
-                    "_\n\nThis is where all your cards are stored. ",
-                    "You can move the file by setting a new value, ",
-                    "or open another database file.",
-                ]);
-            }
-            SettingsState::Retention => {
-                self.text.extend([
-                    "The desired retention for your cards.\n\n|*",
-                    &format!("{:.0}", settings.desired_retention * 100.0),
-                    "%*\n\nA higher retention leads to shorter intervals and more reviews per day. ",
-                    "The default value is 80%."
-                ]);
-            }
-        }
-    }
-
-    pub fn on_enter(&mut self, settings: &Settings) {
-        self.update_text(settings);
-    }
-
-    pub fn on_render(
-        &mut self,
-        area: Rect,
-        buf: &mut Buffer,
-        menu: &mut Menu,
-        colors: &Colors,
-        markup: &mut Markup,
-        shortcuts: &mut Shortcuts,
-    ) {
-        shortcuts.push(SHORTCUT_BROWSE_HORIZONTAL);
-
-        match &self.state {
-            SettingsState::Database => {
-                menu.push_span(Span::raw("Database"));
-                markup.render(&self.text, area, buf, colors);
-            }
-            SettingsState::Retention => {
-                menu.push_span(Span::raw("Desired Retention"));
-                markup.render(&self.text, area, buf, colors);
-                shortcuts.push(SHORTCUT_ADJUST);
-            }
-        }
-    }
-
-    pub fn on_input(
-        &mut self,
-        key: KeyCode,
-        _modifiers: KeyModifiers,
-        settings: &mut Settings,
-    ) -> Action {
-        match &self.state {
-            SettingsState::Database => match key {
-                KeyCode::Right => {
-                    self.state.next();
-                    self.update_text(settings);
-                    Action::Render
-                }
-                KeyCode::Left => {
-                    self.state.prev();
-                    self.update_text(settings);
-                    Action::Render
-                }
-                _ => Action::None,
-            },
-            SettingsState::Retention => match key {
-                KeyCode::Right => {
-                    self.state.next();
-                    self.update_text(settings);
-                    Action::Render
-                }
-                KeyCode::Left => {
-                    self.state.prev();
-                    self.update_text(settings);
-                    Action::Render
-                }
-                KeyCode::Up => {
-                    settings.desired_retention += 0.01; // todo: clamp, also maybe u8?
-                    self.update_text(settings);
-                    Action::Render
-                }
-                KeyCode::Down => {
-                    settings.desired_retention -= 0.01; // todo: clamp, also maybe u8?
-                    self.update_text(settings);
-                    Action::Render
-                }
-                _ => Action::None,
-            },
-        }
-    }
-
-    pub fn on_exit(&mut self) {}
 }

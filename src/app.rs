@@ -1,10 +1,9 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame, DefaultTerminal};
 
-use crate::{database::*, markup::Markup, pages::*, settings::Settings, utils::*};
+use crate::{database::*, markup::Markup, pages::*, utils::*};
 
 pub struct App {
-    settings: Settings,
     running: bool,
     route: Route,
     pages: Pages,
@@ -30,16 +29,7 @@ pub enum Action {
 }
 
 impl App {
-    pub fn new() -> Self {
-        let dirs = directories::ProjectDirs::from("com", "hikikones", "lazycard").unwrap();
-
-        // todo: read settings file from dirs.config
-
-        let settings = Settings {
-            database: dirs.data_dir().join("database.ron"),
-            desired_retention: 0.8,
-        };
-
+    pub fn new(database: Database) -> Self {
         let colors =
             match terminal_colorsaurus::color_scheme(terminal_colorsaurus::QueryOptions::default())
                 .unwrap_or_default()
@@ -59,11 +49,10 @@ impl App {
             };
 
         Self {
-            settings,
             running: true,
             route: Route::Review,
             pages: Pages::new(),
-            db: Database::new(),
+            db: database,
             colors,
             markup: Markup::new(),
             menu: Menu::new(),
@@ -72,9 +61,7 @@ impl App {
     }
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
-        self.pages
-            .review
-            .on_enter(&self.db, self.settings.desired_retention);
+        self.pages.review.on_enter(&self.db);
         self.render(&mut terminal)?;
 
         while self.running {
@@ -86,14 +73,12 @@ impl App {
                             KeyCode::Tab => match self.route {
                                 Route::Review => Action::Route(Route::Editor(None)),
                                 Route::Editor(_) => Action::Route(Route::Cards),
-                                Route::Cards => Action::Route(Route::Settings),
-                                Route::Settings => Action::Route(Route::Review),
+                                Route::Cards => Action::Route(Route::Review),
                             },
                             KeyCode::BackTab => match self.route {
-                                Route::Review => Action::Route(Route::Settings),
+                                Route::Review => Action::Route(Route::Cards),
                                 Route::Editor(_) => Action::Route(Route::Review),
                                 Route::Cards => Action::Route(Route::Editor(None)),
-                                Route::Settings => Action::Route(Route::Cards),
                             },
                             _ => match self.route {
                                 Route::Review => self.pages.review.on_input(
@@ -113,11 +98,6 @@ impl App {
                                     key.modifiers,
                                     &mut self.markup,
                                     &mut self.db,
-                                ),
-                                Route::Settings => self.pages.settings.on_input(
-                                    key.code,
-                                    key.modifiers,
-                                    &mut self.settings,
                                 ),
                             },
                         }
@@ -139,20 +119,15 @@ impl App {
                         Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
                         Route::Cards => self.pages.cards.on_exit(),
-                        Route::Settings => self.pages.settings.on_exit(),
                     }
 
                     self.route = route;
                     self.markup.clear();
 
                     match route {
-                        Route::Review => self
-                            .pages
-                            .review
-                            .on_enter(&self.db, self.settings.desired_retention),
+                        Route::Review => self.pages.review.on_enter(&self.db),
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
                         Route::Cards => self.pages.cards.on_enter(&mut self.db),
-                        Route::Settings => self.pages.settings.on_enter(&self.settings),
                     }
 
                     self.render(&mut terminal)?;
@@ -193,17 +168,11 @@ impl App {
 
             // Navigation
             let mut nav_line = Line::default().alignment(Alignment::Center);
-            for route in [
-                Route::Review,
-                Route::Editor(None),
-                Route::Cards,
-                Route::Settings,
-            ] {
+            for route in [Route::Review, Route::Editor(None), Route::Cards] {
                 let (name, is_current) = match route {
                     Route::Review => ("Review", matches!(self.route, Route::Review)),
                     Route::Editor(_) => ("Editor", matches!(self.route, Route::Editor(_))),
                     Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
-                    Route::Settings => ("Settings", matches!(self.route, Route::Settings)),
                 };
                 let style = if is_current {
                     STYLE_BOLD.fg(self.colors.accent)
@@ -248,16 +217,6 @@ impl App {
                         &self.colors,
                         &mut self.markup,
                         &self.db,
-                        &mut self.shortcuts,
-                    );
-                }
-                Route::Settings => {
-                    self.pages.settings.on_render(
-                        body,
-                        buf,
-                        &mut self.menu,
-                        &self.colors,
-                        &mut self.markup,
                         &mut self.shortcuts,
                     );
                 }

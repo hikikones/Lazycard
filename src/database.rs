@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -6,20 +6,25 @@ use serde::{Deserialize, Serialize};
 pub struct Database {
     btree: BTreeMap<CardId, Card>,
     #[serde(skip)]
+    _path: PathBuf,
+    #[serde(skip)]
     matcher: Matcher,
     #[serde(skip)]
     scheduler: Scheduler,
 }
 
 impl Database {
-    pub fn new() -> Self {
+    pub fn new(_path: PathBuf, desired_retention: f32) -> Self {
+        // todo: use path
+
         let mut btree = BTreeMap::new();
         add_test_data(&mut btree);
 
         Self {
             btree,
+            _path,
             matcher: Matcher::new(),
-            scheduler: Scheduler::new(),
+            scheduler: Scheduler::new(desired_retention),
         }
     }
 
@@ -49,9 +54,9 @@ impl Database {
         })
     }
 
-    pub fn schedule(&mut self, id: CardId, success: bool, desired_retention: f32) {
+    pub fn schedule(&mut self, id: CardId, success: bool) {
         let card = self.btree.get_mut(&id).unwrap();
-        let next_review_state = self.scheduler.schedule(card, success, desired_retention);
+        let next_review_state = self.scheduler.schedule(card, success);
         card.last_review = Some(UnixTime::now());
         card.interval = next_review_state.interval;
         card.stability = next_review_state.stability;
@@ -109,14 +114,20 @@ impl Card {
     }
 }
 
-struct Scheduler(fsrs::FSRS);
+struct Scheduler {
+    fsrs: fsrs::FSRS,
+    desired_retention: f32,
+}
 
 impl Scheduler {
-    fn new() -> Self {
-        Self(fsrs::FSRS::new(Some(&fsrs::DEFAULT_PARAMETERS)).unwrap())
+    fn new(desired_retention: f32) -> Self {
+        Self {
+            fsrs: fsrs::FSRS::new(Some(&fsrs::DEFAULT_PARAMETERS)).unwrap(),
+            desired_retention,
+        }
     }
 
-    fn schedule(&mut self, card: &Card, success: bool, desired_retention: f32) -> ReviewState {
+    fn schedule(&mut self, card: &Card, success: bool) -> ReviewState {
         let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
             None
         } else {
@@ -131,10 +142,10 @@ impl Scheduler {
             0
         };
         let next_states = self
-            .0
+            .fsrs
             .next_states(
                 current_memory_state,
-                desired_retention,
+                self.desired_retention,
                 days_since_last_review,
             )
             .unwrap();
@@ -154,7 +165,7 @@ impl Scheduler {
 
 impl Default for Scheduler {
     fn default() -> Self {
-        Self::new()
+        Self::new(0.8)
     }
 }
 
