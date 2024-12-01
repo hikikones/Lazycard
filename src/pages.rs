@@ -293,25 +293,22 @@ impl CardEditorPage {
                     if ctrl {
                         markup.clear();
                         self.preview = false;
-
                         match self.state {
                             CardEditorState::New => {
                                 let card = Card::new(self.editor.as_str().to_owned());
                                 db.add(card);
-                                self.editor.clear();
-                                return Action::Render;
                             }
                             CardEditorState::Edit(id) => {
                                 let card = db.get_mut(&id).unwrap();
                                 card.set_content(self.editor.as_str());
-                                self.editor.clear();
-                                return Action::Route(Route::Review); // todo: go back?
+                                self.state = CardEditorState::New;
                             }
                         }
+                        self.editor.clear();
                     } else {
                         self.editor.push_char('s');
-                        return Action::Render;
                     }
+                    return Action::Render;
                 }
                 KeyCode::Char('p') => {
                     self.editor.push_char('p');
