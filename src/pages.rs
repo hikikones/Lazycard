@@ -140,7 +140,7 @@ impl ReviewPage {
     pub fn on_input(
         &mut self,
         key: KeyCode,
-        _modifiers: KeyModifiers,
+        modifiers: KeyModifiers,
         markup: &mut Markup,
         db: &mut Database,
     ) -> Action {
@@ -169,16 +169,6 @@ impl ReviewPage {
                     markup.desired_scroll(ScrollMove::Start);
                     return Action::Render;
                 }
-                KeyCode::Up => {
-                    if markup.scroll(ScrollMove::Up(1)) {
-                        return Action::Render;
-                    }
-                }
-                KeyCode::Down => {
-                    if markup.scroll(ScrollMove::Down(1)) {
-                        return Action::Render;
-                    }
-                }
                 KeyCode::Right => {
                     if !self.due.is_empty() {
                         self.next_card(db);
@@ -187,7 +177,11 @@ impl ReviewPage {
                         return Action::Render;
                     }
                 }
-                _ => {}
+                _ => {
+                    if markup.input(key, modifiers) {
+                        return Action::Render;
+                    }
+                }
             },
             ReviewState::None | ReviewState::Done => {}
         }
@@ -274,63 +268,56 @@ impl CardEditorPage {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
         let shift = modifiers.contains(KeyModifiers::SHIFT);
 
-        match key {
-            KeyCode::Up => {
-                if self.preview {
-                    if markup.scroll(ScrollMove::Up(1)) {
-                        return Action::Render;
-                    }
-                } else {
+        if key == KeyCode::Char('p') && ctrl {
+            self.preview = !self.preview;
+            return Action::Render;
+        }
+
+        if self.preview {
+            if markup.input(key, modifiers) {
+                return Action::Render;
+            }
+        } else {
+            match key {
+                KeyCode::Up => {
                     if self.editor.move_cursor(CursorMove::Up, shift) {
                         return Action::Render;
                     }
                 }
-            }
-            KeyCode::Down => {
-                if self.preview {
-                    if markup.scroll(ScrollMove::Down(1)) {
-                        return Action::Render;
-                    }
-                } else {
+                KeyCode::Down => {
                     if self.editor.move_cursor(CursorMove::Down, shift) {
                         return Action::Render;
                     }
                 }
-            }
-            KeyCode::Char('s') => {
-                if ctrl {
-                    markup.clear();
-                    self.preview = false;
+                KeyCode::Char('s') => {
+                    if ctrl {
+                        markup.clear();
+                        self.preview = false;
 
-                    match self.state {
-                        CardEditorState::New => {
-                            let card = Card::new(self.editor.as_str().to_owned());
-                            db.add(card);
-                            self.editor.clear();
-                            return Action::Render;
+                        match self.state {
+                            CardEditorState::New => {
+                                let card = Card::new(self.editor.as_str().to_owned());
+                                db.add(card);
+                                self.editor.clear();
+                                return Action::Render;
+                            }
+                            CardEditorState::Edit(id) => {
+                                let card = db.get_mut(&id).unwrap();
+                                card.set_content(self.editor.as_str());
+                                self.editor.clear();
+                                return Action::Route(Route::Review); // todo: go back?
+                            }
                         }
-                        CardEditorState::Edit(id) => {
-                            let card = db.get_mut(&id).unwrap();
-                            card.set_content(self.editor.as_str());
-                            self.editor.clear();
-                            return Action::Route(Route::Review); // todo: go back?
-                        }
+                    } else {
+                        self.editor.push_char('s');
+                        return Action::Render;
                     }
-                } else if !self.preview {
-                    self.editor.push_char('s');
+                }
+                KeyCode::Char('p') => {
+                    self.editor.push_char('p');
                     return Action::Render;
                 }
-            }
-            KeyCode::Char('p') => {
-                if ctrl {
-                    self.preview = !self.preview;
-                } else if !self.preview {
-                    self.editor.push_char('p');
-                }
-                return Action::Render;
-            }
-            _ => {
-                if !self.preview {
+                _ => {
                     if self.editor.input(key, modifiers) {
                         return Action::Render;
                     }
@@ -508,16 +495,6 @@ impl CardsPage {
                         return Action::Render;
                     }
                 }
-                KeyCode::Up => {
-                    if markup.scroll(ScrollMove::Up(1)) {
-                        return Action::Render;
-                    }
-                }
-                KeyCode::Down => {
-                    if markup.scroll(ScrollMove::Down(1)) {
-                        return Action::Render;
-                    }
-                }
                 KeyCode::Delete => {
                     if !self.cards.is_empty() {
                         let (id, _) = self.cards.remove(self.index);
@@ -557,7 +534,11 @@ impl CardsPage {
                     self.state = CardState::Search;
                     return Action::Render;
                 }
-                _ => {}
+                _ => {
+                    if markup.input(key, modifiers) {
+                        return Action::Render;
+                    }
+                }
             },
             CardState::Search => match key {
                 KeyCode::Enter => {

@@ -7,6 +7,7 @@ use std::{
     sync::LazyLock,
 };
 
+use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{prelude::*, widgets::WidgetRef};
 use syntect::{
     easy::HighlightLines,
@@ -49,6 +50,19 @@ impl Markup {
             desired_scroll: None,
             lines: Vec::new(),
             word_buffer: Vec::new(),
+        }
+    }
+
+    pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
+        let _ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
+        let _shift = key_modifiers.contains(KeyModifiers::SHIFT);
+
+        match key_pressed {
+            KeyCode::Down => self.scroll(ScrollMove::Down(1)),
+            KeyCode::Up => self.scroll(ScrollMove::Up(1)),
+            KeyCode::Home => self.scroll(ScrollMove::Start),
+            KeyCode::End => self.scroll(ScrollMove::End),
+            _ => false,
         }
     }
 
