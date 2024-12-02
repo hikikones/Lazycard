@@ -73,7 +73,7 @@ impl ReviewPage {
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
-            let card_content = db.get(&id).unwrap().get_content();
+            let card_content = db.get(id).unwrap().get_content();
 
             let mut start = 0;
             BreakParser::new(card_content).for_each(|i| {
@@ -148,7 +148,7 @@ impl ReviewPage {
             ReviewState::Review(id) => match key {
                 KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                 KeyCode::Delete => {
-                    db.remove(&id);
+                    db.remove(id);
                     self.total = self.total.saturating_sub(1);
                     self.next_card(db);
                     markup.desired_scroll(ScrollMove::Start);
@@ -222,7 +222,7 @@ impl CardEditorPage {
     pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
         match id {
             Some(id) => {
-                let card = db.get(&id).unwrap();
+                let card = db.get(id).unwrap();
                 self.editor.clear();
                 self.editor.push_str(card.get_content());
                 self.editor.move_cursor(CursorMove::Start, false);
@@ -299,7 +299,7 @@ impl CardEditorPage {
                                 db.add(card);
                             }
                             CardEditorState::Edit(id) => {
-                                let card = db.get_mut(&id).unwrap();
+                                let card = db.get_mut(id).unwrap();
                                 card.set_content(self.editor.as_str());
                                 self.state = CardEditorState::New;
                             }
@@ -366,7 +366,7 @@ impl CardsPage {
 
     fn fetch_cards(&mut self, db: &mut Database) {
         if self.search.is_empty() {
-            let all_cards = db.iter().map(|(id, _)| (*id, MatchScore::default()));
+            let all_cards = db.iter().map(|(id, _)| (id, MatchScore::default()));
             self.cards.extend(all_cards);
         } else {
             let matched_cards = db
@@ -437,7 +437,7 @@ impl CardsPage {
 
                 match self.cards.get(self.index) {
                     Some((id, _)) => {
-                        let card = db.get(id).unwrap();
+                        let card = db.get(*id).unwrap();
                         markup.render(card.get_content(), area, buf, colors);
 
                         shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SEARCH, SHORTCUT_SORT]);
@@ -495,7 +495,7 @@ impl CardsPage {
                 KeyCode::Delete => {
                     if !self.cards.is_empty() {
                         let (id, _) = self.cards.remove(self.index);
-                        db.remove(&id);
+                        db.remove(id);
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
                         }

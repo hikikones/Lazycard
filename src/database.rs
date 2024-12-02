@@ -1,53 +1,72 @@
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
 pub struct Database {
-    btree: BTreeMap<CardId, Card>,
-    #[serde(skip)]
-    _path: PathBuf,
-    #[serde(skip)]
+    path: PathBuf,
+    storage: Storage,
     matcher: Matcher,
-    #[serde(skip)]
     scheduler: Scheduler,
 }
 
 impl Database {
-    pub fn new(_path: PathBuf, desired_retention: f32) -> Self {
-        // todo: use path
+    pub fn new(path: PathBuf, desired_retention: f32) -> Result<Self, Box<dyn std::error::Error>> {
+        let storage = if let Ok(true) = path.try_exists() {
+            Storage::read(&path)?
+        } else {
+            let storage = Storage::default();
+            storage.write(&path)?;
+            storage
+        };
 
-        let mut btree = BTreeMap::new();
-        add_test_data(&mut btree);
-
-        Self {
-            btree,
-            _path,
+        Ok(Self {
+            path,
+            storage,
             matcher: Matcher::new(),
             scheduler: Scheduler::new(desired_retention),
-        }
+        })
+    }
+
+    pub fn get(&self, id: CardId) -> Option<&Card> {
+        self.storage.cards.get(&id)
+    }
+
+    pub fn get_mut(&mut self, id: CardId) -> Option<&mut Card> {
+        self.storage.cards.get_mut(&id)
     }
 
     pub fn add(&mut self, card: Card) {
-        let last_id = self.keys().last().copied().unwrap_or_default().0;
-        self.insert(CardId(last_id + 1), card);
+        let last_id = self.last_id();
+        self.storage.cards.insert(CardId(last_id.0 + 1), card);
+    }
+
+    pub fn remove(&mut self, id: CardId) -> Option<Card> {
+        self.storage.cards.remove(&id)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (CardId, &Card)> {
+        self.storage.cards.iter().map(|(id, card)| (*id, card))
     }
 
     pub fn due(&self) -> impl Iterator<Item = (CardId, &Card)> {
         let now = UnixTime::now();
-        self.btree
+        self.storage
+            .cards
             .iter()
             .filter(move |(_, card)| {
-                let review_time = card.last_review.unwrap_or(card.creation_time);
-                let due_time = review_time.add_days(card.interval);
+                let review_time = card.last_review_time.unwrap_or(card.creation_time);
+                let due_time = review_time.add_days(card.review_interval);
                 due_time <= now
             })
             .map(|(id, card)| (*id, card))
     }
 
     pub fn search(&mut self, pattern: &str) -> impl Iterator<Item = (CardId, &Card, MatchScore)> {
-        self.matcher.pattern(pattern);
-        self.btree.iter().filter_map(|(id, card)| {
+        self.matcher.update_pattern(pattern);
+        self.storage.cards.iter().filter_map(|(id, card)| {
             self.matcher
                 .score(card.content.as_str())
                 .map(|score| (*id, card, MatchScore(score)))
@@ -55,26 +74,25 @@ impl Database {
     }
 
     pub fn schedule(&mut self, id: CardId, success: bool) {
-        let card = self.btree.get_mut(&id).unwrap();
+        let card = self.storage.cards.get_mut(&id).unwrap();
         let next_review_state = self.scheduler.schedule(card, success);
-        card.last_review = Some(UnixTime::now());
-        card.interval = next_review_state.interval;
-        card.stability = next_review_state.stability;
-        card.difficulty = next_review_state.difficulty;
+        card.last_review_time = Some(UnixTime::now());
+        card.review_interval = next_review_state.interval;
+        card.review_stability = next_review_state.stability;
+        card.review_difficulty = next_review_state.difficulty;
     }
-}
 
-impl std::ops::Deref for Database {
-    type Target = BTreeMap<CardId, Card>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.btree
+    pub fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.storage.write(&self.path)
     }
-}
 
-impl std::ops::DerefMut for Database {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.btree
+    fn last_id(&self) -> CardId {
+        self.storage
+            .cards
+            .keys()
+            .last()
+            .copied()
+            .unwrap_or_default()
     }
 }
 
@@ -87,10 +105,10 @@ pub struct CardId(u64);
 pub struct Card {
     content: String,
     creation_time: UnixTime,
-    last_review: Option<UnixTime>,
-    interval: f32,
-    stability: f32,
-    difficulty: f32,
+    last_review_time: Option<UnixTime>,
+    review_interval: f32,
+    review_stability: f32,
+    review_difficulty: f32,
 }
 
 impl Card {
@@ -98,10 +116,10 @@ impl Card {
         Self {
             content: content.into(),
             creation_time: UnixTime::now(),
-            last_review: None,
-            interval: 0.0,
-            stability: 0.0,
-            difficulty: 0.0,
+            last_review_time: None,
+            review_interval: 0.0,
+            review_stability: 0.0,
+            review_difficulty: 0.0,
         }
     }
 
@@ -111,6 +129,53 @@ impl Card {
 
     pub fn set_content(&mut self, content: impl Into<String>) {
         self.content = content.into();
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Storage {
+    version: u32,
+    cards: BTreeMap<CardId, Card>,
+}
+
+impl Storage {
+    const VERSION: u32 = 1;
+
+    fn read(path: &Path) -> Result<Self, Box<dyn std::error::Error>> {
+        let file_content = std::fs::read_to_string(path)?;
+
+        #[derive(Deserialize)]
+        struct V {
+            version: u32,
+        }
+
+        let ron_options = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::UNWRAP_NEWTYPES);
+        let V { version } = ron_options.from_str(&file_content)?;
+
+        match version {
+            Self::VERSION => ron_options.from_str(&file_content).map_err(|e| e.into()),
+            _ => Err("TODO: unknown version".into()),
+        }
+    }
+
+    fn write(&self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        let ron_options = ron::Options::default()
+            .with_default_extension(ron::extensions::Extensions::UNWRAP_NEWTYPES);
+        let ron_string = ron_options.to_string_pretty(self, ron::ser::PrettyConfig::default())?;
+        std::fs::write(path, ron_string).map_err(|e| e.into())
+    }
+}
+
+impl Default for Storage {
+    fn default() -> Self {
+        let mut cards = BTreeMap::new();
+        add_test_data(&mut cards);
+
+        Self {
+            version: Self::VERSION,
+            cards,
+        }
     }
 }
 
@@ -128,15 +193,16 @@ impl Scheduler {
     }
 
     fn schedule(&mut self, card: &Card, success: bool) -> ReviewState {
-        let current_memory_state = if card.stability == 0.0 || card.difficulty == 0.0 {
+        let current_memory_state = if card.review_stability == 0.0 || card.review_difficulty == 0.0
+        {
             None
         } else {
             Some(fsrs::MemoryState {
-                stability: card.stability,
-                difficulty: card.difficulty,
+                stability: card.review_stability,
+                difficulty: card.review_difficulty,
             })
         };
-        let days_since_last_review = if let Some(last_review_time) = card.last_review {
+        let days_since_last_review = if let Some(last_review_time) = card.last_review_time {
             last_review_time.days_since(UnixTime::now())
         } else {
             0
@@ -160,12 +226,6 @@ impl Scheduler {
             stability: next_review_state.memory.stability,
             difficulty: next_review_state.memory.difficulty,
         }
-    }
-}
-
-impl Default for Scheduler {
-    fn default() -> Self {
-        Self::new(0.8)
     }
 }
 
@@ -224,7 +284,7 @@ impl Matcher {
         }
     }
 
-    fn pattern(&mut self, pattern: &str) {
+    fn update_pattern(&mut self, pattern: &str) {
         self.pattern.reparse(
             pattern,
             nucleo_matcher::pattern::CaseMatching::Smart,
@@ -240,14 +300,8 @@ impl Matcher {
     }
 }
 
-impl Default for Matcher {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-fn add_test_data(db: &mut BTreeMap<CardId, Card>) {
-    db.insert(
+fn add_test_data(cards: &mut BTreeMap<CardId, Card>) {
+    cards.insert(
         CardId(1),
         Card::new(
             r#"
@@ -286,7 +340,7 @@ and another one
         ),
     );
 
-    db.insert(
+    cards.insert(
         CardId(2),
         Card::new(
             r#"
@@ -302,5 +356,5 @@ In aliquet dui sapien, ut semper elit sodales sed. Proin quis libero luctus libe
 "#,
         ),
     );
-    db.insert(CardId(3), Card::new("👻 oijwqwu qwdiowhq  i hio h qiowhqwheqw👻👻 wwq qiuwhdidwh👻👻👻❤️\n\nauhui ❤️awudhia\n🧑‍🌾❤️👨‍🦰jfpkw huiw wjwioj ijf weoijwioejfiowejfiowjfiowej\n\nthis\tis\ta\tparagraph\twith\ttabs\n\n```rust\nfn main() {\n\tprintln!(\"Hello, world!\");\n}\n```"));
+    cards.insert(CardId(3), Card::new("👻 oijwqwu qwdiowhq  i hio h qiowhqwheqw👻👻 wwq qiuwhdidwh👻👻👻❤️\n\nauhui ❤️awudhia\n🧑‍🌾❤️👨‍🦰jfpkw huiw wjwioj ijf weoijwioejfiowejfiowjfiowej\n\nthis\tis\ta\tparagraph\twith\ttabs\n\n```rust\nfn main() {\n\tprintln!(\"Hello, world!\");\n}\n```"));
 }

@@ -7,18 +7,18 @@ mod markup;
 mod pages;
 mod utils;
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let db = database::Database::new(
         std::path::PathBuf::from(args.database),
         args.retention as f32 / 100.0,
-    );
+    )?;
 
     let terminal = ratatui::init();
     let app = app::App::new(db);
     let res = app.run(terminal);
     ratatui::restore();
-    res
+    res.map_err(|e| e.into())
 }
 
 /// A flashcard application for the terminal

@@ -60,7 +60,7 @@ impl App {
         }
     }
 
-    pub fn run(mut self, mut terminal: DefaultTerminal) -> std::io::Result<()> {
+    pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<(), Box<dyn std::error::Error>> {
         self.pages.review.on_enter(&self.db);
         self.render(&mut terminal)?;
 
@@ -137,6 +137,9 @@ impl App {
                 }
             }
         }
+
+        // Quitting app
+        self.db.save()?;
 
         Ok(())
     }
