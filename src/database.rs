@@ -10,6 +10,7 @@ pub struct Database {
     storage: Storage,
     matcher: Matcher,
     scheduler: Scheduler,
+    is_dirty: bool,
 }
 
 impl Database {
@@ -27,6 +28,7 @@ impl Database {
             storage,
             matcher: Matcher::new(),
             scheduler: Scheduler::new(desired_retention),
+            is_dirty: false,
         })
     }
 
@@ -34,17 +36,25 @@ impl Database {
         self.storage.cards.get(&id)
     }
 
-    pub fn get_mut(&mut self, id: CardId) -> Option<&mut Card> {
-        self.storage.cards.get_mut(&id)
-    }
-
     pub fn add(&mut self, card: Card) {
         let last_id = self.last_id();
         self.storage.cards.insert(CardId(last_id.0 + 1), card);
+        self.is_dirty = true;
+    }
+
+    pub fn update(&mut self, id: CardId, func: impl FnOnce(&mut Card)) {
+        if let Some(card) = self.storage.cards.get_mut(&id) {
+            self.is_dirty = true;
+            func(card);
+        }
     }
 
     pub fn remove(&mut self, id: CardId) -> Option<Card> {
-        self.storage.cards.remove(&id)
+        if let Some(card) = self.storage.cards.remove(&id) {
+            self.is_dirty = true;
+            return Some(card);
+        }
+        None
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (CardId, &Card)> {
@@ -80,10 +90,16 @@ impl Database {
         card.review_interval = next_review_state.interval;
         card.review_stability = next_review_state.stability;
         card.review_difficulty = next_review_state.difficulty;
+        self.is_dirty = true;
     }
 
     pub fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.storage.write(&self.path)
+        if self.is_dirty {
+            let res = self.storage.write(&self.path);
+            self.is_dirty = res.is_err();
+            return res;
+        }
+        Ok(())
     }
 
     fn last_id(&self) -> CardId {
@@ -96,9 +112,7 @@ impl Database {
     }
 }
 
-#[derive(
-    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct CardId(u64);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -235,9 +249,7 @@ struct ReviewState {
     difficulty: f32,
 }
 
-#[derive(
-    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 struct UnixTime(u64);
 
 impl UnixTime {
@@ -261,7 +273,7 @@ impl UnixTime {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MatchScore(u32);
 
 struct Matcher {

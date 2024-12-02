@@ -299,9 +299,10 @@ impl CardEditorPage {
                                 db.add(card);
                             }
                             CardEditorState::Edit(id) => {
-                                let card = db.get_mut(id).unwrap();
-                                card.set_content(self.editor.as_str());
-                                self.state = CardEditorState::New;
+                                db.update(id, |card| {
+                                    card.set_content(self.editor.as_str());
+                                    self.state = CardEditorState::New;
+                                });
                             }
                         }
                         self.editor.clear();
