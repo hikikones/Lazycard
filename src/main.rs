@@ -7,6 +7,8 @@ mod markup;
 mod pages;
 mod utils;
 
+// todo: external editor
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let db = database::Database::new(

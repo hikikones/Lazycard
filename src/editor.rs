@@ -74,6 +74,7 @@ impl TextEditor {
             KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
             KeyCode::End => self.move_cursor(CursorMove::End, shift),
             KeyCode::Enter => {
+                // todo: push \r\n on windows?
                 self.push_char('\n');
                 true
             }
@@ -214,14 +215,14 @@ impl TextEditor {
     }
 
     fn delete_selection(&mut self, selector: usize) -> bool {
-        let (start, end) = if self.cursor_index < selector {
-            (self.cursor_index, selector)
-        } else {
-            (selector, self.cursor_index)
+        let range = match self.cursor_index.cmp(&selector) {
+            std::cmp::Ordering::Less => self.cursor_index..selector,
+            std::cmp::Ordering::Greater => selector..self.cursor_index,
+            std::cmp::Ordering::Equal => return false,
         };
-        self.input.replace_range(start..end, "");
-        self.cursor_index = start;
-        start != end
+        self.cursor_index = range.start;
+        self.input.replace_range(range, "");
+        true
     }
 
     fn jump_to_line(&mut self, i: usize) -> bool {
@@ -554,14 +555,14 @@ impl TextInput {
     }
 
     fn delete_selection(&mut self, selector: usize) -> bool {
-        let (start, end) = if self.cursor_index < selector {
-            (self.cursor_index, selector)
-        } else {
-            (selector, self.cursor_index)
+        let range = match self.cursor_index.cmp(&selector) {
+            std::cmp::Ordering::Less => self.cursor_index..selector,
+            std::cmp::Ordering::Greater => selector..self.cursor_index,
+            std::cmp::Ordering::Equal => return false,
         };
-        self.input.replace_range(start..end, "");
-        self.cursor_index = start;
-        start != end
+        self.cursor_index = range.start;
+        self.input.replace_range(range, "");
+        true
     }
 
     pub fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {

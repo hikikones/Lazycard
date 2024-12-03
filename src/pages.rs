@@ -341,6 +341,7 @@ pub struct CardsPage {
     state: CardState,
     sort: CardSort,
     search: TextInput,
+    // todo: toggle deleted
 }
 
 enum CardState {
@@ -351,6 +352,7 @@ enum CardState {
 enum CardSort {
     Newest,
     Oldest,
+    // todo: difficulty (easy/hard)
     Search,
 }
 

@@ -307,6 +307,7 @@ enum BlockElement<'a> {
     List { items: ListItems<'a> },
     Code { language: &'a str, text: &'a str },
     Break,
+    // todo: comment
 }
 
 struct BlockParser<'a> {
@@ -626,7 +627,7 @@ impl<'a> Iterator for InlineParser<'a> {
 
 #[derive(Debug)]
 struct CustomCharIter<'a> {
-    chars: Peekable<CharIndices<'a>>,
+    chars: Peekable<CharIndices<'a>>, // todo: use graphemes
     current: Option<(usize, char)>,
     previous: Option<char>,
 }
