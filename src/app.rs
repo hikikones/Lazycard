@@ -10,8 +10,12 @@ pub struct App {
     db: Database,
     colors: Colors,
     markup: Markup,
-    menu: Menu<'static>,
+    title_line: Line<'static>,
+    nav_line: Line<'static>,
+    menu_line: Line<'static>,
     shortcuts: Shortcuts<'static>,
+    shortcuts_line: Line<'static>,
+    footer_line: Line<'static>,
 }
 
 pub struct Colors {
@@ -48,6 +52,14 @@ impl App {
                 },
             };
 
+        let mut title_line = Line::default().centered();
+        title_line.push_span(Span::styled("lazycard", STYLE_NONE.fg(colors.neutral)));
+
+        let mut footer_line = Line::default().centered();
+        footer_line.extend(Shortcut::new("Next", "Tab").as_spans(colors.accent));
+        footer_line.extend(Shortcut::new("Prev", "⇧Tab").as_spans(colors.accent));
+        footer_line.extend(Shortcut::new("Quit", "Esc").as_spans(colors.accent));
+
         Self {
             running: true,
             route: Route::Review,
@@ -55,8 +67,12 @@ impl App {
             db: database,
             colors,
             markup: Markup::new(),
-            menu: Menu::new(),
+            title_line,
+            nav_line: Line::default().centered(),
+            menu_line: Line::default().centered(),
             shortcuts: Shortcuts::new(),
+            shortcuts_line: Line::default().centered(),
+            footer_line,
         }
     }
 
@@ -165,12 +181,9 @@ impl App {
             .areas(area);
 
             // Title
-            let mut title_line = Line::default().alignment(Alignment::Center);
-            title_line.push_span(Span::styled("lazycard", STYLE_NONE.fg(self.colors.neutral)));
-            title_line.render(title, buf);
+            self.title_line.render_ref(title, buf);
 
             // Navigation
-            let mut nav_line = Line::default().alignment(Alignment::Center);
             for route in [Route::Review, Route::Editor(None), Route::Cards] {
                 let (name, is_current) = match route {
                     Route::Review => ("Review", matches!(self.route, Route::Review)),
@@ -182,21 +195,22 @@ impl App {
                 } else {
                     STYLE_NONE
                 };
-                nav_line.push_span(Span::styled(name, style));
-                nav_line.push_span(Span::raw("   "));
+                self.nav_line
+                    .extend([Span::styled(name, style), Span::raw("   ")]);
             }
-            nav_line.spans.pop();
-            nav_line.render(nav, buf);
+            self.nav_line.spans.pop();
+            self.nav_line.render_ref(nav, buf);
+            self.nav_line.spans.clear();
 
             // Body
-            let body = layout_center_horizontal(body, Constraint::Length(64));
-            let body = body.inner(MARGIN_CONTENT);
+            let body =
+                layout_center_horizontal(body, Constraint::Length(64)).inner(Margin::new(1, 1));
             match self.route {
                 Route::Review => {
                     self.pages.review.on_render(
                         body,
                         buf,
-                        &mut self.menu,
+                        &mut self.menu_line,
                         &self.colors,
                         &mut self.markup,
                         &mut self.shortcuts,
@@ -206,7 +220,7 @@ impl App {
                     self.pages.editor.on_render(
                         body,
                         buf,
-                        &mut self.menu,
+                        &mut self.menu_line,
                         &self.colors,
                         &mut self.markup,
                         &mut self.shortcuts,
@@ -216,7 +230,7 @@ impl App {
                     self.pages.cards.on_render(
                         body,
                         buf,
-                        &mut self.menu,
+                        &mut self.menu_line,
                         &self.colors,
                         &mut self.markup,
                         &self.db,
@@ -226,22 +240,18 @@ impl App {
             }
 
             // Menu
-            self.menu.render_ref(menu, buf);
-            self.menu.spans.clear();
+            self.menu_line.render_ref(menu, buf);
+            self.menu_line.spans.clear();
 
             // Shortcuts
-            let mut shortcuts_line = Line::default().alignment(Alignment::Center);
-            for shortcut in self.shortcuts.drain(..) {
-                shortcuts_line.extend(shortcut.as_spans(self.colors.accent));
-            }
-            shortcuts_line.render(shortcuts, buf);
+            self.shortcuts
+                .drain(..)
+                .for_each(|s| self.shortcuts_line.extend(s.as_spans(self.colors.accent)));
+            self.shortcuts_line.render_ref(shortcuts, buf);
+            self.shortcuts_line.spans.clear();
 
             // Footer
-            let mut footer_line = Line::default().alignment(Alignment::Center);
-            footer_line.extend(SHORTCUT_NEXT.as_spans(self.colors.accent));
-            footer_line.extend(SHORTCUT_PREV.as_spans(self.colors.accent));
-            footer_line.extend(SHORTCUT_QUIT.as_spans(self.colors.accent));
-            footer_line.render(footer, buf);
+            self.footer_line.render_ref(footer, buf);
         })
     }
 }

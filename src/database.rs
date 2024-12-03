@@ -145,7 +145,11 @@ impl Card {
         self.content = content.into();
     }
 
-    pub fn difficulty(&self) -> f32 {
+    pub const fn creation_time(&self) -> UnixTime {
+        self.creation_time
+    }
+
+    pub const fn difficulty(&self) -> f32 {
         self.review_difficulty
     }
 }
@@ -254,7 +258,7 @@ struct ReviewState {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-struct UnixTime(u64);
+pub struct UnixTime(u64);
 
 impl UnixTime {
     const SECONDS_PER_DAY: u64 = 86400;

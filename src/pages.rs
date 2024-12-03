@@ -100,7 +100,7 @@ impl ReviewPage {
         &mut self,
         area: Rect,
         buf: &mut Buffer,
-        menu: &mut Menu,
+        menu: &mut Line,
         colors: &Colors,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
@@ -108,8 +108,8 @@ impl ReviewPage {
         match self.state {
             ReviewState::None => {
                 Line::raw("no cards to review...")
-                    .alignment(Alignment::Center)
-                    .render(area.inner(MARGIN_CONTENT), buf);
+                    .centered()
+                    .render(area, buf);
             }
             ReviewState::Review(_) => {
                 menu.push_span(Span::styled(
@@ -120,19 +120,17 @@ impl ReviewPage {
                 markup.render(&self.text, area, buf, colors);
 
                 if !self.reveals.is_empty() {
-                    shortcuts.extend([SHORTCUT_SHOW]);
+                    shortcuts.extend([Shortcut::new("Show", "Space")]);
                 } else {
-                    shortcuts.extend([SHORTCUT_YES, SHORTCUT_NO]);
+                    shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
                 }
                 if !self.due.is_empty() {
-                    shortcuts.extend([SHORTCUT_SKIP]);
+                    shortcuts.extend([Shortcut::new("Skip", "➝")]);
                 }
-                shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
+                shortcuts.extend([Shortcut::new("Edit", "e"), Shortcut::new("Delete", "Del")]);
             }
             ReviewState::Done => {
-                Line::raw("done")
-                    .alignment(Alignment::Center)
-                    .render(area.inner(MARGIN_CONTENT), buf);
+                Line::raw("done").centered().render(area, buf);
             }
         }
     }
@@ -238,7 +236,7 @@ impl CardEditorPage {
         &mut self,
         area: Rect,
         buf: &mut Buffer,
-        menu: &mut Menu,
+        menu: &mut Line,
         colors: &Colors,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
@@ -255,7 +253,7 @@ impl CardEditorPage {
             self.editor.render(area, buf, colors);
         }
 
-        shortcuts.extend([SHORTCUT_SAVE, SHORTCUT_PREVIEW]);
+        shortcuts.extend([Shortcut::new("Save", "^s"), Shortcut::new("Preview", "^p")]);
     }
 
     pub fn on_input(
@@ -336,12 +334,28 @@ impl CardEditorPage {
 }
 
 pub struct CardsPage {
-    cards: Vec<(CardId, f32, MatchScore)>,
+    cards: Vec<(CardId, CardStats)>,
     index: usize,
     state: CardState,
     sort: CardSort,
     search: TextInput,
     // todo: toggle deleted
+}
+
+struct CardStats {
+    creation: UnixTime,
+    difficulty: f32,
+    score: MatchScore,
+}
+
+impl CardStats {
+    const fn new(card: &Card, score: MatchScore) -> Self {
+        Self {
+            creation: card.creation_time(),
+            difficulty: card.difficulty(),
+            score,
+        }
+    }
 }
 
 enum CardState {
@@ -372,12 +386,12 @@ impl CardsPage {
         if self.search.is_empty() {
             let all_cards = db
                 .iter()
-                .map(|(id, card)| (id, card.difficulty(), MatchScore::default()));
+                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default())));
             self.cards.extend(all_cards);
         } else {
             let matched_cards = db
                 .search(self.search.as_str())
-                .map(|(id, card, score)| (id, card.difficulty(), score));
+                .map(|(id, card, score)| (id, CardStats::new(card, score)));
             self.cards.extend(matched_cards);
         }
     }
@@ -386,22 +400,23 @@ impl CardsPage {
         match self.sort {
             CardSort::Newest => {
                 self.cards
-                    .sort_unstable_by_key(|(id, _, _)| std::cmp::Reverse(*id));
+                    .sort_unstable_by_key(|(_, stats)| std::cmp::Reverse(stats.creation));
             }
             CardSort::Oldest => {
-                self.cards.sort_unstable_by_key(|(id, _, _)| *id);
+                self.cards.sort_unstable_by_key(|(_, stats)| stats.creation);
             }
             CardSort::Easy => {
                 self.cards
-                    .sort_unstable_by(|(_, d1, _), (_, d2, _)| d1.total_cmp(d2));
+                    .sort_unstable_by(|(_, s1), (_, s2)| s1.difficulty.total_cmp(&s2.difficulty));
             }
             CardSort::Hard => {
-                self.cards
-                    .sort_unstable_by(|(_, d1, _), (_, d2, _)| d1.total_cmp(d2).reverse());
+                self.cards.sort_unstable_by(|(_, s1), (_, s2)| {
+                    s1.difficulty.total_cmp(&s2.difficulty).reverse()
+                });
             }
             CardSort::Search => {
                 self.cards
-                    .sort_by_key(|(_, _, score)| std::cmp::Reverse(*score));
+                    .sort_by_key(|(_, stats)| std::cmp::Reverse(stats.score));
             }
         }
     }
@@ -415,7 +430,7 @@ impl CardsPage {
         &mut self,
         area: Rect,
         buf: &mut Buffer,
-        menu: &mut Menu,
+        menu: &mut Line,
         colors: &Colors,
         markup: &mut Markup,
         db: &Database,
@@ -452,13 +467,20 @@ impl CardsPage {
                 }
 
                 match self.cards.get(self.index) {
-                    Some((id, _, _)) => {
+                    Some((id, _)) => {
                         let card = db.get(*id).unwrap();
                         markup.render(card.content(), area, buf, colors);
 
-                        shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SEARCH, SHORTCUT_SORT]);
+                        shortcuts.extend([
+                            Shortcut::new("Browse", "⇄"),
+                            Shortcut::new("Search", "/"),
+                            Shortcut::new("Sort", "s"),
+                        ]);
                         if !self.cards.is_empty() {
-                            shortcuts.extend([SHORTCUT_EDIT, SHORTCUT_DELETE]);
+                            shortcuts.extend([
+                                Shortcut::new("Edit", "e"),
+                                Shortcut::new("Delete", "Del"),
+                            ]);
                         }
                     }
                     None => {
@@ -476,7 +498,7 @@ impl CardsPage {
                     y: area.y,
                 };
                 self.search.render(search_area, buf, colors);
-                shortcuts.extend([SHORTCUT_CONFIRM]);
+                shortcuts.push(Shortcut::new("Confirm", "↵"));
             }
         }
     }
@@ -510,7 +532,7 @@ impl CardsPage {
                 }
                 KeyCode::Delete => {
                     if !self.cards.is_empty() {
-                        let (id, _, _) = self.cards.remove(self.index);
+                        let (id, _) = self.cards.remove(self.index);
                         db.remove(id);
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
@@ -520,7 +542,7 @@ impl CardsPage {
                 }
                 KeyCode::Char('e') => {
                     if !self.cards.is_empty() {
-                        let (id, _, _) = self.cards.get(self.index).unwrap();
+                        let (id, _) = self.cards.get(self.index).unwrap();
                         return Action::Route(Route::Editor(Some(*id)));
                     }
                 }
