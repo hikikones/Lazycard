@@ -73,7 +73,7 @@ impl ReviewPage {
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
-            let card_content = db.get(id).unwrap().get_content();
+            let card_content = db.get(id).unwrap().content();
 
             let mut start = 0;
             BreakParser::new(card_content).for_each(|i| {
@@ -224,7 +224,7 @@ impl CardEditorPage {
             Some(id) => {
                 let card = db.get(id).unwrap();
                 self.editor.clear();
-                self.editor.push_str(card.get_content());
+                self.editor.push_str(card.content());
                 self.editor.move_cursor(CursorMove::Start, false);
                 self.state = CardEditorState::Edit(id);
             }
@@ -336,7 +336,7 @@ impl CardEditorPage {
 }
 
 pub struct CardsPage {
-    cards: Vec<(CardId, MatchScore)>,
+    cards: Vec<(CardId, f32, MatchScore)>,
     index: usize,
     state: CardState,
     sort: CardSort,
@@ -352,7 +352,8 @@ enum CardState {
 enum CardSort {
     Newest,
     Oldest,
-    // todo: difficulty (easy/hard)
+    Easy,
+    Hard,
     Search,
 }
 
@@ -369,12 +370,14 @@ impl CardsPage {
 
     fn fetch_cards(&mut self, db: &mut Database) {
         if self.search.is_empty() {
-            let all_cards = db.iter().map(|(id, _)| (id, MatchScore::default()));
+            let all_cards = db
+                .iter()
+                .map(|(id, card)| (id, card.difficulty(), MatchScore::default()));
             self.cards.extend(all_cards);
         } else {
             let matched_cards = db
                 .search(self.search.as_str())
-                .map(|(id, _, score)| (id, score));
+                .map(|(id, card, score)| (id, card.difficulty(), score));
             self.cards.extend(matched_cards);
         }
     }
@@ -383,14 +386,22 @@ impl CardsPage {
         match self.sort {
             CardSort::Newest => {
                 self.cards
-                    .sort_unstable_by_key(|(id, _)| std::cmp::Reverse(*id));
+                    .sort_unstable_by_key(|(id, _, _)| std::cmp::Reverse(*id));
             }
             CardSort::Oldest => {
-                self.cards.sort_unstable_by_key(|(id, _)| *id);
+                self.cards.sort_unstable_by_key(|(id, _, _)| *id);
+            }
+            CardSort::Easy => {
+                self.cards
+                    .sort_unstable_by(|(_, d1, _), (_, d2, _)| d1.total_cmp(d2));
+            }
+            CardSort::Hard => {
+                self.cards
+                    .sort_unstable_by(|(_, d1, _), (_, d2, _)| d1.total_cmp(d2).reverse());
             }
             CardSort::Search => {
                 self.cards
-                    .sort_by_key(|(_, score)| std::cmp::Reverse(*score));
+                    .sort_by_key(|(_, _, score)| std::cmp::Reverse(*score));
             }
         }
     }
@@ -420,6 +431,8 @@ impl CardsPage {
                 match self.sort {
                     CardSort::Newest => "Newest",
                     CardSort::Oldest => "Oldest",
+                    CardSort::Easy => "Easy",
+                    CardSort::Hard => "Hard",
                     CardSort::Search => "Search",
                 },
                 STYLE_NONE.fg(colors.neutral),
@@ -439,9 +452,9 @@ impl CardsPage {
                 }
 
                 match self.cards.get(self.index) {
-                    Some((id, _)) => {
+                    Some((id, _, _)) => {
                         let card = db.get(*id).unwrap();
-                        markup.render(card.get_content(), area, buf, colors);
+                        markup.render(card.content(), area, buf, colors);
 
                         shortcuts.extend([SHORTCUT_BROWSE, SHORTCUT_SEARCH, SHORTCUT_SORT]);
                         if !self.cards.is_empty() {
@@ -497,7 +510,7 @@ impl CardsPage {
                 }
                 KeyCode::Delete => {
                     if !self.cards.is_empty() {
-                        let (id, _) = self.cards.remove(self.index);
+                        let (id, _, _) = self.cards.remove(self.index);
                         db.remove(id);
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
@@ -507,14 +520,16 @@ impl CardsPage {
                 }
                 KeyCode::Char('e') => {
                     if !self.cards.is_empty() {
-                        let (id, _) = self.cards.get(self.index).unwrap();
+                        let (id, _, _) = self.cards.get(self.index).unwrap();
                         return Action::Route(Route::Editor(Some(*id)));
                     }
                 }
                 KeyCode::Char('s') => {
                     self.sort = match self.sort {
                         CardSort::Newest => CardSort::Oldest,
-                        CardSort::Oldest => {
+                        CardSort::Oldest => CardSort::Easy,
+                        CardSort::Easy => CardSort::Hard,
+                        CardSort::Hard => {
                             if self.search.is_empty() {
                                 CardSort::Newest
                             } else {

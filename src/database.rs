@@ -137,12 +137,16 @@ impl Card {
         }
     }
 
-    pub fn get_content(&self) -> &str {
+    pub fn content(&self) -> &str {
         self.content.as_str()
     }
 
     pub fn set_content(&mut self, content: impl Into<String>) {
         self.content = content.into();
+    }
+
+    pub fn difficulty(&self) -> f32 {
+        self.review_difficulty
     }
 }
 
@@ -169,7 +173,7 @@ impl Storage {
 
         match version {
             Self::VERSION => ron_options.from_str(&file_content).map_err(|e| e.into()),
-            _ => Err("TODO: unknown version".into()),
+            _ => Err("unknown version found in database".into()),
         }
     }
 

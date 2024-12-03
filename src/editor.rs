@@ -69,12 +69,14 @@ impl TextEditor {
             KeyCode::Left => self.move_cursor(CursorMove::Back, shift),
             KeyCode::Up => self.move_cursor(CursorMove::Up, shift),
             KeyCode::Down => self.move_cursor(CursorMove::Down, shift),
-            KeyCode::Backspace => self.delete(CursorDelete::Back),
-            KeyCode::Delete => self.delete(CursorDelete::Forward),
             KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
             KeyCode::End => self.move_cursor(CursorMove::End, shift),
+            KeyCode::Backspace => self.delete(CursorDelete::Back),
+            KeyCode::Delete => self.delete(CursorDelete::Forward),
             KeyCode::Enter => {
-                // todo: push \r\n on windows?
+                #[cfg(target_os = "windows")]
+                self.push_str("\r\n");
+                #[cfg(not(target_os = "windows"))]
                 self.push_char('\n');
                 true
             }
@@ -431,10 +433,10 @@ impl TextInput {
             KeyCode::Left => self.move_cursor(CursorMove::Back, shift),
             KeyCode::Up => self.move_cursor(CursorMove::Up, shift),
             KeyCode::Down => self.move_cursor(CursorMove::Down, shift),
-            KeyCode::Backspace => self.delete(CursorDelete::Back),
-            KeyCode::Delete => self.delete(CursorDelete::Forward),
             KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
             KeyCode::End => self.move_cursor(CursorMove::End, shift),
+            KeyCode::Backspace => self.delete(CursorDelete::Back),
+            KeyCode::Delete => self.delete(CursorDelete::Forward),
             KeyCode::Char(c) => match c {
                 'a' => {
                     if ctrl {
