@@ -111,7 +111,7 @@ impl Markup {
             // Process markup
             for (block, _) in BlockParser::new(text) {
                 match block {
-                    BlockElement::Paragraph { alignment, text } => {
+                    BlockElement::Paragraph { text, alignment } => {
                         self.parse_text(text, alignment, "", "");
                     }
                     BlockElement::Code { language, text } => {
@@ -122,6 +122,7 @@ impl Markup {
                             self.parse_text(item, Alignment::Left, " • ", "   ");
                         }
                     }
+                    BlockElement::Comment { .. } => continue,
                     BlockElement::Break => self.lines.push(
                         Line::styled("——————————", STYLE_NONE.fg(colors.neutral))
                             .alignment(Alignment::Center),
@@ -302,10 +303,10 @@ fn calculate_scroll(scroll: usize, lines: usize, height: usize) -> usize {
 
 #[derive(Debug)]
 enum BlockElement<'a> {
-    Paragraph { alignment: Alignment, text: &'a str },
+    Paragraph { text: &'a str, alignment: Alignment },
     List { items: ListItems<'a> },
     Code { language: &'a str, text: &'a str },
-    // todo: comment
+    Comment { _text: &'a str },
     Break,
 }
 
@@ -340,8 +341,8 @@ impl<'a> BlockParser<'a> {
 
         return (
             BlockElement::Paragraph {
-                alignment,
                 text: self.input[paragraph_start..paragraph_end].trim(),
+                alignment,
             },
             start..end,
         );
@@ -357,6 +358,21 @@ impl<'a> BlockParser<'a> {
         return (
             BlockElement::List {
                 items: ListItems::new(self.input[list_start..list_end].trim()),
+            },
+            start..end,
+        );
+    }
+
+    fn parse_comment(&mut self, start: usize) -> (BlockElement<'a>, Range<usize>) {
+        let comment_start = start + 1;
+        let (comment_end, end) = match self.graphemes.find_by(|g| g.contains('\n')) {
+            Some((i, g)) => (i, i + g.len()),
+            None => (self.input.len(), self.input.len()),
+        };
+
+        return (
+            BlockElement::Comment {
+                _text: self.input[comment_start..comment_end].trim(),
             },
             start..end,
         );
@@ -444,6 +460,7 @@ impl<'a> Iterator for BlockParser<'a> {
                 let (block, range) = match g {
                     "|" => self.parse_paragraph(i, Alignment::Center),
                     ">" => self.parse_paragraph(i, Alignment::Right),
+                    "#" => self.parse_comment(i),
                     "`" => {
                         let ticks = 1 + self.graphemes.count_consecutive("`", usize::MAX);
                         if ticks >= 3 {

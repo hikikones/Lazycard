@@ -325,6 +325,7 @@ fn add_test_data(cards: &mut BTreeMap<CardId, Card>) {
         CardId(1),
         Card::new(
             r#"
+# this is a comment
 left paragraph with *bold*, _italic_ and maybe `verbatim text` that *should wrap* when line becomes _tooooooooo_ long...
 
 - item 1
