@@ -65,37 +65,66 @@ impl TextEditor {
         let shift = key_modifiers.contains(KeyModifiers::SHIFT);
 
         match key_pressed {
-            KeyCode::Right => self.move_cursor(CursorMove::Forward, shift),
-            KeyCode::Left => self.move_cursor(CursorMove::Back, shift),
-            KeyCode::Up => self.move_cursor(CursorMove::Up, shift),
-            KeyCode::Down => self.move_cursor(CursorMove::Down, shift),
-            KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
-            KeyCode::End => self.move_cursor(CursorMove::End, shift),
-            KeyCode::Backspace => self.delete(CursorDelete::Back),
-            KeyCode::Delete => self.delete(CursorDelete::Forward),
+            KeyCode::Right => return self.move_cursor(CursorMove::Forward, shift),
+            KeyCode::Left => return self.move_cursor(CursorMove::Back, shift),
+            KeyCode::Up => return self.move_cursor(CursorMove::Up, shift),
+            KeyCode::Down => return self.move_cursor(CursorMove::Down, shift),
+            KeyCode::Home => return self.move_cursor(CursorMove::Start, shift),
+            KeyCode::End => return self.move_cursor(CursorMove::End, shift),
+            KeyCode::Backspace => return self.delete(CursorDelete::Back),
+            KeyCode::Delete => return self.delete(CursorDelete::Forward),
             KeyCode::Enter => {
                 #[cfg(target_os = "windows")]
                 self.push_str("\r\n");
                 #[cfg(not(target_os = "windows"))]
                 self.push_char('\n');
-                true
+                return true;
             }
             KeyCode::Char(c) => match c {
                 'a' => {
                     if ctrl {
-                        self.select_all()
+                        return self.select_all();
+                    }
+
+                    self.push_char(c);
+                    return true;
+                }
+                'c' => {
+                    if ctrl {
+                        if let Some(selector) = self.selection_start {
+                            if let Some(range) = self.get_selection_range(selector) {
+                                if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                    let _ = clipboard.set_text(&self.input[range]);
+                                }
+                            }
+                        }
                     } else {
                         self.push_char(c);
-                        true
+                        return true;
+                    }
+                }
+                'v' => {
+                    if ctrl {
+                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                            if let Ok(s) = clipboard.get_text() {
+                                self.push_str(&s);
+                                return true;
+                            }
+                        }
+                    } else {
+                        self.push_char(c);
+                        return true;
                     }
                 }
                 _ => {
                     self.push_char(c);
-                    true
+                    return true;
                 }
             },
-            _ => false,
+            _ => {}
         }
+
+        false
     }
 
     pub fn push_char(&mut self, c: char) {
@@ -216,11 +245,17 @@ impl TextEditor {
         self.lines.clear();
     }
 
+    fn get_selection_range(&self, selector: usize) -> Option<std::ops::Range<usize>> {
+        match self.cursor_index.cmp(&selector) {
+            std::cmp::Ordering::Less => Some(self.cursor_index..selector),
+            std::cmp::Ordering::Greater => Some(selector..self.cursor_index),
+            std::cmp::Ordering::Equal => None,
+        }
+    }
+
     fn delete_selection(&mut self, selector: usize) -> bool {
-        let range = match self.cursor_index.cmp(&selector) {
-            std::cmp::Ordering::Less => self.cursor_index..selector,
-            std::cmp::Ordering::Greater => selector..self.cursor_index,
-            std::cmp::Ordering::Equal => return false,
+        let Some(range) = self.get_selection_range(selector) else {
+            return false;
         };
         self.cursor_index = range.start;
         self.input.replace_range(range, "");
@@ -429,46 +464,86 @@ impl TextInput {
         let shift = key_modifiers.contains(KeyModifiers::SHIFT);
 
         match key_pressed {
-            KeyCode::Right => self.move_cursor(CursorMove::Forward, shift),
-            KeyCode::Left => self.move_cursor(CursorMove::Back, shift),
-            KeyCode::Up => self.move_cursor(CursorMove::Up, shift),
-            KeyCode::Down => self.move_cursor(CursorMove::Down, shift),
-            KeyCode::Home => self.move_cursor(CursorMove::Start, shift),
-            KeyCode::End => self.move_cursor(CursorMove::End, shift),
-            KeyCode::Backspace => self.delete(CursorDelete::Back),
-            KeyCode::Delete => self.delete(CursorDelete::Forward),
+            KeyCode::Right => return self.move_cursor(CursorMove::Forward, shift),
+            KeyCode::Left => return self.move_cursor(CursorMove::Back, shift),
+            KeyCode::Up => return self.move_cursor(CursorMove::Up, shift),
+            KeyCode::Down => return self.move_cursor(CursorMove::Down, shift),
+            KeyCode::Home => return self.move_cursor(CursorMove::Start, shift),
+            KeyCode::End => return self.move_cursor(CursorMove::End, shift),
+            KeyCode::Backspace => return self.delete(CursorDelete::Back),
+            KeyCode::Delete => return self.delete(CursorDelete::Forward),
             KeyCode::Char(c) => match c {
                 'a' => {
                     if ctrl {
-                        self.select_all()
+                        return self.select_all();
+                    }
+
+                    self.push_char(c);
+                    return true;
+                }
+                'c' => {
+                    if ctrl {
+                        if let Some(selector) = self.selection_start {
+                            if let Some(range) = self.get_selection_range(selector) {
+                                if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                                    let _ = clipboard.set_text(&self.input[range]);
+                                }
+                            }
+                        }
                     } else {
                         self.push_char(c);
-                        true
+                        return true;
+                    }
+                }
+                'v' => {
+                    if ctrl {
+                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                            if let Ok(s) = clipboard.get_text() {
+                                self.push_str(&s);
+                                return true;
+                            }
+                        }
+                    } else {
+                        self.push_char(c);
+                        return true;
                     }
                 }
                 _ => {
                     self.push_char(c);
-                    true
+                    return true;
                 }
             },
-            _ => false,
+            _ => {}
         }
+
+        false
     }
 
     pub fn push_char(&mut self, c: char) {
         if let Some(start) = self.selection_start.take() {
             self.delete_selection(start);
         }
+        let c = if c.is_whitespace() { ' ' } else { c };
         self.input.insert(self.cursor_index, c);
         self.cursor_index += c.len_utf8();
     }
 
-    pub fn _push_str(&mut self, s: &str) {
+    pub fn push_str(&mut self, s: &str) {
         if let Some(start) = self.selection_start.take() {
             self.delete_selection(start);
         }
-        self.input.insert_str(self.cursor_index, s);
-        self.cursor_index += s.len();
+        s.graphemes(true)
+            .map(|g| {
+                if g.chars().any(|c| c.is_whitespace()) {
+                    " "
+                } else {
+                    g
+                }
+            })
+            .for_each(|g| {
+                self.input.insert_str(self.cursor_index, g);
+                self.cursor_index += g.len();
+            });
     }
 
     pub fn move_cursor(&mut self, cm: CursorMove, shift: bool) -> bool {
@@ -556,11 +631,17 @@ impl TextInput {
         self.spans.clear();
     }
 
+    fn get_selection_range(&self, selector: usize) -> Option<std::ops::Range<usize>> {
+        match self.cursor_index.cmp(&selector) {
+            std::cmp::Ordering::Less => Some(self.cursor_index..selector),
+            std::cmp::Ordering::Greater => Some(selector..self.cursor_index),
+            std::cmp::Ordering::Equal => None,
+        }
+    }
+
     fn delete_selection(&mut self, selector: usize) -> bool {
-        let range = match self.cursor_index.cmp(&selector) {
-            std::cmp::Ordering::Less => self.cursor_index..selector,
-            std::cmp::Ordering::Greater => selector..self.cursor_index,
-            std::cmp::Ordering::Equal => return false,
+        let Some(range) = self.get_selection_range(selector) else {
+            return false;
         };
         self.cursor_index = range.start;
         self.input.replace_range(range, "");
@@ -583,13 +664,7 @@ impl TextInput {
         let cursor_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
         let selector_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
 
-        let mut graphemes = self.input.grapheme_indices(true).map(|(i, g)| {
-            if g.chars().any(|c| c.is_whitespace()) {
-                (i, " ")
-            } else {
-                (i, g)
-            }
-        });
+        let mut graphemes = self.input.grapheme_indices(true);
 
         loop {
             let Some((i, g)) = graphemes.next() else {
