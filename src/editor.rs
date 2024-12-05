@@ -4,7 +4,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     app::Colors,
-    utils::{STYLE_ITALIC, STYLE_NONE},
+    utils::{Shortcut, STYLE_ITALIC, STYLE_NONE},
 };
 
 pub struct TextEditor {
@@ -36,6 +36,9 @@ pub enum CursorDelete {
 }
 
 impl TextEditor {
+    pub const SHORTCUTS: [Shortcut<'static>; 2] =
+        [Shortcut::new("Copy", "^c"), Shortcut::new("Paste", "^v")];
+
     pub const fn new() -> Self {
         Self {
             input: String::new(),

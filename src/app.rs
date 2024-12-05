@@ -15,6 +15,7 @@ pub struct App {
     menu_line: Line<'static>,
     shortcuts: Shortcuts<'static>,
     shortcuts_line: Line<'static>,
+    shortcuts_line2: Line<'static>,
     footer_line: Line<'static>,
 }
 
@@ -72,6 +73,7 @@ impl App {
             menu_line: Line::default().centered(),
             shortcuts: Shortcuts::new(),
             shortcuts_line: Line::default().centered(),
+            shortcuts_line2: Line::default().centered(),
             footer_line,
         }
     }
@@ -169,13 +171,14 @@ impl App {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let [title, _, nav, _, menu, body, shortcuts, footer] = Layout::vertical([
+            let [title, _, nav, _, menu, body, shortcuts, shortcuts2, footer] = Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Min(0),
+                Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
             ])
@@ -204,15 +207,16 @@ impl App {
             self.nav_line.spans.clear();
 
             // Body
-            let body =
-                layout_center_horizontal(body, Constraint::Length(64)).inner(Margin::new(1, 1));
+            const MAX_WIDTH: u16 = 64;
+            let body = layout_center_horizontal(body, Constraint::Length(MAX_WIDTH))
+                .inner(Margin::new(1, 1));
             match self.route {
                 Route::Review => {
                     self.pages.review.on_render(
                         body,
                         buf,
-                        &mut self.menu_line,
                         &self.colors,
+                        &mut self.menu_line,
                         &mut self.markup,
                         &mut self.shortcuts,
                     );
@@ -221,8 +225,8 @@ impl App {
                     self.pages.editor.on_render(
                         body,
                         buf,
-                        &mut self.menu_line,
                         &self.colors,
+                        &mut self.menu_line,
                         &mut self.markup,
                         &mut self.shortcuts,
                     );
@@ -231,10 +235,10 @@ impl App {
                     self.pages.cards.on_render(
                         body,
                         buf,
-                        &mut self.menu_line,
-                        &self.colors,
-                        &mut self.markup,
                         &self.db,
+                        &self.colors,
+                        &mut self.menu_line,
+                        &mut self.markup,
                         &mut self.shortcuts,
                     );
                 }
@@ -246,10 +250,16 @@ impl App {
 
             // Shortcuts
             self.shortcuts
-                .drain(..)
+                .drain_first()
                 .for_each(|s| self.shortcuts_line.extend(s.as_spans(self.colors.accent)));
             self.shortcuts_line.render_ref(shortcuts, buf);
             self.shortcuts_line.spans.clear();
+
+            self.shortcuts
+                .drain_second()
+                .for_each(|s| self.shortcuts_line2.extend(s.as_spans(self.colors.accent)));
+            self.shortcuts_line2.render_ref(shortcuts2, buf);
+            self.shortcuts_line2.spans.clear();
 
             // Footer
             self.footer_line.render_ref(footer, buf);

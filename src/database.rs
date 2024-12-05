@@ -32,6 +32,10 @@ impl Database {
         })
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.storage.cards.is_empty()
+    }
+
     pub fn get(&self, id: CardId) -> Option<&Card> {
         self.storage.cards.get(&id)
     }
@@ -57,7 +61,7 @@ impl Database {
         None
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (CardId, &Card)> {
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = (CardId, &Card)> + DoubleEndedIterator {
         self.storage.cards.iter().map(|(id, card)| (*id, card))
     }
 
@@ -98,6 +102,7 @@ pub struct Card {
     pub review_interval: f32,
     pub review_stability: f32,
     pub review_difficulty: f32,
+    pub archived: bool,
 }
 
 impl Card {
@@ -109,6 +114,7 @@ impl Card {
             review_interval: 0.0,
             review_stability: 0.0,
             review_difficulty: 0.0,
+            archived: false,
         }
     }
 
@@ -258,7 +264,9 @@ impl UnixTime {
 }
 
 pub trait CardsIterExt<'a> {
-    fn is_due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)>;
     fn search(
         self,
         pattern: &str,
@@ -270,9 +278,17 @@ impl<'a, I> CardsIterExt<'a> for I
 where
     I: Iterator<Item = (CardId, &'a Card)>,
 {
-    fn is_due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
         let now = UnixTime::now();
-        self.filter(move |(_, card)| card.is_due(now))
+        self.filter(move |(_, card)| !card.archived && card.is_due(now))
+    }
+
+    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+        self.filter(|(_, card)| !card.archived)
+    }
+
+    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+        self.filter(|(_, card)| card.archived)
     }
 
     fn search(

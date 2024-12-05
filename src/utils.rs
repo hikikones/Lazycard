@@ -29,25 +29,41 @@ impl<'a> Shortcut<'a> {
     }
 }
 
-pub struct Shortcuts<'a>(Vec<Shortcut<'a>>);
+pub struct Shortcuts<'a> {
+    first: Vec<Shortcut<'a>>,
+    second: Vec<Shortcut<'a>>,
+}
 
 impl<'a> Shortcuts<'a> {
     pub const fn new() -> Self {
-        Self(Vec::new())
+        Self {
+            first: Vec::new(),
+            second: Vec::new(),
+        }
     }
-}
 
-impl<'a> std::ops::Deref for Shortcuts<'a> {
-    type Target = Vec<Shortcut<'a>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    pub fn _push_first(&mut self, shortcut: Shortcut<'a>) {
+        self.first.push(shortcut);
     }
-}
 
-impl<'a> std::ops::DerefMut for Shortcuts<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    pub fn push_second(&mut self, shortcut: Shortcut<'a>) {
+        self.second.push(shortcut);
+    }
+
+    pub fn extend_first(&mut self, iter: impl IntoIterator<Item = Shortcut<'a>>) {
+        self.first.extend(iter);
+    }
+
+    pub fn extend_second(&mut self, iter: impl IntoIterator<Item = Shortcut<'a>>) {
+        self.second.extend(iter);
+    }
+
+    pub fn drain_first(&mut self) -> impl Iterator<Item = Shortcut<'a>> + '_ {
+        self.first.drain(..)
+    }
+
+    pub fn drain_second(&mut self) -> impl Iterator<Item = Shortcut<'a>> + '_ {
+        self.second.drain(..)
     }
 }
 

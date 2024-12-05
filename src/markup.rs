@@ -18,7 +18,7 @@ use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
 use crate::{
     app::Colors,
-    utils::{STYLE_BOLD, STYLE_ITALIC, STYLE_NONE},
+    utils::{Shortcut, STYLE_BOLD, STYLE_ITALIC, STYLE_NONE},
 };
 
 #[derive(Debug)]
@@ -40,6 +40,8 @@ pub enum ScrollMove {
 }
 
 impl Markup {
+    pub const SHORTCUTS: [Shortcut<'static>; 1] = [Shortcut::new("Scroll", "⮁")];
+
     pub const fn new() -> Self {
         Self {
             width: 0,

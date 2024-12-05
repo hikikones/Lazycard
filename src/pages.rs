@@ -60,7 +60,7 @@ impl ReviewPage {
     }
 
     pub fn on_enter(&mut self, db: &Database) {
-        self.due.extend(db.iter().is_due().map(|(id, _)| id));
+        self.due.extend(db.iter().due().map(|(id, _)| id));
         self.total = self.due.len();
 
         if !self.due.is_empty() {
@@ -100,16 +100,14 @@ impl ReviewPage {
         &mut self,
         area: Rect,
         buf: &mut Buffer,
-        menu: &mut Line,
         colors: &Colors,
+        menu: &mut Line,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
         match self.state {
             ReviewState::None => {
-                Line::raw("no cards to review...")
-                    .centered()
-                    .render(area, buf);
+                markup.render("| No cards to review", area, buf, colors);
             }
             ReviewState::Review(_) => {
                 menu.push_span(Span::styled(
@@ -120,17 +118,18 @@ impl ReviewPage {
                 markup.render(&self.text, area, buf, colors);
 
                 if !self.reveals.is_empty() {
-                    shortcuts.extend([Shortcut::new("Show", "Space")]);
+                    shortcuts.extend_first([Shortcut::new("Show", "Space")]);
                 } else {
-                    shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
+                    shortcuts.extend_first([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
                 }
                 if !self.due.is_empty() {
-                    shortcuts.extend([Shortcut::new("Skip", "➝")]);
+                    shortcuts.push_second(Shortcut::new("Skip", "➝"));
                 }
-                shortcuts.extend([Shortcut::new("Edit", "e"), Shortcut::new("Delete", "Del")]);
+                shortcuts
+                    .extend_second([Shortcut::new("Edit", "e"), Shortcut::new("Archive", "Del")]);
             }
             ReviewState::Done => {
-                Line::raw("done").centered().render(area, buf);
+                markup.render("| Good job!", area, buf, colors);
             }
         }
     }
@@ -146,7 +145,7 @@ impl ReviewPage {
             ReviewState::Review(id) => match key {
                 KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                 KeyCode::Delete => {
-                    db.remove(id);
+                    db.update(id, |card| card.archived = true);
                     self.total = self.total.saturating_sub(1);
                     self.next_card(db);
                     markup.desired_scroll(ScrollMove::Start);
@@ -236,8 +235,8 @@ impl CardEditorPage {
         &mut self,
         area: Rect,
         buf: &mut Buffer,
-        menu: &mut Line,
         colors: &Colors,
+        menu: &mut Line,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
@@ -249,11 +248,16 @@ impl CardEditorPage {
 
         if self.preview {
             markup.render(self.editor.as_str(), area, buf, colors);
+            shortcuts.extend_second(Markup::SHORTCUTS);
         } else {
             self.editor.render(area, buf, colors);
+            shortcuts.extend_second(TextEditor::SHORTCUTS);
         }
 
-        shortcuts.extend([Shortcut::new("Save", "^s"), Shortcut::new("Preview", "^p")]);
+        shortcuts.extend_first([
+            Shortcut::new("Save", "^s"),
+            Shortcut::new("Toggle preview", "^p"),
+        ]);
     }
 
     pub fn on_input(
@@ -338,8 +342,8 @@ pub struct CardsPage {
     index: usize,
     state: CardState,
     sort: CardSort,
+    show_archived: bool,
     search: TextInput,
-    // todo: toggle deleted
 }
 
 struct CardStats {
@@ -378,13 +382,57 @@ impl CardsPage {
             index: 0,
             state: CardState::Browse,
             sort: CardSort::Newest,
+            show_archived: false,
             search: TextInput::new().with_placeholder("search..."),
+        }
+    }
+
+    fn fetch_cards(&mut self, db: &Database, matcher: &mut Matcher) {
+        if self.search.is_empty() {
+            let all_cards = db
+                .iter()
+                .filter(|(_, card)| card.archived == self.show_archived)
+                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default())));
+            self.cards.extend(all_cards);
+        } else {
+            let matched_cards = db
+                .iter()
+                .filter(|(_, card)| card.archived == self.show_archived)
+                .search(self.search.as_str(), matcher)
+                .map(|(id, card, score)| (id, CardStats::new(card, score)));
+            self.cards.extend(matched_cards);
+        }
+    }
+
+    fn sort_cards(&mut self) {
+        match self.sort {
+            CardSort::Newest => {
+                self.cards
+                    .sort_unstable_by_key(|(_, stats)| std::cmp::Reverse(stats.creation));
+            }
+            CardSort::Oldest => {
+                self.cards.sort_unstable_by_key(|(_, stats)| stats.creation);
+            }
+            CardSort::Easy => {
+                self.cards
+                    .sort_unstable_by(|(_, s1), (_, s2)| s1.difficulty.total_cmp(&s2.difficulty));
+            }
+            CardSort::Hard => {
+                self.cards.sort_unstable_by(|(_, s1), (_, s2)| {
+                    s1.difficulty.total_cmp(&s2.difficulty).reverse()
+                });
+            }
+            CardSort::Search => {
+                self.cards
+                    .sort_by_key(|(_, stats)| std::cmp::Reverse(stats.score));
+            }
         }
     }
 
     pub fn on_enter(&mut self, db: &Database) {
         self.cards.extend(
             db.iter()
+                .filter(|(_, card)| card.archived == self.show_archived)
                 .map(|(id, card)| (id, CardStats::new(card, MatchScore::default()))),
         );
         self.sort_cards();
@@ -392,12 +440,12 @@ impl CardsPage {
 
     pub fn on_render(
         &mut self,
-        area: Rect,
+        mut area: Rect,
         buf: &mut Buffer,
-        menu: &mut Line,
-        colors: &Colors,
-        markup: &mut Markup,
         db: &Database,
+        colors: &Colors,
+        menu: &mut Line,
+        markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
         menu.extend([
@@ -416,18 +464,30 @@ impl CardsPage {
                 },
                 STYLE_NONE.fg(colors.neutral),
             ),
+            Span::raw("   "),
+            if self.show_archived {
+                Span::styled("✓", STYLE_NONE.fg(colors.neutral))
+            } else {
+                Span::styled("✗", STYLE_NONE.fg(colors.neutral))
+            },
+            Span::raw(" "),
+            Span::styled("Show archived", STYLE_NONE.fg(colors.neutral)),
         ]);
 
         match self.state {
             CardState::Browse => {
                 if !self.search.is_empty() {
-                    menu.extend([
-                        Span::raw("   "),
-                        Span::styled(
-                            self.search.as_str().to_owned(),
-                            STYLE_ITALIC.fg(colors.neutral),
-                        ),
-                    ]);
+                    area.y = area.y.saturating_sub(1);
+
+                    let mut search_line = Line::default().centered();
+                    search_line.push_span(Span::styled(
+                        self.search.as_str(),
+                        STYLE_ITALIC.fg(colors.neutral),
+                    ));
+                    search_line.render(area, buf);
+
+                    area.y += 2;
+                    area.height = area.height.saturating_sub(1);
                 }
 
                 match self.cards.get(self.index) {
@@ -435,22 +495,46 @@ impl CardsPage {
                         let card = db.get(*id).unwrap();
                         markup.render(card.content.as_str(), area, buf, colors);
 
-                        shortcuts.extend([
-                            Shortcut::new("Browse", "⇄"),
+                        shortcuts.extend_first([
+                            Shortcut::new("Browse", "⮂"),
                             Shortcut::new("Search", "/"),
                             Shortcut::new("Sort", "s"),
+                            Shortcut::new("Toggle archived", "a"),
                         ]);
                         if !self.cards.is_empty() {
-                            shortcuts.extend([
-                                Shortcut::new("Edit", "e"),
-                                Shortcut::new("Delete", "Del"),
-                            ]);
+                            shortcuts.push_second(Shortcut::new("Edit", "e"));
+                            if self.show_archived {
+                                shortcuts.extend_second([
+                                    Shortcut::new("Restore", "r"),
+                                    Shortcut::new("Delete", "Del"),
+                                ]);
+                            } else {
+                                shortcuts.push_second(Shortcut::new("Archive", "Del"));
+                            }
                         }
                     }
                     None => {
-                        Line::raw("no cards")
-                            .alignment(Alignment::Center)
-                            .render(area, buf);
+                        let msg = if db.is_empty() {
+                            "| You have no cards"
+                        } else if self.show_archived && self.search.is_empty() {
+                            "| You have no archived cards"
+                        } else if !self.search.is_empty() {
+                            if self.show_archived {
+                                "| Found no archived cards from search query"
+                            } else {
+                                "| Found no cards from search query"
+                            }
+                        } else if db.iter().active().count() == 0 {
+                            "| You have no active cards"
+                        } else {
+                            "| todo: oops no card found"
+                        };
+                        markup.render(msg, area, buf, colors);
+                        shortcuts.extend_second([
+                            Shortcut::new("Search", "/"),
+                            Shortcut::new("Sort", "s"),
+                            Shortcut::new("Toggle archived", "a"),
+                        ]);
                     }
                 }
             }
@@ -462,7 +546,7 @@ impl CardsPage {
                     y: area.y,
                 };
                 self.search.render(search_area, buf, colors);
-                shortcuts.push(Shortcut::new("Confirm", "↵"));
+                shortcuts.push_second(Shortcut::new("Confirm", "↵"));
             }
         }
     }
@@ -498,9 +582,14 @@ impl CardsPage {
                 KeyCode::Delete => {
                     if !self.cards.is_empty() {
                         let (id, _) = self.cards.remove(self.index);
-                        db.remove(id);
+                        if self.show_archived {
+                            db.remove(id);
+                        } else {
+                            db.update(id, |card| card.archived = true);
+                        }
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
+                            markup.desired_scroll(ScrollMove::Start);
                         }
                         return Action::Render;
                     }
@@ -533,6 +622,26 @@ impl CardsPage {
                 KeyCode::Char('/') => {
                     self.state = CardState::Search;
                     return Action::Render;
+                }
+                KeyCode::Char('a') => {
+                    self.show_archived = !self.show_archived;
+                    self.index = 0;
+                    self.cards.clear();
+                    self.fetch_cards(db, matcher);
+                    self.sort_cards();
+                    markup.desired_scroll(ScrollMove::Start);
+                    return Action::Render;
+                }
+                KeyCode::Char('r') => {
+                    if self.show_archived {
+                        let (id, _) = self.cards.remove(self.index);
+                        db.update(id, |card| card.archived = false);
+                        if !self.cards.is_empty() {
+                            self.index = self.index.min(self.cards.len() - 1);
+                            markup.desired_scroll(ScrollMove::Start);
+                        }
+                        return Action::Render;
+                    }
                 }
                 _ => {
                     if markup.input(key, modifiers) {
@@ -570,46 +679,7 @@ impl CardsPage {
         self.index = 0;
         self.state = CardState::Browse;
         self.sort = CardSort::Newest;
+        self.show_archived = false;
         self.search.clear();
-    }
-
-    fn fetch_cards(&mut self, db: &Database, matcher: &mut Matcher) {
-        if self.search.is_empty() {
-            let all_cards = db
-                .iter()
-                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default())));
-            self.cards.extend(all_cards);
-        } else {
-            let matched_cards = db
-                .iter()
-                .search(self.search.as_str(), matcher)
-                .map(|(id, card, score)| (id, CardStats::new(card, score)));
-            self.cards.extend(matched_cards);
-        }
-    }
-
-    fn sort_cards(&mut self) {
-        match self.sort {
-            CardSort::Newest => {
-                self.cards
-                    .sort_unstable_by_key(|(_, stats)| std::cmp::Reverse(stats.creation));
-            }
-            CardSort::Oldest => {
-                self.cards.sort_unstable_by_key(|(_, stats)| stats.creation);
-            }
-            CardSort::Easy => {
-                self.cards
-                    .sort_unstable_by(|(_, s1), (_, s2)| s1.difficulty.total_cmp(&s2.difficulty));
-            }
-            CardSort::Hard => {
-                self.cards.sort_unstable_by(|(_, s1), (_, s2)| {
-                    s1.difficulty.total_cmp(&s2.difficulty).reverse()
-                });
-            }
-            CardSort::Search => {
-                self.cards
-                    .sort_by_key(|(_, stats)| std::cmp::Reverse(stats.score));
-            }
-        }
     }
 }
