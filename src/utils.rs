@@ -42,7 +42,7 @@ impl<'a> Shortcuts<'a> {
         }
     }
 
-    pub fn _push_first(&mut self, shortcut: Shortcut<'a>) {
+    pub fn push_first(&mut self, shortcut: Shortcut<'a>) {
         self.first.push(shortcut);
     }
 

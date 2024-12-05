@@ -546,7 +546,8 @@ impl CardsPage {
                     y: area.y,
                 };
                 self.search.render(search_area, buf, colors);
-                shortcuts.push_second(Shortcut::new("Confirm", "↵"));
+                shortcuts.push_first(Shortcut::new("Confirm", "↵"));
+                shortcuts.extend_second(TextInput::SHORTCUTS);
             }
         }
     }

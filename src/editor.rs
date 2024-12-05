@@ -437,6 +437,9 @@ pub struct TextInput {
 }
 
 impl TextInput {
+    pub const SHORTCUTS: [Shortcut<'static>; 2] =
+        [Shortcut::new("Copy", "^c"), Shortcut::new("Paste", "^v")];
+
     pub const fn new() -> Self {
         Self {
             input: String::new(),
@@ -702,6 +705,7 @@ impl TextInput {
             ));
         }
 
+        // todo: fix scroll when left-most char has width > 1
         let line_width = area.width as usize;
         if self.cursor_column > self.scroll {
             let width_diff = self.cursor_column - self.scroll;
@@ -721,7 +725,7 @@ impl TextInput {
         for span in self.spans.iter() {
             let span_width = span.width();
             skip_width += span_width;
-            if skip_width > self.scroll && input_width <= line_width {
+            if skip_width > self.scroll && input_width < line_width {
                 input_width += span_width;
                 span_area.width = span_width as u16;
                 span.render_ref(span_area, buf);
