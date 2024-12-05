@@ -68,3 +68,48 @@ pub fn _layout_center_vertical(area: Rect, constraint: Constraint) -> Rect {
         .areas(area);
     area
 }
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct MatchScore(u32);
+
+impl MatchScore {
+    pub const fn new(score: u32) -> Self {
+        Self(score)
+    }
+}
+
+pub struct Matcher {
+    matcher: nucleo_matcher::Matcher,
+    pattern: nucleo_matcher::pattern::Pattern,
+    buffer: Vec<char>,
+}
+
+impl Matcher {
+    pub fn new() -> Self {
+        Self {
+            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
+            pattern: nucleo_matcher::pattern::Pattern::new(
+                "",
+                nucleo_matcher::pattern::CaseMatching::Smart,
+                nucleo_matcher::pattern::Normalization::Smart,
+                nucleo_matcher::pattern::AtomKind::Fuzzy,
+            ),
+            buffer: Vec::new(),
+        }
+    }
+
+    pub fn update(&mut self, pattern: &str) {
+        self.pattern.reparse(
+            pattern,
+            nucleo_matcher::pattern::CaseMatching::Smart,
+            nucleo_matcher::pattern::Normalization::Smart,
+        );
+    }
+
+    pub fn score(&mut self, haystack: &str) -> Option<u32> {
+        self.pattern.score(
+            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
+            &mut self.matcher,
+        )
+    }
+}

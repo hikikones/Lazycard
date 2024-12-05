@@ -5,10 +5,11 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use crate::utils::{MatchScore, Matcher};
+
 pub struct Database {
     path: PathBuf,
     storage: Storage,
-    matcher: Matcher,
     scheduler: Scheduler,
     is_dirty: bool,
 }
@@ -26,7 +27,6 @@ impl Database {
         Ok(Self {
             path,
             storage,
-            matcher: Matcher::new(),
             scheduler: Scheduler::new(desired_retention),
             is_dirty: false,
         })
@@ -61,53 +61,11 @@ impl Database {
         self.storage.cards.iter().map(|(id, card)| (*id, card))
     }
 
-    pub fn due(&self) -> impl Iterator<Item = (CardId, &Card)> {
-        let now = UnixTime::now();
-        self.storage
-            .cards
-            .iter()
-            .filter(move |(_, card)| {
-                let review_time = card.last_review_time.unwrap_or(card.creation_time);
-                let due_time = review_time.add_days(card.review_interval);
-                due_time <= now
-            })
-            .map(|(id, card)| (*id, card))
-    }
-
-    pub fn search(&mut self, pattern: &str) -> impl Iterator<Item = (CardId, &Card, MatchScore)> {
-        self.matcher.update_pattern(pattern);
-        self.storage.cards.iter().filter_map(|(id, card)| {
-            self.matcher
-                .score(card.content.as_str())
-                .map(|score| (*id, card, MatchScore(score)))
-        })
-    }
-
-    pub fn _search_with_filter(
-        &mut self,
-        pattern: &str,
-        f: impl Fn(&Card) -> bool,
-    ) -> impl Iterator<Item = (CardId, &Card, MatchScore)> {
-        self.matcher.update_pattern(pattern);
-        self.storage
-            .cards
-            .iter()
-            .filter(move |(_, card)| f(card))
-            .filter_map(|(id, card)| {
-                self.matcher
-                    .score(card.content.as_str())
-                    .map(|score| (*id, card, MatchScore(score)))
-            })
-    }
-
     pub fn schedule(&mut self, id: CardId, success: bool) {
-        let card = self.storage.cards.get_mut(&id).unwrap();
-        let next_review_state = self.scheduler.schedule(card, success);
-        card.last_review_time = Some(UnixTime::now());
-        card.review_interval = next_review_state.interval;
-        card.review_stability = next_review_state.stability;
-        card.review_difficulty = next_review_state.difficulty;
-        self.is_dirty = true;
+        if let Some(card) = self.storage.cards.get_mut(&id) {
+            card.schedule(success, &mut self.scheduler);
+            self.is_dirty = true;
+        }
     }
 
     pub fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -134,12 +92,12 @@ pub struct CardId(u64);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Card {
-    content: String,
-    creation_time: UnixTime,
-    last_review_time: Option<UnixTime>,
-    review_interval: f32,
-    review_stability: f32,
-    review_difficulty: f32,
+    pub content: String,
+    pub creation_time: UnixTime,
+    pub last_review_time: Option<UnixTime>,
+    pub review_interval: f32,
+    pub review_stability: f32,
+    pub review_difficulty: f32,
 }
 
 impl Card {
@@ -154,20 +112,18 @@ impl Card {
         }
     }
 
-    pub fn content(&self) -> &str {
-        self.content.as_str()
+    fn is_due(&self, now: UnixTime) -> bool {
+        let review_time = self.last_review_time.unwrap_or(self.creation_time);
+        let due_time = review_time.add_days(self.review_interval);
+        due_time <= now
     }
 
-    pub fn set_content(&mut self, content: impl Into<String>) {
-        self.content = content.into();
-    }
-
-    pub const fn creation_time(&self) -> UnixTime {
-        self.creation_time
-    }
-
-    pub const fn difficulty(&self) -> f32 {
-        self.review_difficulty
+    fn schedule(&mut self, success: bool, scheduler: &mut Scheduler) {
+        let review_state = scheduler.schedule(self, success);
+        self.last_review_time = review_state.time.into();
+        self.review_interval = review_state.interval;
+        self.review_stability = review_state.stability;
+        self.review_difficulty = review_state.difficulty;
     }
 }
 
@@ -241,8 +197,9 @@ impl Scheduler {
                 difficulty: card.review_difficulty,
             })
         };
+        let now = UnixTime::now();
         let days_since_last_review = if let Some(last_review_time) = card.last_review_time {
-            last_review_time.days_since(UnixTime::now())
+            last_review_time.days_since(now)
         } else {
             0
         };
@@ -254,21 +211,23 @@ impl Scheduler {
                 days_since_last_review,
             )
             .unwrap();
-        let next_review_state = if success {
+        let state = if success {
             next_states.good
         } else {
             next_states.again
         };
 
         ReviewState {
-            interval: next_review_state.interval,
-            stability: next_review_state.memory.stability,
-            difficulty: next_review_state.memory.difficulty,
+            time: now,
+            interval: state.interval,
+            stability: state.memory.stability,
+            difficulty: state.memory.difficulty,
         }
     }
 }
 
 struct ReviewState {
+    time: UnixTime,
     interval: f32,
     stability: f32,
     difficulty: f32,
@@ -298,42 +257,35 @@ impl UnixTime {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MatchScore(u32);
-
-struct Matcher {
-    matcher: nucleo_matcher::Matcher,
-    pattern: nucleo_matcher::pattern::Pattern,
-    buffer: Vec<char>,
+pub trait CardsIterExt<'a> {
+    fn is_due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn search(
+        self,
+        pattern: &str,
+        matcher: &'a mut Matcher,
+    ) -> impl Iterator<Item = (CardId, &'a Card, MatchScore)>;
 }
 
-impl Matcher {
-    fn new() -> Self {
-        Self {
-            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
-            pattern: nucleo_matcher::pattern::Pattern::new(
-                "",
-                nucleo_matcher::pattern::CaseMatching::Smart,
-                nucleo_matcher::pattern::Normalization::Smart,
-                nucleo_matcher::pattern::AtomKind::Fuzzy,
-            ),
-            buffer: Vec::new(),
-        }
+impl<'a, I> CardsIterExt<'a> for I
+where
+    I: Iterator<Item = (CardId, &'a Card)>,
+{
+    fn is_due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+        let now = UnixTime::now();
+        self.filter(move |(_, card)| card.is_due(now))
     }
 
-    fn update_pattern(&mut self, pattern: &str) {
-        self.pattern.reparse(
-            pattern,
-            nucleo_matcher::pattern::CaseMatching::Smart,
-            nucleo_matcher::pattern::Normalization::Smart,
-        );
-    }
-
-    fn score(&mut self, haystack: &str) -> Option<u32> {
-        self.pattern.score(
-            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
-            &mut self.matcher,
-        )
+    fn search(
+        self,
+        pattern: &str,
+        matcher: &'a mut Matcher,
+    ) -> impl Iterator<Item = (CardId, &'a Card, MatchScore)> {
+        matcher.update(pattern);
+        self.filter_map(|(id, card)| {
+            matcher
+                .score(card.content.as_str())
+                .map(|score| (id, card, MatchScore::new(score)))
+        })
     }
 }
 

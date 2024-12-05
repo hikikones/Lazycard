@@ -60,7 +60,7 @@ impl ReviewPage {
     }
 
     pub fn on_enter(&mut self, db: &Database) {
-        self.due.extend(db.due().map(|(id, _)| id));
+        self.due.extend(db.iter().is_due().map(|(id, _)| id));
         self.total = self.due.len();
 
         if !self.due.is_empty() {
@@ -73,7 +73,7 @@ impl ReviewPage {
         self.text.clear();
 
         if let Some(id) = self.due.pop() {
-            let card_content = db.get(id).unwrap().content();
+            let card_content = db.get(id).unwrap().content.as_str();
 
             let mut start = 0;
             BreakParser::new(card_content).for_each(|i| {
@@ -222,7 +222,7 @@ impl CardEditorPage {
             Some(id) => {
                 let card = db.get(id).unwrap();
                 self.editor.clear();
-                self.editor.push_str(card.content());
+                self.editor.push_str(card.content.as_str());
                 self.editor.move_cursor(CursorMove::Start, false);
                 self.state = CardEditorState::Edit(id);
             }
@@ -298,7 +298,7 @@ impl CardEditorPage {
                             }
                             CardEditorState::Edit(id) => {
                                 db.update(id, |card| {
-                                    card.set_content(self.editor.as_str());
+                                    card.content = self.editor.as_str().to_owned();
                                     self.state = CardEditorState::New;
                                 });
                             }
@@ -351,8 +351,8 @@ struct CardStats {
 impl CardStats {
     const fn new(card: &Card, score: MatchScore) -> Self {
         Self {
-            creation: card.creation_time(),
-            difficulty: card.difficulty(),
+            creation: card.creation_time,
+            difficulty: card.review_difficulty,
             score,
         }
     }
@@ -382,47 +382,11 @@ impl CardsPage {
         }
     }
 
-    fn fetch_cards(&mut self, db: &mut Database) {
-        if self.search.is_empty() {
-            let all_cards = db
-                .iter()
-                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default())));
-            self.cards.extend(all_cards);
-        } else {
-            let matched_cards = db
-                .search(self.search.as_str())
-                .map(|(id, card, score)| (id, CardStats::new(card, score)));
-            self.cards.extend(matched_cards);
-        }
-    }
-
-    fn sort_cards(&mut self) {
-        match self.sort {
-            CardSort::Newest => {
-                self.cards
-                    .sort_unstable_by_key(|(_, stats)| std::cmp::Reverse(stats.creation));
-            }
-            CardSort::Oldest => {
-                self.cards.sort_unstable_by_key(|(_, stats)| stats.creation);
-            }
-            CardSort::Easy => {
-                self.cards
-                    .sort_unstable_by(|(_, s1), (_, s2)| s1.difficulty.total_cmp(&s2.difficulty));
-            }
-            CardSort::Hard => {
-                self.cards.sort_unstable_by(|(_, s1), (_, s2)| {
-                    s1.difficulty.total_cmp(&s2.difficulty).reverse()
-                });
-            }
-            CardSort::Search => {
-                self.cards
-                    .sort_by_key(|(_, stats)| std::cmp::Reverse(stats.score));
-            }
-        }
-    }
-
-    pub fn on_enter(&mut self, db: &mut Database) {
-        self.fetch_cards(db);
+    pub fn on_enter(&mut self, db: &Database) {
+        self.cards.extend(
+            db.iter()
+                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default()))),
+        );
         self.sort_cards();
     }
 
@@ -469,7 +433,7 @@ impl CardsPage {
                 match self.cards.get(self.index) {
                     Some((id, _)) => {
                         let card = db.get(*id).unwrap();
-                        markup.render(card.content(), area, buf, colors);
+                        markup.render(card.content.as_str(), area, buf, colors);
 
                         shortcuts.extend([
                             Shortcut::new("Browse", "⇄"),
@@ -509,6 +473,7 @@ impl CardsPage {
         modifiers: KeyModifiers,
         markup: &mut Markup,
         db: &mut Database,
+        matcher: &mut Matcher,
     ) -> Action {
         match self.state {
             CardState::Browse => match key {
@@ -585,7 +550,7 @@ impl CardsPage {
                     } else {
                         CardSort::Search
                     };
-                    self.fetch_cards(db);
+                    self.fetch_cards(db, matcher);
                     self.sort_cards();
                     return Action::Render;
                 }
@@ -606,5 +571,45 @@ impl CardsPage {
         self.state = CardState::Browse;
         self.sort = CardSort::Newest;
         self.search.clear();
+    }
+
+    fn fetch_cards(&mut self, db: &Database, matcher: &mut Matcher) {
+        if self.search.is_empty() {
+            let all_cards = db
+                .iter()
+                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default())));
+            self.cards.extend(all_cards);
+        } else {
+            let matched_cards = db
+                .iter()
+                .search(self.search.as_str(), matcher)
+                .map(|(id, card, score)| (id, CardStats::new(card, score)));
+            self.cards.extend(matched_cards);
+        }
+    }
+
+    fn sort_cards(&mut self) {
+        match self.sort {
+            CardSort::Newest => {
+                self.cards
+                    .sort_unstable_by_key(|(_, stats)| std::cmp::Reverse(stats.creation));
+            }
+            CardSort::Oldest => {
+                self.cards.sort_unstable_by_key(|(_, stats)| stats.creation);
+            }
+            CardSort::Easy => {
+                self.cards
+                    .sort_unstable_by(|(_, s1), (_, s2)| s1.difficulty.total_cmp(&s2.difficulty));
+            }
+            CardSort::Hard => {
+                self.cards.sort_unstable_by(|(_, s1), (_, s2)| {
+                    s1.difficulty.total_cmp(&s2.difficulty).reverse()
+                });
+            }
+            CardSort::Search => {
+                self.cards
+                    .sort_by_key(|(_, stats)| std::cmp::Reverse(stats.score));
+            }
+        }
     }
 }

@@ -10,6 +10,7 @@ pub struct App {
     db: Database,
     colors: Colors,
     markup: Markup,
+    matcher: Matcher,
     title_line: Line<'static>,
     nav_line: Line<'static>,
     menu_line: Line<'static>,
@@ -67,6 +68,7 @@ impl App {
             db: database,
             colors,
             markup: Markup::new(),
+            matcher: Matcher::new(),
             title_line,
             nav_line: Line::default().centered(),
             menu_line: Line::default().centered(),
@@ -114,6 +116,7 @@ impl App {
                                     key.modifiers,
                                     &mut self.markup,
                                     &mut self.db,
+                                    &mut self.matcher,
                                 ),
                             },
                         }
