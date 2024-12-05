@@ -4,7 +4,6 @@ use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame, DefaultTerminal};
 use crate::{database::*, markup::Markup, pages::*, utils::*};
 
 pub struct App {
-    running: bool,
     route: Route,
     pages: Pages,
     db: Database,
@@ -62,7 +61,6 @@ impl App {
         footer_line.extend(Shortcut::new("Quit", "Esc").as_spans(colors.accent));
 
         Self {
-            running: true,
             route: Route::Review,
             pages: Pages::new(),
             db: database,
@@ -82,7 +80,7 @@ impl App {
         self.pages.review.on_enter(&self.db);
         self.render(&mut terminal)?;
 
-        while self.running {
+        loop {
             let action = match crossterm::event::read()? {
                 Event::Key(key) => {
                     if key.kind == KeyEventKind::Press {
@@ -152,7 +150,7 @@ impl App {
                     self.render(&mut terminal)?;
                 }
                 Action::Quit => {
-                    self.running = false;
+                    break;
                 }
             }
         }
