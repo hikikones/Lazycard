@@ -83,6 +83,23 @@ impl Database {
         })
     }
 
+    pub fn _search_with_filter(
+        &mut self,
+        pattern: &str,
+        f: impl Fn(&Card) -> bool,
+    ) -> impl Iterator<Item = (CardId, &Card, MatchScore)> {
+        self.matcher.update_pattern(pattern);
+        self.storage
+            .cards
+            .iter()
+            .filter(move |(_, card)| f(card))
+            .filter_map(|(id, card)| {
+                self.matcher
+                    .score(card.content.as_str())
+                    .map(|score| (*id, card, MatchScore(score)))
+            })
+    }
+
     pub fn schedule(&mut self, id: CardId, success: bool) {
         let card = self.storage.cards.get_mut(&id).unwrap();
         let next_review_state = self.scheduler.schedule(card, success);
