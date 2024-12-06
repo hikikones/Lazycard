@@ -71,7 +71,7 @@ impl App {
 
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<(), Box<dyn std::error::Error>> {
         self.pages.review.on_enter(&self.db);
-        self.render(&mut terminal)?;
+        self.render(false, &mut terminal)?;
 
         loop {
             let action = match crossterm::event::read()? {
@@ -122,11 +122,10 @@ impl App {
             match action {
                 Action::None => {}
                 Action::Render => {
-                    self.render(&mut terminal)?;
+                    self.render(false, &mut terminal)?;
                 }
                 Action::ClearAndRender => {
-                    terminal.clear()?;
-                    self.render(&mut terminal)?;
+                    self.render(true, &mut terminal)?;
                 }
                 Action::Route(route) => {
                     match self.route {
@@ -138,13 +137,19 @@ impl App {
                     self.route = route;
                     self.markup.clear();
 
-                    match route {
-                        Route::Review => self.pages.review.on_enter(&self.db),
-                        Route::Editor(id) => self.pages.editor.on_enter(id, &self.db),
-                        Route::Cards => self.pages.cards.on_enter(&mut self.db),
-                    }
+                    let clear = match route {
+                        Route::Review => {
+                            self.pages.review.on_enter(&self.db);
+                            false
+                        }
+                        Route::Editor(id) => self.pages.editor.on_enter(id, &self.db)?,
+                        Route::Cards => {
+                            self.pages.cards.on_enter(&mut self.db);
+                            false
+                        }
+                    };
 
-                    self.render(&mut terminal)?;
+                    self.render(clear, &mut terminal)?;
                 }
                 Action::Quit => {
                     break;
@@ -160,8 +165,13 @@ impl App {
 
     fn render<'a>(
         &'a mut self,
+        clear: bool,
         terminal: &'a mut DefaultTerminal,
     ) -> std::io::Result<CompletedFrame> {
+        if clear {
+            terminal.clear()?;
+        }
+
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();

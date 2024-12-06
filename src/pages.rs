@@ -217,7 +217,7 @@ impl CardEditorPage {
         }
     }
 
-    pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
+    pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) -> Result<bool, std::io::Error> {
         self.preview = self.external_editor;
 
         match id {
@@ -227,11 +227,20 @@ impl CardEditorPage {
                 self.editor.push_str(card.content.as_str());
                 self.editor.move_cursor(CursorMove::Start, false);
                 self.state = CardEditorState::Edit(id);
+
+                if self.external_editor {
+                    let content = self.edit_in_external_editor()?;
+                    self.editor.clear();
+                    self.editor.push_str(&content);
+                    return Ok(true);
+                }
             }
             None => {
                 self.state = CardEditorState::New;
             }
         }
+
+        Ok(false)
     }
 
     pub fn on_render(
@@ -289,13 +298,7 @@ impl CardEditorPage {
             match key {
                 KeyCode::Char('e') => {
                     if self.external_editor {
-                        let mut stdout = std::io::stdout();
-                        crossterm::execute!(stdout, crossterm::terminal::LeaveAlternateScreen)?;
-                        crossterm::terminal::disable_raw_mode()?;
-                        let content = edit::edit(self.editor.as_str())?;
-                        crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
-                        crossterm::terminal::enable_raw_mode()?;
-
+                        let content = self.edit_in_external_editor()?;
                         self.editor.clear();
                         self.editor.push_str(&content);
                         return Ok(Action::ClearAndRender);
@@ -373,6 +376,16 @@ impl CardEditorPage {
             }
         }
         self.editor.clear();
+    }
+
+    fn edit_in_external_editor(&self) -> Result<String, std::io::Error> {
+        let mut stdout = std::io::stdout();
+        crossterm::execute!(stdout, crossterm::terminal::LeaveAlternateScreen)?;
+        crossterm::terminal::disable_raw_mode()?;
+        let content = edit::edit(self.editor.as_str())?;
+        crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+        crossterm::terminal::enable_raw_mode()?;
+        Ok(content)
     }
 }
 
