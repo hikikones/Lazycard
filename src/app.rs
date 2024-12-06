@@ -16,7 +16,7 @@ pub struct App {
     shortcuts: Shortcuts<'static>,
     shortcuts_line: Line<'static>,
     shortcuts_line2: Line<'static>,
-    footer_line: Line<'static>,
+    shortcuts_line3: Line<'static>,
 }
 
 pub struct Colors {
@@ -29,12 +29,13 @@ pub struct Colors {
 pub enum Action {
     None,
     Render,
+    ClearAndRender,
     Route(Route),
     Quit,
 }
 
 impl App {
-    pub fn new(database: Database) -> Self {
+    pub fn new(database: Database, external_editor: bool) -> Self {
         let colors =
             match terminal_colorsaurus::color_scheme(terminal_colorsaurus::QueryOptions::default())
                 .unwrap_or_default()
@@ -56,14 +57,14 @@ impl App {
         let mut title_line = Line::default().centered();
         title_line.push_span(Span::styled("lazycard", STYLE_NONE.fg(colors.neutral)));
 
-        let mut footer_line = Line::default().centered();
-        footer_line.extend(Shortcut::new("Next", "Tab").as_spans(colors.accent));
-        footer_line.extend(Shortcut::new("Prev", "⇧Tab").as_spans(colors.accent));
-        footer_line.extend(Shortcut::new("Quit", "Esc").as_spans(colors.accent));
+        let mut shortcuts_line3 = Line::default().centered();
+        shortcuts_line3.extend(Shortcut::new("Next", "Tab").as_spans(colors.accent));
+        shortcuts_line3.extend(Shortcut::new("Prev", "⇧Tab").as_spans(colors.accent));
+        shortcuts_line3.extend(Shortcut::new("Quit", "Esc").as_spans(colors.accent));
 
         Self {
             route: Route::Review,
-            pages: Pages::new(),
+            pages: Pages::new(external_editor),
             db: database,
             colors,
             markup: Markup::new(),
@@ -74,7 +75,7 @@ impl App {
             shortcuts: Shortcuts::new(),
             shortcuts_line: Line::default().centered(),
             shortcuts_line2: Line::default().centered(),
-            footer_line,
+            shortcuts_line3,
         }
     }
 
@@ -110,7 +111,7 @@ impl App {
                                     key.modifiers,
                                     &mut self.markup,
                                     &mut self.db,
-                                ),
+                                )?,
                                 Route::Cards => self.pages.cards.on_input(
                                     key.code,
                                     key.modifiers,
@@ -131,6 +132,10 @@ impl App {
             match action {
                 Action::None => {}
                 Action::Render => {
+                    self.render(&mut terminal)?;
+                }
+                Action::ClearAndRender => {
+                    terminal.clear()?;
                     self.render(&mut terminal)?;
                 }
                 Action::Route(route) => {
@@ -171,8 +176,7 @@ impl App {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let [title, _, nav, _, menu, body, shortcuts, shortcuts2, footer] = Layout::vertical([
-                Constraint::Length(1),
+            let [title, _, nav, menu, body, shortcuts, shortcuts2, footer] = Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
@@ -208,8 +212,9 @@ impl App {
 
             // Body
             const MAX_WIDTH: u16 = 64;
-            let body = layout_center_horizontal(body, Constraint::Length(MAX_WIDTH))
-                .inner(Margin::new(1, 1));
+            const MARGIN: u16 = 2;
+            let body = layout_center_horizontal(body, Constraint::Length(MAX_WIDTH + MARGIN))
+                .inner(Margin::new(MARGIN, MARGIN));
             match self.route {
                 Route::Review => {
                     self.pages.review.on_render(
@@ -261,8 +266,7 @@ impl App {
             self.shortcuts_line2.render_ref(shortcuts2, buf);
             self.shortcuts_line2.spans.clear();
 
-            // Footer
-            self.footer_line.render_ref(footer, buf);
+            self.shortcuts_line3.render_ref(footer, buf);
         })
     }
 }

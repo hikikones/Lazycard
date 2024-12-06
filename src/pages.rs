@@ -23,10 +23,10 @@ pub struct Pages {
 }
 
 impl Pages {
-    pub fn new() -> Self {
+    pub fn new(external_editor: bool) -> Self {
         Self {
             review: ReviewPage::new(),
-            editor: CardEditorPage::new(),
+            editor: CardEditorPage::new(external_editor),
             cards: CardsPage::new(),
         }
     }
@@ -200,6 +200,7 @@ pub struct CardEditorPage {
     editor: TextEditor,
     state: CardEditorState,
     preview: bool,
+    external_editor: bool,
 }
 
 enum CardEditorState {
@@ -208,15 +209,18 @@ enum CardEditorState {
 }
 
 impl CardEditorPage {
-    pub fn new() -> Self {
+    pub fn new(external_editor: bool) -> Self {
         Self {
             editor: TextEditor::new().with_placeholder("content..."),
             state: CardEditorState::New,
             preview: false,
+            external_editor,
         }
     }
 
     pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
+        self.preview = self.external_editor;
+
         match id {
             Some(id) => {
                 let card = db.get(id).unwrap();
@@ -244,7 +248,7 @@ impl CardEditorPage {
             CardEditorState::New => "New Card",
             CardEditorState::Edit(_) => "Edit Card",
         };
-        menu.push_span(Span::raw(title));
+        menu.push_span(Span::styled(title, colors.neutral));
 
         if self.preview {
             markup.render(self.editor.as_str(), area, buf, colors);
@@ -256,7 +260,11 @@ impl CardEditorPage {
 
         shortcuts.extend_first([
             Shortcut::new("Save", "^s"),
-            Shortcut::new("Toggle preview", "^p"),
+            if self.external_editor {
+                Shortcut::new("Edit", "e")
+            } else {
+                Shortcut::new("Toggle preview", "^p")
+            },
         ]);
     }
 
@@ -266,74 +274,103 @@ impl CardEditorPage {
         modifiers: KeyModifiers,
         markup: &mut Markup,
         db: &mut Database,
-    ) -> Action {
+    ) -> Result<Action, Box<dyn std::error::Error>> {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
         let shift = modifiers.contains(KeyModifiers::SHIFT);
 
-        if key == KeyCode::Char('p') && ctrl {
+        if key == KeyCode::Char('p') && ctrl && !self.external_editor {
             self.preview = !self.preview;
-            return Action::Render;
+            return Ok(Action::Render);
         }
 
         if self.preview {
-            if markup.input(key, modifiers) {
-                return Action::Render;
+            match key {
+                KeyCode::Char('e') => {
+                    if self.external_editor {
+                        let mut stdout = std::io::stdout();
+                        crossterm::execute!(stdout, crossterm::terminal::LeaveAlternateScreen)?;
+                        crossterm::terminal::disable_raw_mode()?;
+                        let content = edit::edit(self.editor.as_str())?;
+                        crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+                        crossterm::terminal::enable_raw_mode()?;
+
+                        self.editor.clear();
+                        self.editor.push_str(&content);
+                        return Ok(Action::ClearAndRender);
+                    }
+                }
+                KeyCode::Char('s') => {
+                    if ctrl && !self.editor.is_empty() {
+                        self.save(db);
+                        markup.clear();
+                        return Ok(Action::Render);
+                    }
+                }
+                _ => {
+                    if markup.input(key, modifiers) {
+                        return Ok(Action::Render);
+                    }
+                }
             }
         } else {
             match key {
                 KeyCode::Up => {
                     if self.editor.move_cursor(CursorMove::Up, shift) {
-                        return Action::Render;
+                        return Ok(Action::Render);
                     }
                 }
                 KeyCode::Down => {
                     if self.editor.move_cursor(CursorMove::Down, shift) {
-                        return Action::Render;
+                        return Ok(Action::Render);
                     }
                 }
                 KeyCode::Char('s') => {
                     if ctrl {
-                        markup.clear();
-                        self.preview = false;
-                        match self.state {
-                            CardEditorState::New => {
-                                let card = Card::new(self.editor.as_str().to_owned());
-                                db.add(card);
-                            }
-                            CardEditorState::Edit(id) => {
-                                db.update(id, |card| {
-                                    card.content = self.editor.as_str().to_owned();
-                                    self.state = CardEditorState::New;
-                                });
-                            }
+                        if !self.editor.is_empty() {
+                            self.save(db);
+                            markup.clear();
                         }
-                        self.editor.clear();
                     } else {
                         self.editor.push_char('s');
                     }
-                    return Action::Render;
+                    return Ok(Action::Render);
                 }
                 KeyCode::Char('p') => {
                     self.editor.push_char('p');
-                    return Action::Render;
+                    return Ok(Action::Render);
                 }
                 _ => {
                     if self.editor.input(key, modifiers) {
-                        return Action::Render;
+                        return Ok(Action::Render);
                     }
                 }
             }
         }
 
-        Action::None
+        Ok(Action::None)
     }
 
     pub fn on_exit(&mut self) {
-        self.preview = false;
-
         if let CardEditorState::Edit(_) = self.state {
             self.editor.clear();
         }
+    }
+
+    fn save(&mut self, db: &mut Database) {
+        self.preview = self.external_editor;
+        match self.state {
+            CardEditorState::New => {
+                let card = Card::new(self.editor.as_str().to_owned());
+                db.add(card);
+            }
+            CardEditorState::Edit(id) => {
+                db.update(id, |card| {
+                    card.content = self.editor.as_str().to_owned();
+                    self.state = CardEditorState::New;
+                });
+            }
+        }
+        self.editor.clear();
     }
 }
 

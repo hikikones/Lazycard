@@ -59,6 +59,10 @@ impl TextEditor {
         self
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.input.is_empty()
+    }
+
     pub fn as_str(&self) -> &str {
         self.input.as_str()
     }
@@ -457,12 +461,12 @@ impl TextInput {
         self
     }
 
-    pub fn as_str(&self) -> &str {
-        self.input.as_str()
+    pub fn is_empty(&self) -> bool {
+        self.input.is_empty()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.input.as_str().is_empty()
+    pub fn as_str(&self) -> &str {
+        self.input.as_str()
     }
 
     pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
