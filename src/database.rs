@@ -5,8 +5,6 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::utils::{MatchScore, Matcher};
-
 pub struct Database {
     path: PathBuf,
     storage: Storage,
@@ -118,7 +116,7 @@ impl Card {
         }
     }
 
-    fn is_due(&self, now: UnixTime) -> bool {
+    pub fn is_due(&self, now: UnixTime) -> bool {
         let review_time = self.last_review_time.unwrap_or(self.creation_time);
         let due_time = review_time.add_days(self.review_interval);
         due_time <= now
@@ -245,7 +243,7 @@ pub struct UnixTime(u64);
 impl UnixTime {
     const SECONDS_PER_DAY: u64 = 86400;
 
-    fn now() -> Self {
+    pub fn now() -> Self {
         let secs_since_unix_epoch = std::time::SystemTime::now()
             .duration_since(std::time::SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -260,48 +258,6 @@ impl UnixTime {
     const fn add_days(self, days: f32) -> Self {
         let days_in_secs = days * Self::SECONDS_PER_DAY as f32;
         Self(self.0 + days_in_secs as u64)
-    }
-}
-
-pub trait CardsIterExt<'a> {
-    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
-    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)>;
-    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)>;
-    fn search(
-        self,
-        pattern: &str,
-        matcher: &'a mut Matcher,
-    ) -> impl Iterator<Item = (CardId, &'a Card, MatchScore)>;
-}
-
-impl<'a, I> CardsIterExt<'a> for I
-where
-    I: Iterator<Item = (CardId, &'a Card)>,
-{
-    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
-        let now = UnixTime::now();
-        self.filter(move |(_, card)| !card.archived && card.is_due(now))
-    }
-
-    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)> {
-        self.filter(|(_, card)| !card.archived)
-    }
-
-    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)> {
-        self.filter(|(_, card)| card.archived)
-    }
-
-    fn search(
-        self,
-        pattern: &str,
-        matcher: &'a mut Matcher,
-    ) -> impl Iterator<Item = (CardId, &'a Card, MatchScore)> {
-        matcher.update(pattern);
-        self.filter_map(|(id, card)| {
-            matcher
-                .score(card.content.as_str())
-                .map(|score| (id, card, MatchScore::new(score)))
-        })
     }
 }
 

@@ -2,10 +2,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{prelude::*, widgets::WidgetRef};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{
-    app::Colors,
-    utils::{Shortcut, STYLE_ITALIC, STYLE_NONE},
-};
+use crate::app::{Colors, Shortcut};
 
 pub struct TextEditor {
     input: String,
@@ -325,8 +322,8 @@ impl TextEditor {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
-        let cursor_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
-        let selector_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
+        let cursor_style = Style::new().bg(colors.accent).fg(colors.on_accent);
+        let selector_style = cursor_style;
 
         self.line_start_indexes.push(0);
         self.lines.push(Line::default());
@@ -353,7 +350,7 @@ impl TextEditor {
             } else if is_selected {
                 selector_style
             } else {
-                STYLE_NONE
+                Style::new()
             };
 
             let (is_next_line, span) = if g.contains('\n') {
@@ -400,7 +397,7 @@ impl TextEditor {
         if self.input.is_empty() {
             self.lines[0].push_span(Span::styled(
                 self.placeholder,
-                STYLE_ITALIC.fg(colors.neutral),
+                Style::new().italic().fg(colors.neutral),
             ));
         }
 
@@ -671,8 +668,8 @@ impl TextInput {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
-        let cursor_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
-        let selector_style = STYLE_NONE.bg(colors.accent).fg(colors.on_accent);
+        let cursor_style = Style::new().bg(colors.accent).fg(colors.on_accent);
+        let selector_style = cursor_style;
 
         let mut graphemes = self.input.grapheme_indices(true);
 
@@ -694,7 +691,7 @@ impl TextInput {
             } else if is_selected {
                 selector_style
             } else {
-                STYLE_NONE
+                Style::new()
             };
 
             let span = Span::styled(g.to_string(), style);
@@ -705,7 +702,7 @@ impl TextInput {
         if self.input.is_empty() {
             self.spans.push(Span::styled(
                 self.placeholder,
-                STYLE_ITALIC.fg(colors.neutral),
+                Style::new().italic().fg(colors.neutral),
             ));
         }
 

@@ -1,13 +1,7 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 
-use crate::{
-    app::{Action, Colors},
-    database::*,
-    editor::*,
-    markup::*,
-    utils::*,
-};
+use crate::{app::*, database::*, editor::*, markup::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -112,21 +106,26 @@ impl ReviewPage {
             ReviewState::Review(_) => {
                 menu.push_span(Span::styled(
                     format!("{} / {}", self.progress, self.total),
-                    STYLE_NONE.fg(colors.neutral),
+                    Style::new().fg(colors.neutral),
                 ));
 
                 markup.render(&self.text, area, buf, colors);
 
                 if !self.reveals.is_empty() {
-                    shortcuts.extend_first([Shortcut::new("Show", "Space")]);
+                    shortcuts.extend(ShortcutLine::Top, [Shortcut::new("Show", "Space")]);
                 } else {
-                    shortcuts.extend_first([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
+                    shortcuts.extend(
+                        ShortcutLine::Top,
+                        [Shortcut::new("Yes", "y"), Shortcut::new("No", "n")],
+                    );
                 }
                 if !self.due.is_empty() {
-                    shortcuts.push_second(Shortcut::new("Skip", "➝"));
+                    shortcuts.push(ShortcutLine::Middle, Shortcut::new("Skip", "➝"));
                 }
-                shortcuts
-                    .extend_second([Shortcut::new("Edit", "e"), Shortcut::new("Archive", "Del")]);
+                shortcuts.extend(
+                    ShortcutLine::Middle,
+                    [Shortcut::new("Edit", "e"), Shortcut::new("Archive", "Del")],
+                );
             }
             ReviewState::Done => {
                 markup.render("| Good job!", area, buf, colors);
@@ -252,20 +251,23 @@ impl CardEditorPage {
 
         if self.preview {
             markup.render(self.editor.as_str(), area, buf, colors);
-            shortcuts.extend_second(Markup::SHORTCUTS);
+            shortcuts.extend(ShortcutLine::Middle, Markup::SHORTCUTS);
         } else {
             self.editor.render(area, buf, colors);
-            shortcuts.extend_second(TextEditor::SHORTCUTS);
+            shortcuts.extend(ShortcutLine::Middle, TextEditor::SHORTCUTS);
         }
 
-        shortcuts.extend_first([
-            Shortcut::new("Save", "^s"),
-            if self.external_editor {
-                Shortcut::new("Edit", "e")
-            } else {
-                Shortcut::new("Toggle preview", "^p")
-            },
-        ]);
+        shortcuts.extend(
+            ShortcutLine::Top,
+            [
+                Shortcut::new("Save", "^s"),
+                if self.external_editor {
+                    Shortcut::new("Edit", "e")
+                } else {
+                    Shortcut::new("Toggle preview", "^p")
+                },
+            ],
+        );
     }
 
     pub fn on_input(
@@ -386,11 +388,11 @@ pub struct CardsPage {
 struct CardStats {
     creation: UnixTime,
     difficulty: f32,
-    score: MatchScore,
+    score: u32,
 }
 
 impl CardStats {
-    const fn new(card: &Card, score: MatchScore) -> Self {
+    const fn new(card: &Card, score: u32) -> Self {
         Self {
             creation: card.creation_time,
             difficulty: card.review_difficulty,
@@ -429,7 +431,7 @@ impl CardsPage {
             let all_cards = db
                 .iter()
                 .filter(|(_, card)| card.archived == self.show_archived)
-                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default())));
+                .map(|(id, card)| (id, CardStats::new(card, 0)));
             self.cards.extend(all_cards);
         } else {
             let matched_cards = db
@@ -470,7 +472,7 @@ impl CardsPage {
         self.cards.extend(
             db.iter()
                 .filter(|(_, card)| card.archived == self.show_archived)
-                .map(|(id, card)| (id, CardStats::new(card, MatchScore::default()))),
+                .map(|(id, card)| (id, CardStats::new(card, 0))),
         );
         self.sort_cards();
     }
@@ -488,7 +490,7 @@ impl CardsPage {
         menu.extend([
             Span::styled(
                 format!("{} / {}", self.index + 1, self.cards.len()),
-                STYLE_NONE.fg(colors.neutral),
+                Style::new().fg(colors.neutral),
             ),
             Span::raw("   "),
             Span::styled(
@@ -499,16 +501,16 @@ impl CardsPage {
                     CardSort::Hard => "Hard",
                     CardSort::Search => "Search",
                 },
-                STYLE_NONE.fg(colors.neutral),
+                Style::new().fg(colors.neutral),
             ),
             Span::raw("   "),
             if self.show_archived {
-                Span::styled("✓", STYLE_NONE.fg(colors.neutral))
+                Span::styled("✓", Style::new().fg(colors.neutral))
             } else {
-                Span::styled("✗", STYLE_NONE.fg(colors.neutral))
+                Span::styled("✗", Style::new().fg(colors.neutral))
             },
             Span::raw(" "),
-            Span::styled("Show archived", STYLE_NONE.fg(colors.neutral)),
+            Span::styled("Show archived", Style::new().fg(colors.neutral)),
         ]);
 
         match self.state {
@@ -519,7 +521,7 @@ impl CardsPage {
                     let mut search_line = Line::default().centered();
                     search_line.push_span(Span::styled(
                         self.search.as_str(),
-                        STYLE_ITALIC.fg(colors.neutral),
+                        Style::new().italic().fg(colors.neutral),
                     ));
                     search_line.render(area, buf);
 
@@ -532,21 +534,28 @@ impl CardsPage {
                         let card = db.get(*id).unwrap();
                         markup.render(card.content.as_str(), area, buf, colors);
 
-                        shortcuts.extend_first([
-                            Shortcut::new("Browse", "⮂"),
-                            Shortcut::new("Search", "/"),
-                            Shortcut::new("Sort", "s"),
-                            Shortcut::new("Toggle archived", "a"),
-                        ]);
+                        shortcuts.extend(
+                            ShortcutLine::Top,
+                            [
+                                Shortcut::new("Browse", "⮂"),
+                                Shortcut::new("Search", "/"),
+                                Shortcut::new("Sort", "s"),
+                                Shortcut::new("Toggle archived", "a"),
+                            ],
+                        );
                         if !self.cards.is_empty() {
-                            shortcuts.push_second(Shortcut::new("Edit", "e"));
+                            shortcuts.push(ShortcutLine::Middle, Shortcut::new("Edit", "e"));
                             if self.show_archived {
-                                shortcuts.extend_second([
-                                    Shortcut::new("Restore", "r"),
-                                    Shortcut::new("Delete", "Del"),
-                                ]);
+                                shortcuts.extend(
+                                    ShortcutLine::Middle,
+                                    [
+                                        Shortcut::new("Restore", "r"),
+                                        Shortcut::new("Delete", "Del"),
+                                    ],
+                                );
                             } else {
-                                shortcuts.push_second(Shortcut::new("Archive", "Del"));
+                                shortcuts
+                                    .push(ShortcutLine::Middle, Shortcut::new("Archive", "Del"));
                             }
                         }
                     }
@@ -567,11 +576,14 @@ impl CardsPage {
                             "| todo: oops no card found"
                         };
                         markup.render(msg, area, buf, colors);
-                        shortcuts.extend_second([
-                            Shortcut::new("Search", "/"),
-                            Shortcut::new("Sort", "s"),
-                            Shortcut::new("Toggle archived", "a"),
-                        ]);
+                        shortcuts.extend(
+                            ShortcutLine::Middle,
+                            [
+                                Shortcut::new("Search", "/"),
+                                Shortcut::new("Sort", "s"),
+                                Shortcut::new("Toggle archived", "a"),
+                            ],
+                        );
                     }
                 }
             }
@@ -583,8 +595,8 @@ impl CardsPage {
                     y: area.y,
                 };
                 self.search.render(search_area, buf, colors);
-                shortcuts.push_first(Shortcut::new("Confirm", "↵"));
-                shortcuts.extend_second(TextInput::SHORTCUTS);
+                shortcuts.push(ShortcutLine::Top, Shortcut::new("Confirm", "↵"));
+                shortcuts.extend(ShortcutLine::Middle, TextInput::SHORTCUTS);
             }
         }
     }

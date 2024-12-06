@@ -1,7 +1,8 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind};
+use layout::Flex;
 use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame, DefaultTerminal};
 
-use crate::{database::*, markup::Markup, pages::*, utils::*};
+use crate::{database::*, markup::Markup, pages::*};
 
 pub struct App {
     route: Route,
@@ -14,9 +15,6 @@ pub struct App {
     nav_line: Line<'static>,
     menu_line: Line<'static>,
     shortcuts: Shortcuts<'static>,
-    shortcuts_line: Line<'static>,
-    shortcuts_line2: Line<'static>,
-    shortcuts_line3: Line<'static>,
 }
 
 pub struct Colors {
@@ -55,12 +53,7 @@ impl App {
             };
 
         let mut title_line = Line::default().centered();
-        title_line.push_span(Span::styled("lazycard", STYLE_NONE.fg(colors.neutral)));
-
-        let mut shortcuts_line3 = Line::default().centered();
-        shortcuts_line3.extend(Shortcut::new("Next", "Tab").as_spans(colors.accent));
-        shortcuts_line3.extend(Shortcut::new("Prev", "⇧Tab").as_spans(colors.accent));
-        shortcuts_line3.extend(Shortcut::new("Quit", "Esc").as_spans(colors.accent));
+        title_line.push_span(Span::styled("lazycard", Style::new().fg(colors.neutral)));
 
         Self {
             route: Route::Review,
@@ -73,9 +66,6 @@ impl App {
             nav_line: Line::default().centered(),
             menu_line: Line::default().centered(),
             shortcuts: Shortcuts::new(),
-            shortcuts_line: Line::default().centered(),
-            shortcuts_line2: Line::default().centered(),
-            shortcuts_line3,
         }
     }
 
@@ -176,20 +166,19 @@ impl App {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let [title, _, nav, menu, body, shortcuts, shortcuts2, footer] = Layout::vertical([
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Min(0),
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
-            ])
-            .areas(area);
+            let [title_area, _, nav_area, menu_area, body_area, shortcuts_area] =
+                Layout::vertical([
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                    Constraint::Min(0),
+                    Constraint::Length(3),
+                ])
+                .areas(area);
 
             // Title
-            self.title_line.render_ref(title, buf);
+            self.title_line.render_ref(title_area, buf);
 
             // Navigation
             for route in [Route::Review, Route::Editor(None), Route::Cards] {
@@ -199,21 +188,21 @@ impl App {
                     Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
                 };
                 let style = if is_current {
-                    STYLE_BOLD.fg(self.colors.accent)
+                    Style::new().bold().fg(self.colors.accent)
                 } else {
-                    STYLE_NONE
+                    Style::new()
                 };
                 self.nav_line
                     .extend([Span::styled(name, style), Span::raw("   ")]);
             }
             self.nav_line.spans.pop();
-            self.nav_line.render_ref(nav, buf);
+            self.nav_line.render_ref(nav_area, buf);
             self.nav_line.spans.clear();
 
             // Body
             const MAX_WIDTH: u16 = 64;
             const MARGIN: u16 = 2;
-            let body = layout_center_horizontal(body, Constraint::Length(MAX_WIDTH + MARGIN))
+            let body = center_horizontal(body_area, Constraint::Length(MAX_WIDTH + MARGIN))
                 .inner(Margin::new(MARGIN, MARGIN));
             match self.route {
                 Route::Review => {
@@ -250,23 +239,185 @@ impl App {
             }
 
             // Menu
-            self.menu_line.render_ref(menu, buf);
+            self.menu_line.render_ref(menu_area, buf);
             self.menu_line.spans.clear();
 
             // Shortcuts
-            self.shortcuts
-                .drain_first()
-                .for_each(|s| self.shortcuts_line.extend(s.as_spans(self.colors.accent)));
-            self.shortcuts_line.render_ref(shortcuts, buf);
-            self.shortcuts_line.spans.clear();
+            self.shortcuts.extend(
+                ShortcutLine::Bottom,
+                [
+                    Shortcut::new("Next", "Tab"),
+                    Shortcut::new("Prev", "⇧Tab"),
+                    Shortcut::new("Quit", "Esc"),
+                ],
+            );
+            self.shortcuts.render(shortcuts_area, buf, &self.colors);
+        })
+    }
+}
 
-            self.shortcuts
-                .drain_second()
-                .for_each(|s| self.shortcuts_line2.extend(s.as_spans(self.colors.accent)));
-            self.shortcuts_line2.render_ref(shortcuts2, buf);
-            self.shortcuts_line2.spans.clear();
+pub struct Shortcut<'a> {
+    name: &'a str,
+    key: &'a str,
+}
 
-            self.shortcuts_line3.render_ref(footer, buf);
+impl<'a> Shortcut<'a> {
+    pub const fn new(name: &'a str, key: &'a str) -> Self {
+        Self { name, key }
+    }
+}
+
+pub struct Shortcuts<'a> {
+    shortcuts: Vec<(ShortcutLine, Shortcut<'a>)>,
+    top: Line<'a>,
+    middle: Line<'a>,
+    bottom: Line<'a>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ShortcutLine {
+    Top,
+    Middle,
+    Bottom,
+}
+
+impl<'a> Shortcuts<'a> {
+    fn new() -> Self {
+        Self {
+            shortcuts: Vec::new(),
+            top: Line::default().centered(),
+            middle: Line::default().centered(),
+            bottom: Line::default().centered(),
+        }
+    }
+
+    pub fn push(&mut self, line: ShortcutLine, shortcut: Shortcut<'a>) {
+        self.shortcuts.push((line, shortcut));
+    }
+
+    pub fn extend(
+        &mut self,
+        line: ShortcutLine,
+        shortcuts: impl IntoIterator<Item = Shortcut<'a>>,
+    ) {
+        self.shortcuts
+            .extend(shortcuts.into_iter().map(|s| (line, s)));
+    }
+
+    fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {
+        let key_color = colors.accent;
+        for (line, shortcut) in self.shortcuts.drain(..) {
+            let spans = [
+                Span::raw(" "),
+                Span::styled(shortcut.key, key_color),
+                Span::raw(" "),
+                Span::raw(shortcut.name),
+                Span::raw(" "),
+            ];
+            match line {
+                ShortcutLine::Top => self.top.extend(spans),
+                ShortcutLine::Middle => self.middle.extend(spans),
+                ShortcutLine::Bottom => self.bottom.extend(spans),
+            }
+        }
+
+        let [top, middle, bottom] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(area);
+        self.top.render_ref(top, buf);
+        self.middle.render_ref(middle, buf);
+        self.bottom.render_ref(bottom, buf);
+
+        self.top.spans.clear();
+        self.middle.spans.clear();
+        self.bottom.spans.clear();
+    }
+}
+
+pub struct Matcher {
+    matcher: nucleo_matcher::Matcher,
+    pattern: nucleo_matcher::pattern::Pattern,
+    buffer: Vec<char>,
+}
+
+impl Matcher {
+    pub fn new() -> Self {
+        Self {
+            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
+            pattern: nucleo_matcher::pattern::Pattern::new(
+                "",
+                nucleo_matcher::pattern::CaseMatching::Smart,
+                nucleo_matcher::pattern::Normalization::Smart,
+                nucleo_matcher::pattern::AtomKind::Fuzzy,
+            ),
+            buffer: Vec::new(),
+        }
+    }
+
+    pub fn update(&mut self, pattern: &str) {
+        self.pattern.reparse(
+            pattern,
+            nucleo_matcher::pattern::CaseMatching::Smart,
+            nucleo_matcher::pattern::Normalization::Smart,
+        );
+    }
+
+    pub fn score(&mut self, haystack: &str) -> Option<u32> {
+        self.pattern.score(
+            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
+            &mut self.matcher,
+        )
+    }
+}
+
+fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {
+    let [area] = Layout::horizontal([constraint])
+        .flex(Flex::Center)
+        .areas(area);
+    area
+}
+
+pub trait CardsIterExt<'a> {
+    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+    fn search(
+        self,
+        pattern: &str,
+        matcher: &'a mut Matcher,
+    ) -> impl Iterator<Item = (CardId, &'a Card, u32)>;
+}
+
+impl<'a, I> CardsIterExt<'a> for I
+where
+    I: Iterator<Item = (CardId, &'a Card)>,
+{
+    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+        let now = UnixTime::now();
+        self.filter(move |(_, card)| !card.archived && card.is_due(now))
+    }
+
+    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+        self.filter(|(_, card)| !card.archived)
+    }
+
+    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+        self.filter(|(_, card)| card.archived)
+    }
+
+    fn search(
+        self,
+        pattern: &str,
+        matcher: &'a mut Matcher,
+    ) -> impl Iterator<Item = (CardId, &'a Card, u32)> {
+        matcher.update(pattern);
+        self.filter_map(|(id, card)| {
+            matcher
+                .score(card.content.as_str())
+                .map(|score| (id, card, score))
         })
     }
 }

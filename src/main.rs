@@ -5,7 +5,6 @@ mod database;
 mod editor;
 mod markup;
 mod pages;
-mod utils;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();

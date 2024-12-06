@@ -16,10 +16,7 @@ use syntect::{
 };
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
-use crate::{
-    app::Colors,
-    utils::{Shortcut, STYLE_BOLD, STYLE_ITALIC, STYLE_NONE},
-};
+use crate::app::{Colors, Shortcut};
 
 #[derive(Debug)]
 pub struct Markup {
@@ -126,7 +123,7 @@ impl Markup {
                     }
                     BlockElement::Comment { .. } => continue,
                     BlockElement::Break => self.lines.push(
-                        Line::styled("——————————", STYLE_NONE.fg(colors.neutral))
+                        Line::styled("——————————", Style::new().fg(colors.neutral))
                             .alignment(Alignment::Center),
                     ),
                 }
@@ -181,9 +178,9 @@ impl Markup {
 
         for (tag, span) in InlineParser::new(text) {
             let style = match tag {
-                InlineTag::Normal => STYLE_NONE,
-                InlineTag::Bold => STYLE_BOLD,
-                InlineTag::Italic => STYLE_ITALIC,
+                InlineTag::Normal => Style::new(),
+                InlineTag::Bold => Style::new().bold(),
+                InlineTag::Italic => Style::new().italic(),
             };
             for g in span.graphemes(true) {
                 if g.chars().any(|c| c.is_whitespace()) {
