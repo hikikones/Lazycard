@@ -33,6 +33,7 @@ pub struct ReviewPage {
     state: ReviewState,
     reveals: Vec<String>,
     text: String,
+    rng: fastrand::Rng,
 }
 
 enum ReviewState {
@@ -42,7 +43,7 @@ enum ReviewState {
 }
 
 impl ReviewPage {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             due: Vec::new(),
             total: 0,
@@ -50,6 +51,7 @@ impl ReviewPage {
             state: ReviewState::None,
             reveals: Vec::new(),
             text: String::new(),
+            rng: fastrand::Rng::new(),
         }
     }
 
@@ -57,36 +59,43 @@ impl ReviewPage {
         self.due.extend(db.iter().due().map(|(id, _)| id));
         self.total = self.due.len();
 
-        if !self.due.is_empty() {
-            self.next_card(db);
+        if let Some(id) = self.next_card() {
+            self.start_review(id, db);
         }
     }
 
-    fn next_card(&mut self, db: &Database) {
+    fn next_card(&mut self) -> Option<CardId> {
+        if self.due.is_empty() {
+            None
+        } else {
+            let random_index = self.rng.usize(0..self.due.len());
+            Some(self.due.remove(random_index))
+        }
+    }
+
+    fn start_review(&mut self, id: CardId, db: &Database) {
         self.reveals.clear();
         self.text.clear();
 
-        if let Some(id) = self.due.pop() {
-            let card_content = db.get(id).unwrap().content.as_str();
+        let card_content = db.get(id).unwrap().content.as_str();
 
-            let mut start = 0;
-            BreakParser::new(card_content).for_each(|i| {
-                self.reveals.push(card_content[start..i].to_owned());
-                start = i;
-            });
-            self.reveals.push(card_content[start..].to_owned());
-            self.reveals.reverse();
-
-            self.reveal_next();
-            self.state = ReviewState::Review(id);
-        } else {
-            self.state = ReviewState::Done;
+        let mut start = 0;
+        for i in BreakParser::new(card_content) {
+            self.reveals.push(card_content[start..i].to_owned());
+            start = i;
         }
+        self.reveals.push(card_content[start..].to_owned());
+        self.reveals.reverse();
+        self.state = ReviewState::Review(id);
+        self.reveal_next();
     }
 
-    fn reveal_next(&mut self) {
+    fn reveal_next(&mut self) -> bool {
         if let Some(s) = self.reveals.pop() {
             self.text.push_str(s.as_str());
+            true
+        } else {
+            false
         }
     }
 
@@ -146,29 +155,38 @@ impl ReviewPage {
                 KeyCode::Delete => {
                     db.update(id, |card| card.archived = true);
                     self.total = self.total.saturating_sub(1);
-                    self.next_card(db);
-                    markup.desired_scroll(ScrollMove::Start);
+                    if let Some(next_id) = self.next_card() {
+                        self.start_review(next_id, db);
+                        markup.desired_scroll(ScrollMove::Start);
+                    } else {
+                        self.state = ReviewState::Done;
+                    }
                     return Action::Render;
                 }
                 KeyCode::Char(' ') => {
-                    if !self.reveals.is_empty() {
-                        self.reveal_next();
+                    if self.reveal_next() {
                         markup.desired_scroll(ScrollMove::End);
                         return Action::Render;
                     }
                 }
                 KeyCode::Char('y' | 'n') => {
-                    let success = key == KeyCode::Char('y');
-                    db.schedule(id, success);
-                    self.progress += 1;
-                    self.next_card(db);
-                    markup.desired_scroll(ScrollMove::Start);
-                    return Action::Render;
+                    if self.reveals.is_empty() {
+                        let success = key == KeyCode::Char('y');
+                        db.schedule(id, success);
+                        self.progress += 1;
+                        if let Some(next_id) = self.next_card() {
+                            self.start_review(next_id, db);
+                            markup.desired_scroll(ScrollMove::Start);
+                        } else {
+                            self.state = ReviewState::Done;
+                        }
+                        return Action::Render;
+                    }
                 }
                 KeyCode::Right => {
-                    if !self.due.is_empty() {
-                        self.next_card(db);
-                        self.due.insert(0, id);
+                    if let Some(next_id) = self.next_card() {
+                        self.due.push(id);
+                        self.start_review(next_id, db);
                         markup.desired_scroll(ScrollMove::Start);
                         return Action::Render;
                     }

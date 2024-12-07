@@ -1869,6 +1869,7 @@ dependencies = [
  "clap",
  "crossterm",
  "edit",
+ "fastrand",
  "fsrs",
  "nucleo-matcher",
  "ratatui",

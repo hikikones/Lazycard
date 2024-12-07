@@ -2,12 +2,14 @@
 name = "lazycard"
 version = "0.1.0"
 edition = "2021"
+# todo: add msrs and other fields
 
 [dependencies]
 arboard = { version = "3.4", default-features = false }
 clap = { version = "4.5", features = ["derive"] }
 crossterm = "0.28"
 edit = "0.1"
+fastrand = "2.2"
 fsrs = "1.4"
 nucleo-matcher = "0.3"
 ratatui = { version = "0.29", features = ["unstable-widget-ref"] }
