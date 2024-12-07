@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 
-use crate::{app::*, database::*, editor::*, markup::*};
+use crate::{app::*, database::*, editor::*, markup::*, terminal::Terminal};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -217,7 +217,12 @@ impl CardEditorPage {
         }
     }
 
-    pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) -> Result<bool, std::io::Error> {
+    pub fn on_enter(
+        &mut self,
+        id: Option<CardId>,
+        db: &Database,
+        terminal: &mut Terminal,
+    ) -> std::io::Result<()> {
         self.preview = self.external_editor;
 
         match id {
@@ -229,10 +234,9 @@ impl CardEditorPage {
                 self.state = CardEditorState::Edit(id);
 
                 if self.external_editor {
-                    let content = self.edit_in_external_editor()?;
+                    let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
                     self.editor.clear();
                     self.editor.push_str(&content);
-                    return Ok(true);
                 }
             }
             None => {
@@ -240,7 +244,7 @@ impl CardEditorPage {
             }
         }
 
-        Ok(false)
+        Ok(())
     }
 
     pub fn on_render(
@@ -285,7 +289,8 @@ impl CardEditorPage {
         modifiers: KeyModifiers,
         markup: &mut Markup,
         db: &mut Database,
-    ) -> Result<Action, Box<dyn std::error::Error>> {
+        terminal: &mut Terminal,
+    ) -> std::io::Result<Action> {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
         let shift = modifiers.contains(KeyModifiers::SHIFT);
 
@@ -298,10 +303,10 @@ impl CardEditorPage {
             match key {
                 KeyCode::Char('e') => {
                     if self.external_editor {
-                        let content = self.edit_in_external_editor()?;
+                        let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
                         self.editor.clear();
                         self.editor.push_str(&content);
-                        return Ok(Action::ClearAndRender);
+                        return Ok(Action::Render);
                     }
                 }
                 KeyCode::Char('s') => {
@@ -376,16 +381,6 @@ impl CardEditorPage {
             }
         }
         self.editor.clear();
-    }
-
-    fn edit_in_external_editor(&self) -> Result<String, std::io::Error> {
-        let mut stdout = std::io::stdout();
-        crossterm::execute!(stdout, crossterm::terminal::LeaveAlternateScreen)?;
-        crossterm::terminal::disable_raw_mode()?;
-        let content = edit::edit(self.editor.as_str())?;
-        crossterm::execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
-        crossterm::terminal::enable_raw_mode()?;
-        Ok(content)
     }
 }
 

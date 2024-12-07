@@ -1,8 +1,8 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use layout::Flex;
-use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame, DefaultTerminal};
+use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame};
 
-use crate::{database::*, markup::Markup, pages::*};
+use crate::{database::*, markup::Markup, pages::*, terminal::Terminal};
 
 pub struct App {
     route: Route,
@@ -27,7 +27,6 @@ pub struct Colors {
 pub enum Action {
     None,
     Render,
-    ClearAndRender,
     Route(Route),
     Quit,
 }
@@ -69,9 +68,9 @@ impl App {
         }
     }
 
-    pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
         self.pages.review.on_enter(&self.db);
-        self.render(false, &mut terminal)?;
+        self.render(&mut terminal)?;
 
         loop {
             let action = match crossterm::event::read()? {
@@ -101,6 +100,7 @@ impl App {
                                     key.modifiers,
                                     &mut self.markup,
                                     &mut self.db,
+                                    &mut terminal,
                                 )?,
                                 Route::Cards => self.pages.cards.on_input(
                                     key.code,
@@ -122,10 +122,7 @@ impl App {
             match action {
                 Action::None => {}
                 Action::Render => {
-                    self.render(false, &mut terminal)?;
-                }
-                Action::ClearAndRender => {
-                    self.render(true, &mut terminal)?;
+                    self.render(&mut terminal)?;
                 }
                 Action::Route(route) => {
                     match self.route {
@@ -137,19 +134,15 @@ impl App {
                     self.route = route;
                     self.markup.clear();
 
-                    let clear = match route {
-                        Route::Review => {
-                            self.pages.review.on_enter(&self.db);
-                            false
+                    match route {
+                        Route::Review => self.pages.review.on_enter(&self.db),
+                        Route::Editor(id) => {
+                            self.pages.editor.on_enter(id, &self.db, &mut terminal)?
                         }
-                        Route::Editor(id) => self.pages.editor.on_enter(id, &self.db)?,
-                        Route::Cards => {
-                            self.pages.cards.on_enter(&mut self.db);
-                            false
-                        }
-                    };
+                        Route::Cards => self.pages.cards.on_enter(&mut self.db),
+                    }
 
-                    self.render(clear, &mut terminal)?;
+                    self.render(&mut terminal)?;
                 }
                 Action::Quit => {
                     break;
@@ -163,15 +156,7 @@ impl App {
         Ok(())
     }
 
-    fn render<'a>(
-        &'a mut self,
-        clear: bool,
-        terminal: &'a mut DefaultTerminal,
-    ) -> std::io::Result<CompletedFrame> {
-        if clear {
-            terminal.clear()?;
-        }
-
+    fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame> {
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();
@@ -314,7 +299,7 @@ impl<'a> Shortcuts<'a> {
             .extend(shortcuts.into_iter().map(|s| (line, s)));
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {
+    fn render(&mut self, mut area: Rect, buf: &mut Buffer, colors: &Colors) {
         let key_color = colors.accent;
         for (line, shortcut) in self.shortcuts.drain(..) {
             let spans = [
@@ -331,15 +316,11 @@ impl<'a> Shortcuts<'a> {
             }
         }
 
-        let [top, middle, bottom] = Layout::vertical([
-            Constraint::Length(1),
-            Constraint::Length(1),
-            Constraint::Length(1),
-        ])
-        .areas(area);
-        self.top.render_ref(top, buf);
-        self.middle.render_ref(middle, buf);
-        self.bottom.render_ref(bottom, buf);
+        self.top.render_ref(area, buf);
+        area.y += 1;
+        self.middle.render_ref(area, buf);
+        area.y += 1;
+        self.bottom.render_ref(area, buf);
 
         self.top.spans.clear();
         self.middle.spans.clear();

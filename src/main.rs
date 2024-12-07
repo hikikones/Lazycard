@@ -5,6 +5,7 @@ mod database;
 mod editor;
 mod markup;
 mod pages;
+mod terminal;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -13,10 +14,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         args.desired_retention as f32 / 100.0,
     )?;
 
-    let terminal = ratatui::init();
+    let terminal = terminal::init()?;
     let app = app::App::new(db, args.external_editor);
     let res = app.run(terminal);
-    ratatui::restore();
+    terminal::restore()?;
     res.map_err(|e| e.into())
 }
 
