@@ -98,6 +98,7 @@ impl Markup {
         let width = area.width as usize;
         self.height = area.height as usize;
 
+        // todo: switch hasher?
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
         let hash = hasher.finish();
@@ -405,7 +406,7 @@ impl<'a> BlockParser<'a> {
             let end_ticks = self.graphemes.count_consecutive("`", usize::MAX);
             if end_ticks == ticks {
                 let end = code_end + g.len() + end_ticks;
-                let mut graphemes = CustomGraphemeIter::new(&self.input[end..]);
+                let mut graphemes = self.input[end..].grapheme_indices(true);
 
                 let Some((i, g)) = graphemes.next() else {
                     return (
@@ -531,6 +532,7 @@ impl<'a> Iterator for ListItems<'a> {
     }
 }
 
+// todo: rework with start/end tags?
 #[derive(Debug, Clone, Copy)]
 enum InlineTag {
     Normal,

@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[command(version, about, long_about = None)]
 struct Args {
     /// Where to store your cards [example: ~/lazycard.ron]
-    #[clap(value_name = "DATABASE_FILE", value_hint = clap::ValueHint::FilePath)]
+    #[arg(value_name = "DATABASE_FILE", value_hint = clap::ValueHint::FilePath)]
     database: String,
 
     /// Desired retention in percent for your cards
