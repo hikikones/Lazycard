@@ -194,15 +194,31 @@ impl Markup {
                             column += 1;
                         }
                     } else {
-                        // todo: break word when word_width > width
                         if column + word_width > width {
-                            self.lines.push(line);
-                            (line, column) = new_line(wrap_indent, alignment);
+                            if word_width > width / 2 {
+                                // break word
+                                for g_span in self.word_buffer.drain(..) {
+                                    let g_width = g_span.width();
+                                    if column + g_width > width {
+                                        self.lines.push(line);
+                                        (line, column) = new_line(wrap_indent, alignment);
+                                    }
+                                    line.push_span(g_span);
+                                    column += g_width;
+                                }
+                            } else {
+                                // push word to next line
+                                self.lines.push(line);
+                                (line, column) = new_line(wrap_indent, alignment);
+                                line.extend(self.word_buffer.drain(..));
+                                column += word_width;
+                            }
+                        } else {
+                            line.extend(self.word_buffer.drain(..));
+                            column += word_width;
                         }
-
-                        line.extend(self.word_buffer.drain(..));
                         line.push_span(Span::styled(" ", style));
-                        column += word_width + 1;
+                        column += 1;
                     }
                     word_width = 0;
                 } else {
@@ -214,13 +230,27 @@ impl Markup {
         }
 
         if !self.word_buffer.is_empty() {
-            // todo: break word when word_width > width
             if column + word_width > width {
-                self.lines.push(line);
-                (line, _) = new_line(wrap_indent, alignment);
+                if word_width > width / 2 {
+                    // break word
+                    for g_span in self.word_buffer.drain(..) {
+                        let g_width = g_span.width();
+                        if column + g_width > width {
+                            self.lines.push(line);
+                            (line, column) = new_line(wrap_indent, alignment);
+                        }
+                        line.push_span(g_span);
+                        column += g_width;
+                    }
+                } else {
+                    // push word to next line
+                    self.lines.push(line);
+                    (line, _) = new_line(wrap_indent, alignment);
+                    line.extend(self.word_buffer.drain(..));
+                }
+            } else {
+                line.extend(self.word_buffer.drain(..));
             }
-
-            line.extend(self.word_buffer.drain(..));
         }
 
         self.lines.push(line);

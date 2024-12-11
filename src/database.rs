@@ -65,7 +65,7 @@ impl Database {
 
     pub fn schedule(&mut self, id: CardId, success: bool) {
         if let Some(card) = self.storage.cards.get_mut(&id) {
-            card.schedule(success, &mut self.scheduler);
+            self.scheduler.schedule(card, success);
             self.is_dirty = true;
         }
     }
@@ -90,7 +90,7 @@ impl Database {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CardId(u64);
+pub struct CardId(u64); // todo: seahash?
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Card {
@@ -121,17 +121,9 @@ impl Card {
         let due_time = review_time.add_days(self.review_interval);
         due_time <= now
     }
-
-    fn schedule(&mut self, success: bool, scheduler: &mut Scheduler) {
-        let review_state = scheduler.schedule(self, success);
-        self.last_review_time = review_state.time.into();
-        self.review_interval = review_state.interval;
-        self.review_stability = review_state.stability;
-        self.review_difficulty = review_state.difficulty;
-    }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Storage {
     version: u32,
     cards: BTreeMap<CardId, Card>,
@@ -191,7 +183,7 @@ impl Scheduler {
         }
     }
 
-    fn schedule(&mut self, card: &Card, success: bool) -> ReviewState {
+    fn schedule(&mut self, card: &mut Card, success: bool) {
         let current_memory_state = if card.review_stability == 0.0 || card.review_difficulty == 0.0
         {
             None
@@ -221,20 +213,11 @@ impl Scheduler {
             next_states.again
         };
 
-        ReviewState {
-            time: now,
-            interval: state.interval,
-            stability: state.memory.stability,
-            difficulty: state.memory.difficulty,
-        }
+        card.last_review_time = now.into();
+        card.review_interval = state.interval;
+        card.review_stability = state.memory.stability;
+        card.review_difficulty = state.memory.difficulty;
     }
-}
-
-struct ReviewState {
-    time: UnixTime,
-    interval: f32,
-    stability: f32,
-    difficulty: f32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

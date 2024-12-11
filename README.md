@@ -41,24 +41,24 @@ Cards are written in a custom lightweight markup language, inspired by both [Mar
 <tr>
 <td>
 
-````
+<pre>
 A normal paragraph with *bold* and _italic_ text.
 
 | Center paragraph
 
+# This is a comment
 > Right paragraph
 
-# This is a comment
 ---
 
 - item 1
 - item 2
 
 ```python
-define add(a, b):
+def add(a, b):
     return a + b
 ```
-````
+</pre>
 
 </td>
 <td>
@@ -74,10 +74,10 @@ A normal paragraph with **bold** and _italic_ text.
 - item 1
 - item 2
 
-```python
+<pre>
 def add(a, b):
     return a + b
-```
+</pre>
 
 </td>
 </tr>
