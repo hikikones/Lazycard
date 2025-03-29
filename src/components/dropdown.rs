@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use sir::{css, global_css};
 
 use crate::components::Button;
 
@@ -24,16 +23,8 @@ pub struct DropdownProps {
 pub fn Dropdown<'a>(props: DropdownProps) -> Element {
     let uuid = use_hook(|| uuid::Uuid::new_v4());
 
-    global_css!(
-        "
-        .show-dropdown {
-            visibility: visible !important;
-        }
-    "
-    );
-
     let on_click = move |_| {
-        eval(&format!(
+        document::eval(&format!(
             r#"
             const dropdown = document.getElementById('{uuid}');
             const menu = dropdown.children[1];
@@ -50,10 +41,7 @@ pub fn Dropdown<'a>(props: DropdownProps) -> Element {
     rsx! {
         div {
             id: "{uuid}",
-            class: css!("
-                display: inline-block;
-                position: relative;
-            "),
+            class:"dropdown",
 
             Button {
                 text_size: props.text_size,
@@ -65,15 +53,7 @@ pub fn Dropdown<'a>(props: DropdownProps) -> Element {
             }
 
             div {
-                class: css!("
-                    visibility: hidden;
-                    position: absolute;
-                    right: 0;
-                    z-index: 2;
-                    display: flex;
-                    flex-direction: column;
-                    background-color: var(--surface-color);
-                "),
+                class: "dropdown-content",
                 {props.children}
             }
         }

@@ -1,7 +1,6 @@
 use std::ops::Sub;
 
 use dioxus::prelude::*;
-use sir::css;
 
 use database::{use_database, CardId, Database};
 
@@ -99,13 +98,11 @@ pub fn Review() -> Element {
 
     rsx! {
         div {
-            class: css!("
-                display: flex;
-                height: 100%;
-                flex-direction: column;
-                justify-content: space-between;
-                align-items: center;
-            "),
+            display: "flex",
+            height: "100%",
+            flex_direction: "column",
+            justify_content: "space-between",
+            align_items: "center",
 
             div {
                 span {
@@ -115,25 +112,17 @@ pub fn Review() -> Element {
             }
 
             div {
-                class: css!("
-                    max-width: 75ch;
-                    padding: 1rem;
-                    margin: 1rem;
-                    border: none;
-                    box-shadow: 0 0.25rem 1rem var(--shadow-color);
-                    background-color: var(--surface-color);
-                    color: var(--surface-text-color);
-                "),
+                max_width: "75ch",
+                padding: "1rem",
+                margin: "1rem",
+                border: "none",
+                box_shadow: "0 0.25rem 1rem var(--shadow-color)",
+                background_color: "var(--surface-color)",
+                color: "color: var(--surface-text-color)",
                 {card_render}
             }
 
             div {
-                class: css!("
-                    & > * {
-                        margin: 0 0.5rem;
-                    }
-                "),
-
                 {button_render},
 
                 ReviewButton {

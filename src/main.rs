@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use sir::{css, global_css};
 
 mod components;
 mod routes;
@@ -54,7 +53,6 @@ pub fn app() -> Element {
     config::provide_config();
 
     rsx! {
-        sir::AppStyle {}
         Router::<Route> {}
     }
 }
@@ -70,38 +68,14 @@ fn Redirect() -> Element {
         nav.push(Route::Welcome {});
     }
 
-    None
+    VNode::empty()
 }
 
 #[allow(non_snake_case)]
 fn Main() -> Element {
-    global_css!(
-        "
-        #main {
-            display: flex;
-        }       
-    "
-    );
-
     rsx! {
         nav {
-            class: css!("
-                position: sticky;
-                top: 0;
-                height: 100vh;
-                min-width: 48px;
-                max-width: 48px;
-                background-color: var(--primary-color);
-            "),
-
             div {
-                class: css!("
-                    display: flex;
-                    height: inherit;
-                    flex-direction: column;
-                    justify-content: space-between;
-                "),
-
                 div {
                     NavLink { to: "/review", icon: IconName::Drafts }
                     NavLink { to: "/cards", icon: IconName::Layers }
@@ -115,11 +89,6 @@ fn Main() -> Element {
         }
 
         main {
-            class: css!("
-                flex-grow: 1;
-                padding: 1rem;
-            "),
-
             Outlet::<Route> {}
         }
     }
@@ -131,14 +100,6 @@ fn NavLink(props: NavLinkProps) -> Element {
         Link {
             to: props.to,
             active_class: "active",
-            class: css!("
-                display: flex;
-                padding: 10px;
-                color: var(--primary-variant-color);
-                &:hover, &.active {
-                    color: var(--primary-text-color);
-                }
-            "),
             Icon {
                 name: props.icon,
                 size: IconSize::Custom(28),

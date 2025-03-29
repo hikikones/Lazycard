@@ -33,6 +33,98 @@ body {
     overflow-x: hidden;
 }
 
+#main {
+    display: flex;
+}
+
+main {
+    flex-grow: 1;
+    padding: 1rem;
+}
+
+nav {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    min-width: 48px;
+    max-width: 48px;
+    background-color: var(--primary-color);
+}
+
+nav>div {
+    display: flex;
+    height: inherit;
+    flex-direction: column;
+    justify-content: space-between;
+
+}
+
+a {
+    display: flex;
+    padding: 10px;
+    color: var(--primary-variant-color);
+
+}
+
+a:hover,
+a.active {
+    color: var(--primary-text-color);
+}
+
+button {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    cursor: pointer;
+    border: none;
+    padding: 0.25rem;
+    color: var(--secondary-text-color);
+    background-color: transparent;
+}
+
+button:hover {
+    background-color: var(--secondary-color);
+}
+
+button:active {
+    background-color: var(--secondary-variant-color);
+}
+
+button:disabled {
+    color: var(--secondary-text-color);
+    background-color: transparent;
+    cursor: unset;
+    opacity: 0.5;
+}
+
+button>* {
+    margin-right: 0.25rem;
+    pointer-events: none;
+}
+
+button>*:last-child {
+    margin-right: 0;
+}
+
+div.dropdown {
+    display: inline-block;
+    position: relative;
+}
+
+div.dropdown-content {
+    visibility: hidden;
+    position: absolute;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--surface-color);
+}
+
+.show-dropdown {
+    visibility: visible !important;
+}
+
 :focus:not(:focus-visible) {
     outline: none;
 }
