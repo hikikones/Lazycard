@@ -34,16 +34,16 @@ pub enum Action {
 impl App {
     pub fn new(database: Database, external_editor: bool) -> Self {
         let colors =
-            match terminal_colorsaurus::color_scheme(terminal_colorsaurus::QueryOptions::default())
-                .unwrap_or_default()
+            match terminal_colorsaurus::theme_mode(terminal_colorsaurus::QueryOptions::default())
+                .unwrap_or(terminal_colorsaurus::ThemeMode::Dark)
             {
-                terminal_colorsaurus::ColorScheme::Dark => Colors {
+                terminal_colorsaurus::ThemeMode::Dark => Colors {
                     accent: Color::Yellow,
                     on_accent: Color::Black,
                     neutral: Color::DarkGray,
                     syntax_highlighting: "base16-eighties.dark",
                 },
-                terminal_colorsaurus::ColorScheme::Light => Colors {
+                terminal_colorsaurus::ThemeMode::Light => Colors {
                     accent: Color::LightBlue,
                     on_accent: Color::Black,
                     neutral: Color::DarkGray,
