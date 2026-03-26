@@ -1,6 +1,6 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use layout::Flex;
-use ratatui::{prelude::*, widgets::WidgetRef, CompletedFrame};
+use ratatui::{prelude::*, CompletedFrame};
 
 use crate::{database::*, markup::Markup, pages::*, terminal::Terminal};
 
@@ -156,7 +156,7 @@ impl App {
         Ok(())
     }
 
-    fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame> {
+    fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();
@@ -173,7 +173,7 @@ impl App {
                 .areas(area);
 
             // Title
-            self.title_line.render_ref(title_area, buf);
+            (&self.title_line).render(title_area, buf);
 
             // Navigation
             for route in [Route::Review, Route::Editor(None), Route::Cards] {
@@ -191,7 +191,7 @@ impl App {
                     .extend([Span::styled(name, style), Span::raw("   ")]);
             }
             self.nav_line.spans.pop();
-            self.nav_line.render_ref(nav_area, buf);
+            (&self.nav_line).render(nav_area, buf);
             self.nav_line.spans.clear();
 
             // Body
@@ -234,7 +234,7 @@ impl App {
             }
 
             // Menu
-            self.menu_line.render_ref(menu_area, buf);
+            (&self.menu_line).render(menu_area, buf);
             self.menu_line.spans.clear();
 
             // Shortcuts
@@ -316,11 +316,11 @@ impl<'a> Shortcuts<'a> {
             }
         }
 
-        self.top.render_ref(area, buf);
+        (&self.top).render(area, buf);
         area.y += 1;
-        self.middle.render_ref(area, buf);
+        (&self.middle).render(area, buf);
         area.y += 1;
-        self.bottom.render_ref(area, buf);
+        (&self.bottom).render(area, buf);
 
         self.top.spans.clear();
         self.middle.spans.clear();

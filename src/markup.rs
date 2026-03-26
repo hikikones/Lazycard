@@ -7,7 +7,7 @@ use std::{
 };
 
 use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::{prelude::*, widgets::WidgetRef};
+use ratatui::prelude::*;
 use syntect::{
     easy::HighlightLines,
     highlighting::{FontStyle, ThemeSet},
@@ -144,7 +144,7 @@ impl Markup {
             .skip(self.scroll)
             .take(self.height)
             .for_each(|line| {
-                line.render_ref(line_area, buf);
+                line.render(line_area, buf);
                 line_area.y += 1;
             });
     }

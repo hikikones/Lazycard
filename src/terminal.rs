@@ -23,7 +23,7 @@ pub fn restore() -> std::io::Result<()> {
 }
 
 impl Terminal {
-    pub fn draw<F>(&mut self, render_callback: F) -> std::io::Result<CompletedFrame>
+    pub fn draw<F>(&mut self, render_callback: F) -> std::io::Result<CompletedFrame<'_>>
     where
         F: FnOnce(&mut Frame),
     {

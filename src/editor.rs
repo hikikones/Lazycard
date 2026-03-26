@@ -1,5 +1,5 @@
 use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::{prelude::*, widgets::WidgetRef};
+use ratatui::prelude::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::app::{Colors, Shortcut};
@@ -421,7 +421,7 @@ impl TextEditor {
             .skip(self.scroll)
             .take(height)
             .for_each(|line| {
-                line.render_ref(line_area, buf);
+                line.render(line_area, buf);
                 line_area.y += 1;
             });
     }
@@ -729,7 +729,7 @@ impl TextInput {
             if skip_width > self.scroll && input_width < line_width {
                 input_width += span_width;
                 span_area.width = span_width as u16;
-                span.render_ref(span_area, buf);
+                span.render(span_area, buf);
                 span_area.x += span_width as u16;
             }
         }
