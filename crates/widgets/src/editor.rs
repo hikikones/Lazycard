@@ -3,9 +3,8 @@ use ratatui::{
     prelude::*,
 };
 use unicode_segmentation::UnicodeSegmentation;
-use widgets::Shortcut;
 
-use crate::app::Colors;
+use super::Shortcut;
 
 pub struct TextEditor {
     input: String,
@@ -18,6 +17,8 @@ pub struct TextEditor {
     selection_start: Option<usize>,
     scroll: usize,
     lines: Vec<Line<'static>>,
+    accent_color: Color,
+    neutral_color: Color,
 }
 
 pub enum CursorMove {
@@ -51,11 +52,19 @@ impl TextEditor {
             selection_start: None,
             scroll: 0,
             lines: Vec::new(),
+            accent_color: Color::White,
+            neutral_color: Color::DarkGray,
         }
     }
 
     pub const fn with_placeholder(mut self, s: &'static str) -> Self {
         self.placeholder = s;
+        self
+    }
+
+    pub const fn with_colors(mut self, accent: Color, neutral: Color) -> Self {
+        self.accent_color = accent;
+        self.neutral_color = neutral;
         self
     }
 
@@ -308,7 +317,7 @@ impl TextEditor {
         self.cursor_index != old_cursor
     }
 
-    pub fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer) {
         self.lines.clear();
         self.line_start_indexes.clear();
         self.cursor_column = 0;
@@ -325,7 +334,7 @@ impl TextEditor {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
-        let cursor_style = Style::new().bg(colors.accent).fg(colors.on_accent);
+        let cursor_style = Style::new().fg(self.accent_color).reversed();
         let selector_style = cursor_style;
 
         self.line_start_indexes.push(0);
@@ -400,7 +409,7 @@ impl TextEditor {
         if self.input.is_empty() {
             self.lines[0].push_span(Span::styled(
                 self.placeholder,
-                Style::new().italic().fg(colors.neutral),
+                Style::new().italic().fg(self.neutral_color),
             ));
         }
 
@@ -438,6 +447,8 @@ pub struct TextInput {
     selection_start: Option<usize>,
     scroll: usize,
     spans: Vec<Span<'static>>,
+    accent_color: Color,
+    neutral_color: Color,
 }
 
 impl TextInput {
@@ -453,11 +464,19 @@ impl TextInput {
             selection_start: None,
             scroll: 0,
             spans: Vec::new(),
+            accent_color: Color::White,
+            neutral_color: Color::DarkGray,
         }
     }
 
     pub const fn with_placeholder(mut self, s: &'static str) -> Self {
         self.placeholder = s;
+        self
+    }
+
+    pub const fn with_colors(mut self, accent: Color, neutral: Color) -> Self {
+        self.accent_color = accent;
+        self.neutral_color = neutral;
         self
     }
 
@@ -658,7 +677,7 @@ impl TextInput {
         true
     }
 
-    pub fn render(&mut self, area: Rect, buf: &mut Buffer, colors: &Colors) {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer) {
         self.spans.clear();
         self.cursor_column = 0;
 
@@ -671,7 +690,7 @@ impl TextInput {
             .selection_start
             .unwrap_or(self.cursor_index)
             .max(self.cursor_index);
-        let cursor_style = Style::new().bg(colors.accent).fg(colors.on_accent);
+        let cursor_style = Style::new().fg(self.accent_color).reversed();
         let selector_style = cursor_style;
 
         let mut graphemes = self.input.grapheme_indices(true);
@@ -705,7 +724,7 @@ impl TextInput {
         if self.input.is_empty() {
             self.spans.push(Span::styled(
                 self.placeholder,
-                Style::new().italic().fg(colors.neutral),
+                Style::new().italic().fg(self.neutral_color),
             ));
         }
 

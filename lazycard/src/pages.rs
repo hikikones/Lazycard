@@ -3,9 +3,12 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     prelude::*,
 };
-use widgets::{BreakParser, Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts};
+use widgets::{
+    BreakParser, CursorMove, Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts, TextEditor,
+    TextInput,
+};
 
-use crate::{app::*, editor::*, terminal::Terminal};
+use crate::{app::*, terminal::Terminal};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -21,11 +24,11 @@ pub struct Pages {
 }
 
 impl Pages {
-    pub fn new(external_editor: bool) -> Self {
+    pub fn new(external_editor: bool, colors: &Colors) -> Self {
         Self {
             review: ReviewPage::new(),
-            editor: CardEditorPage::new(external_editor),
-            cards: CardsPage::new(),
+            editor: CardEditorPage::new(external_editor, colors),
+            cards: CardsPage::new(colors),
         }
     }
 }
@@ -230,9 +233,11 @@ enum CardEditorState {
 }
 
 impl CardEditorPage {
-    pub fn new(external_editor: bool) -> Self {
+    pub fn new(external_editor: bool, colors: &Colors) -> Self {
         Self {
-            editor: TextEditor::new().with_placeholder("content..."),
+            editor: TextEditor::new()
+                .with_placeholder("content...")
+                .with_colors(colors.accent, colors.neutral),
             state: CardEditorState::New,
             preview: false,
             external_editor,
@@ -288,7 +293,7 @@ impl CardEditorPage {
             markup.render(self.editor.as_str(), area, buf);
             shortcuts.extend(ShortcutLine::Middle, Markup::SHORTCUTS);
         } else {
-            self.editor.render(area, buf, colors);
+            self.editor.render(area, buf);
             shortcuts.extend(ShortcutLine::Middle, TextEditor::SHORTCUTS);
         }
 
@@ -445,14 +450,16 @@ enum CardSort {
 }
 
 impl CardsPage {
-    pub fn new() -> Self {
+    pub fn new(colors: &Colors) -> Self {
         Self {
             cards: Vec::new(),
             index: 0,
             state: CardState::Browse,
             sort: CardSort::Newest,
             show_archived: false,
-            search: TextInput::new().with_placeholder("search..."),
+            search: TextInput::new()
+                .with_placeholder("search...")
+                .with_colors(colors.accent, colors.neutral),
         }
     }
 
@@ -624,7 +631,7 @@ impl CardsPage {
                     x: area.x + area.width / 4,
                     y: area.y,
                 };
-                self.search.render(search_area, buf, colors);
+                self.search.render(search_area, buf);
                 shortcuts.push(ShortcutLine::Top, Shortcut::new("Confirm", "↵"));
                 shortcuts.extend(ShortcutLine::Middle, TextInput::SHORTCUTS);
             }
