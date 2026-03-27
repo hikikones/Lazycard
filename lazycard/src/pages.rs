@@ -1,7 +1,8 @@
 use crossterm::event::{KeyCode, KeyModifiers};
+use database::*;
 use ratatui::prelude::*;
 
-use crate::{app::*, database::*, editor::*, markup::*, terminal::Terminal};
+use crate::{app::*, editor::*, markup::*, terminal::Terminal};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {

@@ -1226,6 +1226,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
+name = "database"
+version = "0.1.0"
+dependencies = [
+ "fsrs",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "deltae"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2321,13 +2330,11 @@ dependencies = [
  "arboard",
  "clap",
  "crossterm",
+ "database",
  "edit",
  "fastrand",
- "fsrs",
  "nucleo-matcher",
  "ratatui",
- "ron",
- "serde",
  "syntect",
  "terminal-colorsaurus",
  "unicode-segmentation",

@@ -1,8 +1,9 @@
 use crossterm::event::{Event, KeyCode, KeyEventKind};
+use database::*;
 use layout::Flex;
-use ratatui::{prelude::*, CompletedFrame};
+use ratatui::{CompletedFrame, prelude::*};
 
-use crate::{database::*, markup::Markup, pages::*, terminal::Terminal};
+use crate::{markup::Markup, pages::*, terminal::Terminal};
 
 pub struct App {
     route: Route,
@@ -161,16 +162,22 @@ impl App {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let [title_area, _, nav_area, menu_area, body_area, shortcuts_area] =
-                Layout::vertical([
-                    Constraint::Length(1),
-                    Constraint::Length(1),
-                    Constraint::Length(1),
-                    Constraint::Length(1),
-                    Constraint::Min(0),
-                    Constraint::Length(3),
-                ])
-                .areas(area);
+            let [
+                title_area,
+                _,
+                nav_area,
+                menu_area,
+                body_area,
+                shortcuts_area,
+            ] = Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Min(0),
+                Constraint::Length(3),
+            ])
+            .areas(area);
 
             // Title
             (&self.title_line).render(title_area, buf);

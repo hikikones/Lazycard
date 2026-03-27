@@ -1,13 +1,19 @@
-[package]
-name = "lazycard"
+[workspace]
+resolver = "3"
+members = ["crates/*", "lazycard"]
+default-members = ["lazycard"]
+
+[workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+license = "MIT"
 # todo: add msrs and other fields
 
-[dependencies]
+[workspace.dependencies]
 arboard = { version = "3.6", default-features = false }
 clap = { version = "4.6", features = ["derive"] }
 crossterm = "0.29"
+database = { path = "crates/database", default-features = false }
 edit = "0.1"
 fastrand = "2.3"
 fsrs = "5.2"
@@ -19,3 +25,13 @@ syntect = "5.3"
 terminal-colorsaurus = "1.0"
 unicode-segmentation = "1.13"
 unicode-width = "0.2"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1

@@ -1,7 +1,6 @@
 use clap::Parser;
 
 mod app;
-mod database;
 mod editor;
 mod markup;
 mod pages;
