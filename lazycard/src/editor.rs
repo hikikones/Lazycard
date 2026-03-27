@@ -1,5 +1,7 @@
-use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::prelude::*;
+use ratatui::{
+    crossterm::event::{KeyCode, KeyModifiers},
+    prelude::*,
+};
 use unicode_segmentation::UnicodeSegmentation;
 use widgets::Shortcut;
 

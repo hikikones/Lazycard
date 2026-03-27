@@ -7,7 +7,6 @@ license.workspace = true
 [dependencies]
 arboard = { workspace = true }
 clap = { workspace = true }
-crossterm = { workspace = true }
 database = { workspace = true }
 edit = { workspace = true }
 fastrand = { workspace = true }

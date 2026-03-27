@@ -1,7 +1,10 @@
-use crossterm::event::{Event, KeyCode, KeyEventKind};
 use database::*;
 use layout::Flex;
-use ratatui::{CompletedFrame, prelude::*};
+use ratatui::{
+    CompletedFrame,
+    crossterm::event::{Event, KeyCode, KeyEventKind},
+    prelude::*,
+};
 use widgets::{Markup, Shortcut, ShortcutLine, Shortcuts};
 
 use crate::{pages::*, terminal::Terminal};
@@ -78,7 +81,7 @@ impl App {
         self.render(&mut terminal)?;
 
         loop {
-            let action = match crossterm::event::read()? {
+            let action = match ratatui::crossterm::event::read()? {
                 Event::Key(key) => {
                     if key.kind == KeyEventKind::Press {
                         match key.code {

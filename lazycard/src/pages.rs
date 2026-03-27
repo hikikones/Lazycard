@@ -1,6 +1,8 @@
-use crossterm::event::{KeyCode, KeyModifiers};
 use database::*;
-use ratatui::prelude::*;
+use ratatui::{
+    crossterm::event::{KeyCode, KeyModifiers},
+    prelude::*,
+};
 use widgets::{BreakParser, Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts};
 
 use crate::{app::*, editor::*, terminal::Terminal};

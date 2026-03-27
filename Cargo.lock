@@ -2329,7 +2329,6 @@ version = "0.1.0"
 dependencies = [
  "arboard",
  "clap",
- "crossterm",
  "database",
  "edit",
  "fastrand",

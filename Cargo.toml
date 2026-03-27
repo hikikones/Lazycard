@@ -12,7 +12,6 @@ license = "MIT"
 [workspace.dependencies]
 arboard = { version = "3.6", default-features = false }
 clap = { version = "4.6", features = ["derive"] }
-crossterm = "0.29"
 database = { path = "crates/database", default-features = false }
 edit = "0.1"
 fastrand = "2.3"
