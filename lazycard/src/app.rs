@@ -2,8 +2,9 @@ use crossterm::event::{Event, KeyCode, KeyEventKind};
 use database::*;
 use layout::Flex;
 use ratatui::{CompletedFrame, prelude::*};
+use widgets::{Markup, Shortcut, ShortcutLine, Shortcuts};
 
-use crate::{markup::Markup, pages::*, terminal::Terminal};
+use crate::{pages::*, terminal::Terminal};
 
 pub struct App {
     route: Route,
@@ -55,17 +56,20 @@ impl App {
         let mut title_line = Line::default().centered();
         title_line.push_span(Span::styled("lazycard", Style::new().fg(colors.neutral)));
 
+        let markup = Markup::new(colors.syntax_highlighting);
+        let shortcuts = Shortcuts::new().with_colors(Color::Reset, colors.accent);
+
         Self {
             route: Route::Review,
             pages: Pages::new(external_editor),
             db: database,
             colors,
-            markup: Markup::new(),
+            markup,
             matcher: Matcher::new(),
             title_line,
             nav_line: Line::default().centered(),
             menu_line: Line::default().centered(),
-            shortcuts: Shortcuts::new(),
+            shortcuts,
         }
     }
 
@@ -253,85 +257,8 @@ impl App {
                     Shortcut::new("Quit", "Esc"),
                 ],
             );
-            self.shortcuts.render(shortcuts_area, buf, &self.colors);
+            self.shortcuts.render(shortcuts_area, buf);
         })
-    }
-}
-
-pub struct Shortcut<'a> {
-    name: &'a str,
-    key: &'a str,
-}
-
-impl<'a> Shortcut<'a> {
-    pub const fn new(name: &'a str, key: &'a str) -> Self {
-        Self { name, key }
-    }
-}
-
-pub struct Shortcuts<'a> {
-    shortcuts: Vec<(ShortcutLine, Shortcut<'a>)>,
-    top: Line<'a>,
-    middle: Line<'a>,
-    bottom: Line<'a>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ShortcutLine {
-    Top,
-    Middle,
-    Bottom,
-}
-
-impl<'a> Shortcuts<'a> {
-    fn new() -> Self {
-        Self {
-            shortcuts: Vec::new(),
-            top: Line::default().centered(),
-            middle: Line::default().centered(),
-            bottom: Line::default().centered(),
-        }
-    }
-
-    pub fn push(&mut self, line: ShortcutLine, shortcut: Shortcut<'a>) {
-        self.shortcuts.push((line, shortcut));
-    }
-
-    pub fn extend(
-        &mut self,
-        line: ShortcutLine,
-        shortcuts: impl IntoIterator<Item = Shortcut<'a>>,
-    ) {
-        self.shortcuts
-            .extend(shortcuts.into_iter().map(|s| (line, s)));
-    }
-
-    fn render(&mut self, mut area: Rect, buf: &mut Buffer, colors: &Colors) {
-        let key_color = colors.accent;
-        for (line, shortcut) in self.shortcuts.drain(..) {
-            let spans = [
-                Span::raw(" "),
-                Span::styled(shortcut.key, key_color),
-                Span::raw(" "),
-                Span::raw(shortcut.name),
-                Span::raw(" "),
-            ];
-            match line {
-                ShortcutLine::Top => self.top.extend(spans),
-                ShortcutLine::Middle => self.middle.extend(spans),
-                ShortcutLine::Bottom => self.bottom.extend(spans),
-            }
-        }
-
-        (&self.top).render(area, buf);
-        area.y += 1;
-        (&self.middle).render(area, buf);
-        area.y += 1;
-        (&self.bottom).render(area, buf);
-
-        self.top.spans.clear();
-        self.middle.spans.clear();
-        self.bottom.spans.clear();
     }
 }
 

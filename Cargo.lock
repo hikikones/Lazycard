@@ -2339,6 +2339,7 @@ dependencies = [
  "terminal-colorsaurus",
  "unicode-segmentation",
  "unicode-width",
+ "widgets",
 ]
 
 [[package]]
@@ -4897,6 +4898,16 @@ dependencies = [
  "home",
  "once_cell",
  "rustix 0.38.44",
+]
+
+[[package]]
+name = "widgets"
+version = "0.1.0"
+dependencies = [
+ "ratatui",
+ "syntect",
+ "unicode-segmentation",
+ "unicode-width",
 ]
 
 [[package]]

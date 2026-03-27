@@ -1,8 +1,9 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use database::*;
 use ratatui::prelude::*;
+use widgets::{BreakParser, Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts};
 
-use crate::{app::*, editor::*, markup::*, terminal::Terminal};
+use crate::{app::*, editor::*, terminal::Terminal};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -111,7 +112,7 @@ impl ReviewPage {
     ) {
         match self.state {
             ReviewState::None => {
-                markup.render("| No cards to review", area, buf, colors);
+                markup.render("| No cards to review", area, buf);
             }
             ReviewState::Review(_) => {
                 menu.push_span(Span::styled(
@@ -119,7 +120,7 @@ impl ReviewPage {
                     Style::new().fg(colors.neutral),
                 ));
 
-                markup.render(&self.text, area, buf, colors);
+                markup.render(&self.text, area, buf);
 
                 if !self.reveals.is_empty() {
                     shortcuts.extend(ShortcutLine::Top, [Shortcut::new("Show", "Space")]);
@@ -138,7 +139,7 @@ impl ReviewPage {
                 );
             }
             ReviewState::Done => {
-                markup.render("| Good job!", area, buf, colors);
+                markup.render("| Good job!", area, buf);
             }
         }
     }
@@ -282,7 +283,7 @@ impl CardEditorPage {
         menu.push_span(Span::styled(title, colors.neutral));
 
         if self.preview {
-            markup.render(self.editor.as_str(), area, buf, colors);
+            markup.render(self.editor.as_str(), area, buf);
             shortcuts.extend(ShortcutLine::Middle, Markup::SHORTCUTS);
         } else {
             self.editor.render(area, buf, colors);
@@ -559,7 +560,7 @@ impl CardsPage {
                 match self.cards.get(self.index) {
                     Some((id, _)) => {
                         let card = db.get(*id).unwrap();
-                        markup.render(card.content.as_str(), area, buf, colors);
+                        markup.render(card.content.as_str(), area, buf);
 
                         shortcuts.extend(
                             ShortcutLine::Top,
@@ -602,7 +603,7 @@ impl CardsPage {
                         } else {
                             "| todo: oops no card found"
                         };
-                        markup.render(msg, area, buf, colors);
+                        markup.render(msg, area, buf);
                         shortcuts.extend(
                             ShortcutLine::Middle,
                             [

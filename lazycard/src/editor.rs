@@ -1,8 +1,9 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 use unicode_segmentation::UnicodeSegmentation;
+use widgets::Shortcut;
 
-use crate::app::{Colors, Shortcut};
+use crate::app::Colors;
 
 pub struct TextEditor {
     input: String,

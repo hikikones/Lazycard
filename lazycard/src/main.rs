@@ -2,7 +2,6 @@ use clap::Parser;
 
 mod app;
 mod editor;
-mod markup;
 mod pages;
 mod terminal;
 

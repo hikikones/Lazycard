@@ -25,6 +25,7 @@ syntect = "5.3"
 terminal-colorsaurus = "1.0"
 unicode-segmentation = "1.13"
 unicode-width = "0.2"
+widgets = { path = "crates/widgets", default-features = false }
 
 [profile.dev]
 opt-level = 1

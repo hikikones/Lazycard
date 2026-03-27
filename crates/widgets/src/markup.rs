@@ -6,8 +6,10 @@ use std::{
     sync::LazyLock,
 };
 
-use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::prelude::*;
+use ratatui::{
+    crossterm::event::{KeyCode, KeyModifiers},
+    prelude::*,
+};
 use syntect::{
     easy::HighlightLines,
     highlighting::{FontStyle, ThemeSet},
@@ -16,7 +18,7 @@ use syntect::{
 };
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
-use crate::app::{Colors, Shortcut};
+use super::Shortcut;
 
 #[derive(Debug)]
 pub struct Markup {
@@ -25,6 +27,7 @@ pub struct Markup {
     hash: u64,
     scroll: usize,
     desired_scroll: Option<usize>,
+    syntax_highlight_theme: &'static str,
     lines: Vec<Line<'static>>,
     word_buffer: Vec<Span<'static>>,
 }
@@ -39,13 +42,14 @@ pub enum ScrollMove {
 impl Markup {
     pub const SHORTCUTS: [Shortcut<'static>; 1] = [Shortcut::new("Scroll", "⮁")];
 
-    pub const fn new() -> Self {
+    pub const fn new(syntax_highlight_theme: &'static str) -> Self {
         Self {
             width: 0,
             height: 0,
             hash: 0,
             scroll: 0,
             desired_scroll: None,
+            syntax_highlight_theme,
             lines: Vec::new(),
             word_buffer: Vec::new(),
         }
@@ -94,7 +98,7 @@ impl Markup {
         }
     }
 
-    pub fn render(&mut self, text: &str, area: Rect, buf: &mut Buffer, colors: &Colors) {
+    pub fn render(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
         let width = area.width as usize;
         self.height = area.height as usize;
 
@@ -115,7 +119,7 @@ impl Markup {
                         self.parse_text(text, alignment, "", "");
                     }
                     BlockElement::Code { language, text } => {
-                        self.parse_code(language, text, colors);
+                        self.parse_code(language, text);
                     }
                     BlockElement::List { items } => {
                         for item in items {
@@ -124,7 +128,7 @@ impl Markup {
                     }
                     BlockElement::Comment { .. } => continue,
                     BlockElement::Break => self.lines.push(
-                        Line::styled("——————————", Style::new().fg(colors.neutral))
+                        Line::styled("——————————", Style::new().fg(Color::DarkGray))
                             .alignment(Alignment::Center),
                     ),
                 }
@@ -256,7 +260,7 @@ impl Markup {
         self.lines.push(line);
     }
 
-    fn parse_code(&mut self, language: &str, text: &str, colors: &Colors) {
+    fn parse_code(&mut self, language: &str, text: &str) {
         static SYNTAX_SET: LazyLock<SyntaxSet> =
             LazyLock::new(|| SyntaxSet::load_defaults_newlines());
         static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(|| ThemeSet::load_defaults());
@@ -269,7 +273,7 @@ impl Markup {
                 .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
         };
         let mut highlighter =
-            HighlightLines::new(syntax, &THEME_SET.themes[colors.syntax_highlighting]);
+            HighlightLines::new(syntax, &THEME_SET.themes[self.syntax_highlight_theme]);
 
         for code_line in LinesWithEndings::from(text.replace('\t', "    ").as_str()) {
             match highlighter.highlight_line(code_line, &SYNTAX_SET) {
