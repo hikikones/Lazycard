@@ -11,19 +11,38 @@ license = "MIT"
 
 [workspace.dependencies]
 arboard = { version = "3.6", default-features = false }
-clap = { version = "4.6", features = ["derive"] }
+clap = { version = "4.6", default-features = false, features = [
+  "color",
+  "derive",
+  "error-context",
+  "help",
+  "std",
+  "usage"
+] }
 database = { path = "crates/database", default-features = false }
-edit = "0.1"
-fastrand = "2.3"
-fsrs = "5.2"
-nucleo-matcher = "0.3"
-ratatui = { version = "0.30", features = ["crossterm"] }
-ron = "0.12"
-serde = { version = "1.0", features = ["derive"] }
-syntect = "5.3"
-terminal-colorsaurus = "1.0"
-unicode-segmentation = "1.13"
-unicode-width = "0.2"
+edit = { version = "0.1", default-features = false, features = ["better-path"] }
+fastrand = { version = "2.3", default-features = false }
+fsrs = { version = "5.2", default-features = false }
+nucleo-matcher = { version = "0.3", default-features = false, features = [
+  "unicode-casefold",
+  "unicode-normalization",
+  "unicode-segmentation"
+] }
+ratatui = { version = "0.30", default-features = false, features = ["crossterm"] }
+ron = { version = "0.12", default-features = false, features = ["std"] }
+serde = { version = "1.0", default-features = false, features = [
+  "derive",
+  "std"
+] }
+syntect = { version = "5.3", default-features = false, features = [
+  "default-syntaxes",
+  "default-themes",
+  "parsing",
+  "regex-onig"
+] }
+terminal-colorsaurus = { version = "1.0", default-features = false }
+unicode-segmentation = { version = "1.12", default-features = false }
+unicode-width = { version = "0.2", default-features = false }
 widgets = { path = "crates/widgets", default-features = false }
 
 [profile.dev]
