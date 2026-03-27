@@ -5,15 +5,11 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-arboard = { workspace = true }
 clap = { workspace = true }
 database = { workspace = true }
 edit = { workspace = true }
 fastrand = { workspace = true }
 nucleo-matcher = { workspace = true }
 ratatui = { workspace = true }
-syntect = { workspace = true }
 terminal-colorsaurus = { workspace = true }
-unicode-segmentation = { workspace = true }
-unicode-width = { workspace = true }
 widgets = { workspace = true }
