@@ -7,7 +7,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::Widget,
 };
-use widgets::{Markup, ScrollMove, Shortcut, Shortcuts, TextInput};
+use widgets::{Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt, Matcher},
@@ -52,6 +52,18 @@ enum CardSort {
     Easy,
     Hard,
     Search,
+}
+
+impl CardSort {
+    const fn as_str(&self) -> &str {
+        match self {
+            Self::Newest => "Newest",
+            Self::Oldest => "Oldest",
+            Self::Easy => "Easy",
+            Self::Hard => "Hard",
+            Self::Search => "Search",
+        }
+    }
 }
 
 impl CardsPage {
@@ -125,34 +137,23 @@ impl CardsPage {
         buf: &mut Buffer,
         db: &Database,
         colors: &Colors,
-        menu: &mut Line,
+        menu: &mut TextSegment,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
+        const SPACING: (&str, Style) = ("    ", Style::new());
+        let card_progress = format!("{} / {}", self.index + 1, self.cards.len());
+        let card_sort = self.sort.as_str();
+        let checkmark = symbols::checkmark(self.show_archived);
+        let neutral = Style::new().fg(colors.neutral);
+
         menu.extend([
-            Span::styled(
-                format!("{} / {}", self.index + 1, self.cards.len()),
-                Style::new().fg(colors.neutral),
-            ),
-            Span::raw("   "),
-            Span::styled(
-                match self.sort {
-                    CardSort::Newest => "Newest",
-                    CardSort::Oldest => "Oldest",
-                    CardSort::Easy => "Easy",
-                    CardSort::Hard => "Hard",
-                    CardSort::Search => "Search",
-                },
-                Style::new().fg(colors.neutral),
-            ),
-            Span::raw("   "),
-            if self.show_archived {
-                Span::styled(symbols::CHECKMARK_YES, Style::new().fg(colors.neutral))
-            } else {
-                Span::styled(symbols::CHECKMARK_NO, Style::new().fg(colors.neutral))
-            },
-            Span::raw(" "),
-            Span::styled("Show archived", Style::new().fg(colors.neutral)),
+            (card_progress.as_str(), neutral),
+            SPACING,
+            (card_sort, neutral),
+            SPACING,
+            ("Show archived: ", neutral),
+            (checkmark, neutral),
         ]);
 
         match self.state {

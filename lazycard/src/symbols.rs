@@ -22,6 +22,10 @@ pub const STAR_BIG: &str = "🟊";
 pub const CHECKMARK_YES: &str = "🗸";
 pub const CHECKMARK_NO: &str = "✗";
 
+pub const fn checkmark(v: bool) -> &'static str {
+    if v { CHECKMARK_YES } else { CHECKMARK_NO }
+}
+
 macro_rules! alt {
     ($s:expr) => {{
         const _: &str = $s;

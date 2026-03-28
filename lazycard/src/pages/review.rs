@@ -3,10 +3,8 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
-    style::Style,
-    text::{Line, Span},
 };
-use widgets::{BreakParser, Markup, ScrollMove, Shortcut, Shortcuts};
+use widgets::{BreakParser, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt},
@@ -93,7 +91,7 @@ impl ReviewPage {
         area: Rect,
         buf: &mut Buffer,
         colors: &Colors,
-        menu: &mut Line,
+        menu: &mut TextSegment,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
@@ -102,10 +100,10 @@ impl ReviewPage {
                 markup.render("| No cards to review", area, buf);
             }
             ReviewState::Review(_) => {
-                menu.push_span(Span::styled(
-                    format!("{} / {}", self.progress, self.total),
-                    Style::new().fg(colors.neutral),
-                ));
+                menu.push_str(
+                    &format!("{} / {}", self.progress, self.total),
+                    colors.neutral,
+                );
 
                 markup.render(&self.text, area, buf);
 

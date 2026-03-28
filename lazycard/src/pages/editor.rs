@@ -3,9 +3,8 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
-    text::{Line, Span},
 };
-use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor};
+use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor, TextSegment};
 
 use crate::{app::Action, settings::Colors, symbols, terminal::Terminal};
 
@@ -68,7 +67,7 @@ impl CardEditorPage {
         area: Rect,
         buf: &mut Buffer,
         colors: &Colors,
-        menu: &mut Line,
+        menu: &mut TextSegment,
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
@@ -76,7 +75,7 @@ impl CardEditorPage {
             CardEditorState::New => "New Card",
             CardEditorState::Edit(_) => "Edit Card",
         };
-        menu.push_span(Span::styled(title, colors.neutral));
+        menu.push_str(title, colors.neutral);
 
         if self.preview {
             markup.render(self.editor.as_str(), area, buf);

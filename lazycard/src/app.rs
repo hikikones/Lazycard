@@ -4,8 +4,6 @@ use ratatui::{
     crossterm::event::{Event, KeyCode, KeyEventKind},
     layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Style},
-    text::Line,
-    widgets::Widget,
 };
 use widgets::{Markup, Shortcut, Shortcuts, TextSegment};
 
@@ -18,7 +16,6 @@ pub struct App {
     settings: Settings,
     markup: Markup,
     matcher: Matcher,
-    menu_line: Line<'static>,
     text: TextSegment,
     shortcuts: Shortcuts,
 }
@@ -33,7 +30,6 @@ pub enum Action {
 impl App {
     pub fn new(database: Database, external_editor: bool) -> Self {
         let settings = Settings::default();
-
         let markup = Markup::new(settings.syntax_highlighting());
         let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
@@ -44,7 +40,6 @@ impl App {
             settings,
             markup,
             matcher: Matcher::new(),
-            menu_line: Line::default().centered(),
             text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts,
         }
@@ -185,7 +180,7 @@ impl App {
                         body,
                         buf,
                         colors,
-                        &mut self.menu_line,
+                        &mut self.text,
                         &mut self.markup,
                         &mut self.shortcuts,
                     );
@@ -195,7 +190,7 @@ impl App {
                         body,
                         buf,
                         colors,
-                        &mut self.menu_line,
+                        &mut self.text,
                         &mut self.markup,
                         &mut self.shortcuts,
                     );
@@ -206,7 +201,7 @@ impl App {
                         buf,
                         &self.database,
                         colors,
-                        &mut self.menu_line,
+                        &mut self.text,
                         &mut self.markup,
                         &mut self.shortcuts,
                     );
@@ -214,8 +209,8 @@ impl App {
             }
 
             // Menu
-            (&self.menu_line).render(menu_area, buf);
-            self.menu_line.spans.clear();
+            self.text.render(menu_area, buf);
+            self.text.clear();
 
             // Shortcuts
             self.shortcuts.render(shortcuts_page_area, buf);
