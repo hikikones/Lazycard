@@ -6,12 +6,13 @@ use ratatui::{
     style::Style,
     text::{Line, Span},
 };
-use widgets::{BreakParser, Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts};
+use widgets::{BreakParser, Markup, ScrollMove, Shortcut, Shortcuts};
 
 use crate::{
     app::{Action, CardsIterExt},
     pages::Route,
     settings::Colors,
+    symbols,
 };
 
 pub struct ReviewPage {
@@ -109,20 +110,17 @@ impl ReviewPage {
                 markup.render(&self.text, area, buf);
 
                 if !self.reveals.is_empty() {
-                    shortcuts.extend(ShortcutLine::Top, [Shortcut::new("Show", "Space")]);
+                    shortcuts.extend([Shortcut::new("Show", symbols::SPACE)]);
                 } else {
-                    shortcuts.extend(
-                        ShortcutLine::Top,
-                        [Shortcut::new("Yes", "y"), Shortcut::new("No", "n")],
-                    );
+                    shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
                 }
                 if !self.due.is_empty() {
-                    shortcuts.push(ShortcutLine::Middle, Shortcut::new("Skip", "➝"));
+                    shortcuts.push(Shortcut::new("Skip", symbols::ARROW_RIGHT));
                 }
-                shortcuts.extend(
-                    ShortcutLine::Middle,
-                    [Shortcut::new("Edit", "e"), Shortcut::new("Archive", "Del")],
-                );
+                shortcuts.extend([
+                    Shortcut::new("Edit", "e"),
+                    Shortcut::new("Archive", symbols::DELETE),
+                ]);
             }
             ReviewState::Done => {
                 markup.render("| Good job!", area, buf);

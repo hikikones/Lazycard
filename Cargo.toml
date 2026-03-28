@@ -20,6 +20,7 @@ clap = { version = "4.6", default-features = false, features = [
   "usage"
 ] }
 clap-cargo = { version = "0.18", default-features = false }
+constcat = { version = "0.6", default-features = false }
 database = { path = "crates/database", default-features = false }
 edit = { version = "0.1", default-features = false, features = ["better-path"] }
 fastrand = { version = "2.3", default-features = false }

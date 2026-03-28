@@ -1,13 +1,15 @@
 use database::*;
-use layout::Flex;
 use ratatui::{
     CompletedFrame,
     crossterm::event::{Event, KeyCode, KeyEventKind},
-    prelude::*,
+    layout::{Constraint, Flex, Layout, Margin, Rect},
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::Widget,
 };
-use widgets::{Markup, Shortcut, ShortcutLine, Shortcuts};
+use widgets::{Markup, Shortcut, Shortcuts};
 
-use crate::{pages::*, settings::Settings, terminal::Terminal};
+use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
 pub struct App {
     route: Route,
@@ -19,7 +21,7 @@ pub struct App {
     title_line: Line<'static>,
     nav_line: Line<'static>,
     menu_line: Line<'static>,
-    shortcuts: Shortcuts<'static>,
+    shortcuts: Shortcuts,
 }
 
 pub enum Action {
@@ -157,14 +159,16 @@ impl App {
                 nav_area,
                 menu_area,
                 body_area,
-                shortcuts_area,
+                shortcuts_page_area,
+                shortcuts_app_area,
             ] = Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
                 Constraint::Length(1),
-                Constraint::Min(0),
-                Constraint::Length(3),
+                Constraint::Min(5),
+                Constraint::Length(1),
+                Constraint::Length(1),
             ])
             .areas(area);
 
@@ -234,15 +238,15 @@ impl App {
             self.menu_line.spans.clear();
 
             // Shortcuts
-            self.shortcuts.extend(
-                ShortcutLine::Bottom,
-                [
-                    Shortcut::new("Next", "Tab"),
-                    Shortcut::new("Prev", "⇧Tab"),
-                    Shortcut::new("Quit", "Esc"),
-                ],
-            );
-            self.shortcuts.render(shortcuts_area, buf);
+            self.shortcuts.render(shortcuts_page_area, buf);
+            self.shortcuts.clear();
+
+            self.shortcuts.extend([
+                Shortcut::new("Quit", symbols::ESCAPE),
+                Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
+            ]);
+            self.shortcuts.render(shortcuts_app_area, buf);
+            self.shortcuts.clear();
         })
     }
 }

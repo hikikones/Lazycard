@@ -7,12 +7,13 @@ use ratatui::{
     text::{Line, Span},
     widgets::Widget,
 };
-use widgets::{Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts, TextInput};
+use widgets::{Markup, ScrollMove, Shortcut, Shortcuts, TextInput};
 
 use crate::{
     app::{Action, CardsIterExt, Matcher},
     pages::Route,
     settings::Colors,
+    symbols,
 };
 
 pub struct CardsPage {
@@ -146,9 +147,9 @@ impl CardsPage {
             ),
             Span::raw("   "),
             if self.show_archived {
-                Span::styled("✓", Style::new().fg(colors.neutral))
+                Span::styled(symbols::CHECKMARK_YES, Style::new().fg(colors.neutral))
             } else {
-                Span::styled("✗", Style::new().fg(colors.neutral))
+                Span::styled(symbols::CHECKMARK_NO, Style::new().fg(colors.neutral))
             },
             Span::raw(" "),
             Span::styled("Show archived", Style::new().fg(colors.neutral)),
@@ -175,28 +176,21 @@ impl CardsPage {
                         let card = db.get(*id).unwrap();
                         markup.render(card.content.as_str(), area, buf);
 
-                        shortcuts.extend(
-                            ShortcutLine::Top,
-                            [
-                                Shortcut::new("Browse", "⮂"),
-                                Shortcut::new("Search", "/"),
-                                Shortcut::new("Sort", "s"),
-                                Shortcut::new("Toggle archived", "a"),
-                            ],
-                        );
+                        shortcuts.extend([
+                            Shortcut::new("Browse", symbols::ARROW_RIGHT_LEFT),
+                            Shortcut::new("Search", "/"),
+                            Shortcut::new("Sort", "s"),
+                            Shortcut::new("Toggle archived", "a"),
+                        ]);
                         if !self.cards.is_empty() {
-                            shortcuts.push(ShortcutLine::Middle, Shortcut::new("Edit", "e"));
+                            shortcuts.push(Shortcut::new("Edit", "e"));
                             if self.show_archived {
-                                shortcuts.extend(
-                                    ShortcutLine::Middle,
-                                    [
-                                        Shortcut::new("Restore", "r"),
-                                        Shortcut::new("Delete", "Del"),
-                                    ],
-                                );
+                                shortcuts.extend([
+                                    Shortcut::new("Restore", "r"),
+                                    Shortcut::new("Delete", symbols::DELETE),
+                                ]);
                             } else {
-                                shortcuts
-                                    .push(ShortcutLine::Middle, Shortcut::new("Archive", "Del"));
+                                shortcuts.push(Shortcut::new("Archive", symbols::DELETE));
                             }
                         }
                     }
@@ -217,14 +211,11 @@ impl CardsPage {
                             "| todo: oops no card found"
                         };
                         markup.render(msg, area, buf);
-                        shortcuts.extend(
-                            ShortcutLine::Middle,
-                            [
-                                Shortcut::new("Search", "/"),
-                                Shortcut::new("Sort", "s"),
-                                Shortcut::new("Toggle archived", "a"),
-                            ],
-                        );
+                        shortcuts.extend([
+                            Shortcut::new("Search", "/"),
+                            Shortcut::new("Sort", "s"),
+                            Shortcut::new("Toggle archived", "a"),
+                        ]);
                     }
                 }
             }
@@ -236,8 +227,7 @@ impl CardsPage {
                     y: area.y,
                 };
                 self.search.render(search_area, buf);
-                shortcuts.push(ShortcutLine::Top, Shortcut::new("Confirm", "↵"));
-                shortcuts.extend(ShortcutLine::Middle, TextInput::SHORTCUTS);
+                shortcuts.push(Shortcut::new("Confirm", "↵"));
             }
         }
     }

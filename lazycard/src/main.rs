@@ -1,6 +1,7 @@
 mod app;
 mod pages;
 mod settings;
+mod symbols;
 mod terminal;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

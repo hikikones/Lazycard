@@ -1,10 +1,10 @@
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
-    style::Color,
-    text::{Line, Span},
-    widgets::Widget,
+    layout::{Alignment, Rect},
+    style::{Color, Style},
 };
+
+use crate::TextSegment;
 
 pub struct Shortcut<'a> {
     name: &'a str,
@@ -17,77 +17,77 @@ impl<'a> Shortcut<'a> {
     }
 }
 
-pub struct Shortcuts<'a> {
-    shortcuts: Vec<(ShortcutLine, Shortcut<'a>)>,
-    top: Line<'a>,
-    middle: Line<'a>,
-    bottom: Line<'a>,
+pub struct Shortcuts {
     name_color: Color,
     key_color: Color,
+    text: TextSegment,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ShortcutLine {
-    Top,
-    Middle,
-    Bottom,
-}
-
-impl<'a> Shortcuts<'a> {
-    pub fn new() -> Self {
+impl Shortcuts {
+    pub const fn new() -> Self {
         Self {
-            shortcuts: Vec::new(),
-            top: Line::default().centered(),
-            middle: Line::default().centered(),
-            bottom: Line::default().centered(),
             name_color: Color::Reset,
             key_color: Color::Indexed(240),
+            text: TextSegment::new().with_alignment(Alignment::Center),
         }
     }
 
     pub const fn with_colors(mut self, name: Color, key: Color) -> Self {
+        self.set_colors(name, key);
+        self
+    }
+
+    pub const fn set_colors(&mut self, name: Color, key: Color) -> &mut Self {
         self.name_color = name;
         self.key_color = key;
         self
     }
 
-    pub fn push(&mut self, line: ShortcutLine, shortcut: Shortcut<'a>) {
-        self.shortcuts.push((line, shortcut));
-    }
-
-    pub fn extend(
-        &mut self,
-        line: ShortcutLine,
-        shortcuts: impl IntoIterator<Item = Shortcut<'a>>,
-    ) {
-        self.shortcuts
-            .extend(shortcuts.into_iter().map(|s| (line, s)));
-    }
-
-    pub fn render(&mut self, mut area: Rect, buf: &mut Buffer) {
-        for (line, shortcut) in self.shortcuts.drain(..) {
-            let spans = [
-                Span::raw(" "),
-                Span::styled(shortcut.key, self.key_color),
-                Span::raw(" "),
-                Span::styled(shortcut.name, self.name_color),
-                Span::raw(" "),
-            ];
-            match line {
-                ShortcutLine::Top => self.top.extend(spans),
-                ShortcutLine::Middle => self.middle.extend(spans),
-                ShortcutLine::Bottom => self.bottom.extend(spans),
-            }
+    pub fn push(&mut self, shortcut: Shortcut<'_>) {
+        if !self.text.is_empty() {
+            self.text.push_char(' ', Style::new());
         }
 
-        (&self.top).render(area, buf);
-        area.y += 1;
-        (&self.middle).render(area, buf);
-        area.y += 1;
-        (&self.bottom).render(area, buf);
+        self.text.extend([
+            (shortcut.key, Style::new().fg(self.key_color)),
+            (" ", Style::new()),
+            (shortcut.name, Style::new().fg(self.name_color)),
+        ]);
+    }
 
-        self.top.spans.clear();
-        self.middle.spans.clear();
-        self.bottom.spans.clear();
+    pub fn push_iter<'a>(&mut self, name: impl IntoIterator<Item = &'a str>, key: &str) {
+        if !self.text.is_empty() {
+            self.text.push_char(' ', Style::new());
+        }
+
+        self.text
+            .extend([(key, Style::new().fg(self.key_color)), (" ", Style::new())]);
+
+        self.text.extend_as_one(name, self.name_color);
+    }
+
+    pub fn extend<'a>(&mut self, shortcuts: impl IntoIterator<Item = Shortcut<'a>>) {
+        for shortcut in shortcuts {
+            self.push(shortcut);
+        }
+    }
+
+    pub fn pop(&mut self) {
+        if self.text.is_empty() {
+            return;
+        }
+
+        self.text.pop();
+        self.text.pop();
+        self.text.pop();
+        self.text.pop();
+    }
+
+    pub fn clear(&mut self) {
+        self.text.clear();
+    }
+
+    pub fn render(&self, area: Rect, buf: &mut Buffer) {
+        self.text.render(area, buf);
     }
 }

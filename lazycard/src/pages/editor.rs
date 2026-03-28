@@ -5,9 +5,9 @@ use ratatui::{
     layout::Rect,
     text::{Line, Span},
 };
-use widgets::{CursorMove, Markup, Shortcut, ShortcutLine, Shortcuts, TextEditor};
+use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor};
 
-use crate::{app::Action, settings::Colors, terminal::Terminal};
+use crate::{app::Action, settings::Colors, symbols, terminal::Terminal};
 
 pub struct CardEditorPage {
     editor: TextEditor,
@@ -80,23 +80,18 @@ impl CardEditorPage {
 
         if self.preview {
             markup.render(self.editor.as_str(), area, buf);
-            shortcuts.extend(ShortcutLine::Middle, Markup::SHORTCUTS);
         } else {
             self.editor.render(area, buf);
-            shortcuts.extend(ShortcutLine::Middle, TextEditor::SHORTCUTS);
         }
 
-        shortcuts.extend(
-            ShortcutLine::Top,
-            [
-                Shortcut::new("Save", "^s"),
-                if self.external_editor {
-                    Shortcut::new("Edit", "e")
-                } else {
-                    Shortcut::new("Toggle preview", "^p")
-                },
-            ],
-        );
+        shortcuts.extend([
+            Shortcut::new("Save", symbols::ctrl!("s")),
+            if self.external_editor {
+                Shortcut::new("Edit", "e")
+            } else {
+                Shortcut::new("Toggle preview", symbols::ctrl!("p"))
+            },
+        ]);
     }
 
     pub fn on_input(

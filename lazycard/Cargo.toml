@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 clap = { workspace = true }
 clap-cargo = { workspace = true }
+constcat = { workspace = true }
 database = { workspace = true }
 edit = { workspace = true }
 fastrand = { workspace = true }
