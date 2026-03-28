@@ -9,8 +9,11 @@ use ratatui::{
 };
 use widgets::{Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts, TextInput};
 
-use super::Route;
-use crate::app::{Action, CardsIterExt, Colors, Matcher};
+use crate::{
+    app::{Action, CardsIterExt, Matcher},
+    pages::Route,
+    settings::Colors,
+};
 
 pub struct CardsPage {
     cards: Vec<(CardId, CardStats)>,

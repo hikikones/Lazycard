@@ -7,26 +7,19 @@ use ratatui::{
 };
 use widgets::{Markup, Shortcut, ShortcutLine, Shortcuts};
 
-use crate::{pages::*, terminal::Terminal};
+use crate::{pages::*, settings::Settings, terminal::Terminal};
 
 pub struct App {
     route: Route,
     pages: Pages,
-    db: Database,
-    colors: Colors,
+    database: Database,
+    settings: Settings,
     markup: Markup,
     matcher: Matcher,
     title_line: Line<'static>,
     nav_line: Line<'static>,
     menu_line: Line<'static>,
     shortcuts: Shortcuts<'static>,
-}
-
-pub struct Colors {
-    pub accent: Color,
-    pub _on_accent: Color,
-    pub neutral: Color,
-    pub syntax_highlighting: &'static str,
 }
 
 pub enum Action {
@@ -38,35 +31,19 @@ pub enum Action {
 
 impl App {
     pub fn new(database: Database, external_editor: bool) -> Self {
-        let colors =
-            match terminal_colorsaurus::theme_mode(terminal_colorsaurus::QueryOptions::default())
-                .unwrap_or(terminal_colorsaurus::ThemeMode::Dark)
-            {
-                terminal_colorsaurus::ThemeMode::Dark => Colors {
-                    accent: Color::Yellow,
-                    _on_accent: Color::Black,
-                    neutral: Color::DarkGray,
-                    syntax_highlighting: "base16-eighties.dark",
-                },
-                terminal_colorsaurus::ThemeMode::Light => Colors {
-                    accent: Color::LightBlue,
-                    _on_accent: Color::Black,
-                    neutral: Color::DarkGray,
-                    syntax_highlighting: "InspiredGitHub",
-                },
-            };
+        let settings = Settings::default();
 
         let mut title_line = Line::default().centered();
-        title_line.push_span(Span::styled("lazycard", Style::new().fg(colors.neutral)));
+        title_line.push_span(Span::styled("lazycard", settings.neutral()));
 
-        let markup = Markup::new(colors.syntax_highlighting);
-        let shortcuts = Shortcuts::new().with_colors(Color::Reset, colors.accent);
+        let markup = Markup::new(settings.syntax_highlighting());
+        let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.accent());
 
         Self {
             route: Route::Review,
-            pages: Pages::new(external_editor, &colors),
-            db: database,
-            colors,
+            pages: Pages::new(external_editor, settings.colors()),
+            database,
+            settings,
             markup,
             matcher: Matcher::new(),
             title_line,
@@ -77,7 +54,7 @@ impl App {
     }
 
     pub fn run(&mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
-        self.pages.review.on_enter(&self.db);
+        self.pages.review.on_enter(&self.database);
         self.render(&mut terminal)?;
 
         loop {
@@ -101,20 +78,20 @@ impl App {
                                     key.code,
                                     key.modifiers,
                                     &mut self.markup,
-                                    &mut self.db,
+                                    &mut self.database,
                                 ),
                                 Route::Editor(_) => self.pages.editor.on_input(
                                     key.code,
                                     key.modifiers,
                                     &mut self.markup,
-                                    &mut self.db,
+                                    &mut self.database,
                                     &mut terminal,
                                 )?,
                                 Route::Cards => self.pages.cards.on_input(
                                     key.code,
                                     key.modifiers,
                                     &mut self.markup,
-                                    &mut self.db,
+                                    &mut self.database,
                                     &mut self.matcher,
                                 ),
                             },
@@ -143,11 +120,13 @@ impl App {
                     self.markup.clear();
 
                     match route {
-                        Route::Review => self.pages.review.on_enter(&self.db),
+                        Route::Review => self.pages.review.on_enter(&self.database),
                         Route::Editor(id) => {
-                            self.pages.editor.on_enter(id, &self.db, &mut terminal)?
+                            self.pages
+                                .editor
+                                .on_enter(id, &self.database, &mut terminal)?
                         }
-                        Route::Cards => self.pages.cards.on_enter(&mut self.db),
+                        Route::Cards => self.pages.cards.on_enter(&mut self.database),
                     }
 
                     self.render(&mut terminal)?;
@@ -162,13 +141,15 @@ impl App {
     }
 
     pub fn quit(mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.db.save()
+        self.database.save()
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();
+
+            let colors = self.settings.colors();
 
             let [
                 title_area,
@@ -198,7 +179,7 @@ impl App {
                     Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
                 };
                 let style = if is_current {
-                    Style::new().bold().fg(self.colors.accent)
+                    Style::new().bold().fg(self.settings.accent())
                 } else {
                     Style::new()
                 };
@@ -219,7 +200,7 @@ impl App {
                     self.pages.review.on_render(
                         body,
                         buf,
-                        &self.colors,
+                        colors,
                         &mut self.menu_line,
                         &mut self.markup,
                         &mut self.shortcuts,
@@ -229,7 +210,7 @@ impl App {
                     self.pages.editor.on_render(
                         body,
                         buf,
-                        &self.colors,
+                        colors,
                         &mut self.menu_line,
                         &mut self.markup,
                         &mut self.shortcuts,
@@ -239,8 +220,8 @@ impl App {
                     self.pages.cards.on_render(
                         body,
                         buf,
-                        &self.db,
-                        &self.colors,
+                        &self.database,
+                        colors,
                         &mut self.menu_line,
                         &mut self.markup,
                         &mut self.shortcuts,

@@ -7,10 +7,7 @@ use ratatui::{
 };
 use widgets::{CursorMove, Markup, Shortcut, ShortcutLine, Shortcuts, TextEditor};
 
-use crate::{
-    app::{Action, Colors},
-    terminal::Terminal,
-};
+use crate::{app::Action, settings::Colors, terminal::Terminal};
 
 pub struct CardEditorPage {
     editor: TextEditor,

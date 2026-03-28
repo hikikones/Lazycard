@@ -8,8 +8,11 @@ use ratatui::{
 };
 use widgets::{BreakParser, Markup, ScrollMove, Shortcut, ShortcutLine, Shortcuts};
 
-use super::Route;
-use crate::app::{Action, CardsIterExt, Colors};
+use crate::{
+    app::{Action, CardsIterExt},
+    pages::Route,
+    settings::Colors,
+};
 
 pub struct ReviewPage {
     due: Vec<CardId>,
