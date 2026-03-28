@@ -18,7 +18,6 @@ pub struct App {
     settings: Settings,
     markup: Markup,
     matcher: Matcher,
-    title_line: Line<'static>,
     nav_line: Line<'static>,
     menu_line: Line<'static>,
     shortcuts: Shortcuts,
@@ -48,7 +47,6 @@ impl App {
             settings,
             markup,
             matcher: Matcher::new(),
-            title_line,
             nav_line: Line::default().centered(),
             menu_line: Line::default().centered(),
             shortcuts,
@@ -146,8 +144,6 @@ impl App {
             let colors = self.settings.colors();
 
             let [
-                title_area,
-                _,
                 nav_area,
                 menu_area,
                 body_area,
@@ -156,16 +152,11 @@ impl App {
             ] = Layout::vertical([
                 Constraint::Length(1),
                 Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
                 Constraint::Min(5),
                 Constraint::Length(1),
                 Constraint::Length(1),
             ])
             .areas(area);
-
-            // Title
-            (&self.title_line).render(title_area, buf);
 
             // Navigation
             for route in [Route::Review, Route::Editor(None), Route::Cards] {
