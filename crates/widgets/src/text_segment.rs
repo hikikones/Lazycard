@@ -83,6 +83,11 @@ impl TextSegment {
         self.total_width += unicode_width::UnicodeWidthStr::width(text);
     }
 
+    pub fn push_int(&mut self, int: impl itoa::Integer, style: impl Into<Style>) {
+        let mut buffer = itoa::Buffer::new();
+        self.push_str(buffer.format(int), style);
+    }
+
     pub fn extend(&mut self, items: impl IntoIterator<Item = (impl AsRef<str>, impl Into<Style>)>) {
         for (text, style) in items.into_iter() {
             self.push_str(text.as_ref(), style);

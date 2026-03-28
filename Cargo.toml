@@ -25,6 +25,7 @@ database = { path = "crates/database", default-features = false }
 edit = { version = "0.1", default-features = false, features = ["better-path"] }
 fastrand = { version = "2.3", default-features = false }
 fsrs = { version = "5.2", default-features = false }
+itoa = { version = "1.0", default-features = false }
 nucleo-matcher = { version = "0.3", default-features = false, features = [
   "unicode-casefold",
   "unicode-normalization",

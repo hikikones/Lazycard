@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 arboard = { workspace = true }
+itoa = { workspace = true }
 ratatui = { workspace = true }
 syntect = { workspace = true }
 unicode-segmentation = { workspace = true }

@@ -142,18 +142,17 @@ impl CardsPage {
         shortcuts: &mut Shortcuts,
     ) {
         const SPACING: (&str, Style) = ("    ", Style::new());
-        let card_progress = format!("{} / {}", self.index + 1, self.cards.len());
-        let card_sort = self.sort.as_str();
-        let checkmark = symbols::checkmark(self.show_archived);
         let neutral = Style::new().fg(colors.neutral);
 
+        menu.push_int(self.index + 1, neutral);
+        menu.push_str(" / ", neutral);
+        menu.push_int(self.cards.len(), neutral);
         menu.extend([
-            (card_progress.as_str(), neutral),
             SPACING,
-            (card_sort, neutral),
+            (self.sort.as_str(), neutral),
             SPACING,
-            ("Show archived: ", neutral),
-            (checkmark, neutral),
+            (symbols::checkmark(self.show_archived), neutral),
+            (" Show archived", neutral),
         ]);
 
         match self.state {
