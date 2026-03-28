@@ -13,10 +13,10 @@ pub struct Pages {
 }
 
 impl Pages {
-    pub fn new(external_editor: bool, colors: &crate::settings::Colors) -> Self {
+    pub fn new(colors: &crate::settings::Colors) -> Self {
         Self {
             review: ReviewPage::new(),
-            editor: CardEditorPage::new(external_editor, colors),
+            editor: CardEditorPage::new(colors),
             cards: CardsPage::new(colors),
         }
     }

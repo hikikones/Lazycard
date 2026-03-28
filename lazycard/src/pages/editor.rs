@@ -12,7 +12,6 @@ pub struct CardEditorPage {
     editor: TextEditor,
     state: CardEditorState,
     preview: bool,
-    external_editor: bool,
 }
 
 enum CardEditorState {
@@ -21,25 +20,17 @@ enum CardEditorState {
 }
 
 impl CardEditorPage {
-    pub fn new(external_editor: bool, colors: &Colors) -> Self {
+    pub fn new(colors: &Colors) -> Self {
         Self {
             editor: TextEditor::new()
-                .with_placeholder("content...")
+                .with_placeholder("Content...")
                 .with_colors(colors.primary, colors.neutral),
             state: CardEditorState::New,
             preview: false,
-            external_editor,
         }
     }
 
-    pub fn on_enter(
-        &mut self,
-        id: Option<CardId>,
-        db: &Database,
-        terminal: &mut Terminal,
-    ) -> std::io::Result<()> {
-        self.preview = self.external_editor;
-
+    pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
         match id {
             Some(id) => {
                 let card = db.get(id).unwrap();
@@ -47,19 +38,11 @@ impl CardEditorPage {
                 self.editor.push_str(card.content.as_str());
                 self.editor.move_cursor(CursorMove::Start, false);
                 self.state = CardEditorState::Edit(id);
-
-                if self.external_editor {
-                    let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
-                    self.editor.clear();
-                    self.editor.push_str(&content);
-                }
             }
             None => {
                 self.state = CardEditorState::New;
             }
         }
-
-        Ok(())
     }
 
     pub fn on_render(
@@ -85,11 +68,7 @@ impl CardEditorPage {
 
         shortcuts.extend([
             Shortcut::new("Save", symbols::ctrl!("s")),
-            if self.external_editor {
-                Shortcut::new("Edit", "e")
-            } else {
-                Shortcut::new("Toggle preview", symbols::ctrl!("p"))
-            },
+            Shortcut::new("Toggle preview", symbols::ctrl!("p")),
         ]);
     }
 
@@ -104,7 +83,7 @@ impl CardEditorPage {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
         let shift = modifiers.contains(KeyModifiers::SHIFT);
 
-        if key == KeyCode::Char('p') && ctrl && !self.external_editor {
+        if ctrl && key == KeyCode::Char('p') {
             self.preview = !self.preview;
             return Ok(Action::Render);
         }
@@ -112,12 +91,10 @@ impl CardEditorPage {
         if self.preview {
             match key {
                 KeyCode::Char('e') => {
-                    if self.external_editor {
-                        let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
-                        self.editor.clear();
-                        self.editor.push_str(&content);
-                        return Ok(Action::Render);
-                    }
+                    let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
+                    self.editor.clear();
+                    self.editor.push_str(&content);
+                    return Ok(Action::Render);
                 }
                 KeyCode::Char('s') => {
                     if ctrl && !self.editor.is_empty() {
@@ -177,7 +154,6 @@ impl CardEditorPage {
     }
 
     fn save(&mut self, db: &mut Database) {
-        self.preview = self.external_editor;
         match self.state {
             CardEditorState::New => {
                 let card = Card::new(self.editor.as_str().to_owned());

@@ -28,14 +28,14 @@ pub enum Action {
 }
 
 impl App {
-    pub fn new(database: Database, external_editor: bool) -> Self {
+    pub fn new(database: Database) -> Self {
         let settings = Settings::default();
         let markup = Markup::new(settings.syntax_highlighting());
         let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
         Self {
             route: Route::Review,
-            pages: Pages::new(external_editor, settings.colors()),
+            pages: Pages::new(settings.colors()),
             database,
             settings,
             markup,
@@ -105,11 +105,7 @@ impl App {
 
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.database),
-                        Route::Editor(id) => {
-                            self.pages
-                                .editor
-                                .on_enter(id, &self.database, &mut terminal)?
-                        }
+                        Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
                         Route::Cards => self.pages.cards.on_enter(&mut self.database),
                     }
 

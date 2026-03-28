@@ -10,7 +10,7 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new(path: PathBuf, desired_retention: f32) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(path: PathBuf) -> Result<Self, Box<dyn std::error::Error>> {
         let storage = if let Ok(true) = path.try_exists() {
             Storage::read(&path)?
         } else {
@@ -22,7 +22,7 @@ impl Database {
         Ok(Self {
             path,
             storage,
-            scheduler: Scheduler::new(desired_retention),
+            scheduler: Scheduler::new(),
             is_dirty: false,
         })
     }
