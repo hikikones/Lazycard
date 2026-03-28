@@ -68,7 +68,8 @@ impl CardEditorPage {
 
         shortcuts.extend([
             Shortcut::new("Save", symbols::ctrl!("s")),
-            Shortcut::new("Toggle preview", symbols::ctrl!("p")),
+            Shortcut::new("Preview (toggle)", symbols::ctrl!("p")),
+            Shortcut::new("Edit", "e"),
         ]);
     }
 
@@ -91,6 +92,7 @@ impl CardEditorPage {
         if self.preview {
             match key {
                 KeyCode::Char('e') => {
+                    // TODO: Add to logs when failure
                     let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
                     self.editor.clear();
                     self.editor.push_str(&content);
