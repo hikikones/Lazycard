@@ -100,10 +100,9 @@ impl ReviewPage {
                 markup.render("| No cards to review", area, buf);
             }
             ReviewState::Review(_) => {
-                menu.push_str(
-                    &format!("{} / {}", self.progress, self.total),
-                    colors.neutral,
-                );
+                menu.push_int(self.progress, colors.neutral);
+                menu.push_str(" / ", colors.neutral);
+                menu.push_int(self.total, colors.neutral);
 
                 markup.render(&self.text, area, buf);
 
