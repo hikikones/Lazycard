@@ -65,16 +65,8 @@ impl App {
                     if key.kind == KeyEventKind::Press {
                         match key.code {
                             KeyCode::Esc => Action::Quit,
-                            KeyCode::Tab => match self.route {
-                                Route::Review => Action::Route(Route::Editor(None)),
-                                Route::Editor(_) => Action::Route(Route::Cards),
-                                Route::Cards => Action::Route(Route::Review),
-                            },
-                            KeyCode::BackTab => match self.route {
-                                Route::Review => Action::Route(Route::Cards),
-                                Route::Editor(_) => Action::Route(Route::Review),
-                                Route::Cards => Action::Route(Route::Editor(None)),
-                            },
+                            KeyCode::Tab => Action::Route(self.route.next()),
+                            KeyCode::BackTab => Action::Route(self.route.prev()),
                             _ => match self.route {
                                 Route::Review => self.pages.review.on_input(
                                     key.code,
