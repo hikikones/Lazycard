@@ -13,8 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let terminal = terminal::Terminal::init()?;
 
-    let app = app::App::new(db, args.external_editor);
+    let mut app = app::App::new(db, args.external_editor);
     let res = app.run(terminal);
+    app.quit()?;
 
     terminal::Terminal::restore()?;
 

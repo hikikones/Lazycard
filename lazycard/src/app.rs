@@ -76,7 +76,7 @@ impl App {
         }
     }
 
-    pub fn run(mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(&mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
         self.pages.review.on_enter(&self.db);
         self.render(&mut terminal)?;
 
@@ -158,10 +158,11 @@ impl App {
             }
         }
 
-        // Quitting app
-        self.db.save()?;
-
         Ok(())
+    }
+
+    pub fn quit(mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.db.save()
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
