@@ -11,11 +11,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         args.desired_retention as f32 / 100.0,
     )?;
 
-    let terminal = terminal::init()?;
+    let terminal = terminal::Terminal::init()?;
+
     let app = app::App::new(db, args.external_editor);
     let res = app.run(terminal);
-    terminal::restore()?;
-    res.map_err(|e| e.into())
+
+    terminal::Terminal::restore()?;
+
+    res
 }
 
 /// A flashcard application for the terminal

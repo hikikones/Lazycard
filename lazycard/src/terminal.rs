@@ -9,20 +9,20 @@ pub struct Terminal {
     clear: bool,
 }
 
-pub fn init() -> std::io::Result<Terminal> {
-    let terminal = ratatui::try_init()?;
-
-    Ok(Terminal {
-        terminal,
-        clear: false,
-    })
-}
-
-pub fn restore() -> std::io::Result<()> {
-    ratatui::try_restore()
-}
-
 impl Terminal {
+    pub fn init() -> std::io::Result<Self> {
+        let terminal = ratatui::try_init()?;
+
+        Ok(Self {
+            terminal,
+            clear: false,
+        })
+    }
+
+    pub fn restore() -> std::io::Result<()> {
+        ratatui::try_restore()
+    }
+
     pub fn draw<F>(&mut self, render_callback: F) -> std::io::Result<CompletedFrame<'_>>
     where
         F: FnOnce(&mut Frame),
