@@ -2,10 +2,12 @@
 name = "lazycard"
 version.workspace = true
 edition.workspace = true
+description = "A simple flashcard application for the terminal."
 license.workspace = true
 
 [dependencies]
 clap = { workspace = true }
+clap-cargo = { workspace = true }
 database = { workspace = true }
 edit = { workspace = true }
 fastrand = { workspace = true }
