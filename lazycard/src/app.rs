@@ -1,13 +1,13 @@
-use database::*;
+use database::{Card, CardId, Database, UnixTime};
 use ratatui::{
     CompletedFrame,
     crossterm::event::{Event, KeyCode, KeyEventKind},
-    layout::{Constraint, Flex, Layout, Margin, Rect},
+    layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Style},
-    text::{Line, Span},
+    text::Line,
     widgets::Widget,
 };
-use widgets::{Markup, Shortcut, Shortcuts};
+use widgets::{Markup, Shortcut, Shortcuts, TextSegment};
 
 use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
@@ -18,8 +18,8 @@ pub struct App {
     settings: Settings,
     markup: Markup,
     matcher: Matcher,
-    nav_line: Line<'static>,
     menu_line: Line<'static>,
+    text: TextSegment,
     shortcuts: Shortcuts,
 }
 
@@ -34,9 +34,6 @@ impl App {
     pub fn new(database: Database, external_editor: bool) -> Self {
         let settings = Settings::default();
 
-        let mut title_line = Line::default().centered();
-        title_line.push_span(Span::styled("lazycard", settings.neutral()));
-
         let markup = Markup::new(settings.syntax_highlighting());
         let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
@@ -47,8 +44,8 @@ impl App {
             settings,
             markup,
             matcher: Matcher::new(),
-            nav_line: Line::default().centered(),
             menu_line: Line::default().centered(),
+            text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts,
         }
     }
@@ -159,23 +156,23 @@ impl App {
             .areas(area);
 
             // Navigation
-            for route in [Route::Review, Route::Editor(None), Route::Cards] {
-                let (name, is_current) = match route {
-                    Route::Review => ("Review", matches!(self.route, Route::Review)),
-                    Route::Editor(_) => ("Editor", matches!(self.route, Route::Editor(_))),
-                    Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
-                };
+            const SPACING: &str = "   ";
+            for (route, name, spacing) in [
+                (Route::Review, "Review", SPACING),
+                (Route::Editor(None), "Editor", SPACING),
+                (Route::Cards, "Cards", ""),
+            ] {
+                let is_current =
+                    std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
                 let style = if is_current {
-                    Style::new().bold().fg(self.settings.primary())
+                    Style::new().fg(colors.primary).bold()
                 } else {
                     Style::new()
                 };
-                self.nav_line
-                    .extend([Span::styled(name, style), Span::raw("   ")]);
+                self.text.extend([(name, style), (spacing, Style::new())]);
             }
-            self.nav_line.spans.pop();
-            (&self.nav_line).render(nav_area, buf);
-            self.nav_line.spans.clear();
+            self.text.render(nav_area, buf);
+            self.text.clear();
 
             // Body
             const MAX_WIDTH: u16 = 64;
