@@ -200,7 +200,7 @@ pub struct AnsiParser<'a> {
 }
 
 impl<'a> AnsiParser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub const fn new(input: &'a str) -> Self {
         Self {
             input,
             start: 0,

@@ -18,8 +18,6 @@ use syntect::{
 };
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
-use super::Shortcut;
-
 #[derive(Debug)]
 pub struct Markup {
     width: usize,
@@ -40,8 +38,6 @@ pub enum ScrollMove {
 }
 
 impl Markup {
-    pub const SHORTCUTS: [Shortcut<'static>; 1] = [Shortcut::new("Scroll", "⮁")];
-
     pub const fn new(syntax_highlight_theme: &'static str) -> Self {
         Self {
             width: 0,

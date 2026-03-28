@@ -3,11 +3,11 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
-    style::Style,
+    style::{Color, Style},
     text::{Line, Span},
     widgets::Widget,
 };
-use widgets::{Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextSegment};
+use widgets::{Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt, Matcher},
@@ -67,7 +67,7 @@ impl CardSort {
 }
 
 impl CardsPage {
-    pub fn new(colors: &Colors) -> Self {
+    pub const fn new(colors: &Colors) -> Self {
         Self {
             cards: Vec::new(),
             index: 0,
@@ -75,8 +75,14 @@ impl CardsPage {
             sort: CardSort::Newest,
             show_archived: false,
             search: TextInput::new()
-                .with_placeholder("search...")
-                .with_colors(colors.primary, colors.neutral),
+                .with_placeholder("Search...")
+                .with_colors(TextInputColors {
+                    normal: Color::Reset,
+                    cursor: colors.primary,
+                    selector: colors.neutral,
+                    placeholder: colors.neutral,
+                    disabled: colors.neutral,
+                }),
         }
     }
 

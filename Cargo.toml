@@ -33,6 +33,7 @@ nucleo-matcher = { version = "0.3", default-features = false, features = [
 ] }
 ratatui = { version = "0.30", default-features = false, features = ["crossterm"] }
 ron = { version = "0.12", default-features = false, features = ["std"] }
+seahash = { version = "4.1", default-features = false }
 serde = { version = "1.0", default-features = false, features = [
   "derive",
   "std"

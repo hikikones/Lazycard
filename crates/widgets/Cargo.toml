@@ -8,6 +8,7 @@ license.workspace = true
 arboard = { workspace = true }
 itoa = { workspace = true }
 ratatui = { workspace = true }
+seahash = { workspace = true }
 syntect = { workspace = true }
 unicode-segmentation = { workspace = true }
 unicode-width = { workspace = true }
