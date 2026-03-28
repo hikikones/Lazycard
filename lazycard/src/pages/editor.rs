@@ -69,7 +69,7 @@ impl CardEditorPage {
         shortcuts.extend([
             Shortcut::new("Save", symbols::ctrl!("s")),
             Shortcut::new("Preview (toggle)", symbols::ctrl!("p")),
-            Shortcut::new("Edit", "e"),
+            Shortcut::new("Edit", symbols::ctrl!("e")),
         ]);
     }
 
@@ -82,66 +82,46 @@ impl CardEditorPage {
         terminal: &mut Terminal,
     ) -> std::io::Result<Action> {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
-        let shift = modifiers.contains(KeyModifiers::SHIFT);
 
-        if ctrl && key == KeyCode::Char('p') {
-            self.preview = !self.preview;
-            return Ok(Action::Render);
-        }
-
-        if self.preview {
-            match key {
-                KeyCode::Char('e') => {
-                    // TODO: Add to logs when failure
+        match key {
+            KeyCode::Char('e') => {
+                // TODO: Add to logs when failure
+                if ctrl {
                     let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
                     self.editor.clear();
                     self.editor.push_str(&content);
+                    self.editor.move_cursor(CursorMove::Start, false);
                     return Ok(Action::Render);
                 }
-                KeyCode::Char('s') => {
-                    if ctrl && !self.editor.is_empty() {
+            }
+            KeyCode::Char('p') => {
+                if ctrl {
+                    self.preview = !self.preview;
+                    return Ok(Action::Render);
+                } else if !self.preview {
+                    self.editor.push_char('p');
+                    return Ok(Action::Render);
+                }
+            }
+            KeyCode::Char('s') => {
+                if ctrl {
+                    if !self.editor.is_empty() {
                         self.save(db);
                         markup.clear();
                         return Ok(Action::Render);
                     }
+                } else if !self.preview {
+                    self.editor.push_char('s');
+                    return Ok(Action::Render);
                 }
-                _ => {
+            }
+            _ => {
+                if self.preview {
                     if markup.input(key, modifiers) {
                         return Ok(Action::Render);
                     }
-                }
-            }
-        } else {
-            match key {
-                KeyCode::Up => {
-                    if self.editor.move_cursor(CursorMove::Up, shift) {
-                        return Ok(Action::Render);
-                    }
-                }
-                KeyCode::Down => {
-                    if self.editor.move_cursor(CursorMove::Down, shift) {
-                        return Ok(Action::Render);
-                    }
-                }
-                KeyCode::Char('s') => {
-                    if ctrl {
-                        if !self.editor.is_empty() {
-                            self.save(db);
-                            markup.clear();
-                        }
-                    } else {
-                        self.editor.push_char('s');
-                    }
+                } else if self.editor.input(key, modifiers) {
                     return Ok(Action::Render);
-                }
-                KeyCode::Char('p') => {
-                    self.editor.push_char('p');
-                    return Ok(Action::Render);
-                }
-                _ => {
-                    if self.editor.input(key, modifiers) {
-                        return Ok(Action::Render);
-                    }
                 }
             }
         }
@@ -158,16 +138,17 @@ impl CardEditorPage {
     fn save(&mut self, db: &mut Database) {
         match self.state {
             CardEditorState::New => {
-                let card = Card::new(self.editor.as_str().to_owned());
+                let card = Card::new(self.editor.as_str());
                 db.add(card);
             }
             CardEditorState::Edit(id) => {
                 db.update(id, |card| {
                     card.content = self.editor.as_str().to_owned();
-                    self.state = CardEditorState::New;
                 });
             }
         }
+        self.state = CardEditorState::New;
+        self.preview = false;
         self.editor.clear();
     }
 }
