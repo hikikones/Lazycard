@@ -26,7 +26,7 @@ impl CardEditorPage {
         Self {
             editor: TextEditor::new()
                 .with_placeholder("content...")
-                .with_colors(colors.accent, colors.neutral),
+                .with_colors(colors.primary, colors.neutral),
             state: CardEditorState::New,
             preview: false,
             external_editor,

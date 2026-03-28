@@ -64,7 +64,7 @@ impl CardsPage {
             show_archived: false,
             search: TextInput::new()
                 .with_placeholder("search...")
-                .with_colors(colors.accent, colors.neutral),
+                .with_colors(colors.primary, colors.neutral),
         }
     }
 

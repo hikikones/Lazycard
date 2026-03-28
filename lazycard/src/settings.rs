@@ -15,12 +15,12 @@ impl Default for Settings {
                 .unwrap_or(terminal_colorsaurus::ThemeMode::Dark)
             {
                 terminal_colorsaurus::ThemeMode::Dark => Colors {
-                    accent: Color::LightYellow,
+                    primary: Color::LightYellow,
                     neutral: Color::Indexed(245),
                     syntax_highlighting: "base16-eighties.dark",
                 },
                 terminal_colorsaurus::ThemeMode::Light => Colors {
-                    accent: Color::LightCyan,
+                    primary: Color::LightCyan,
                     neutral: Color::Indexed(245),
                     syntax_highlighting: "InspiredGitHub",
                 },
@@ -35,8 +35,8 @@ impl Settings {
         &self.colors
     }
 
-    pub const fn accent(&self) -> Color {
-        self.colors.accent
+    pub const fn primary(&self) -> Color {
+        self.colors.primary
     }
 
     pub const fn neutral(&self) -> Color {
@@ -47,8 +47,8 @@ impl Settings {
         self.colors.syntax_highlighting
     }
 
-    pub const fn set_accent(&mut self, color: Color) {
-        self.colors.accent = color;
+    pub const fn set_primary(&mut self, color: Color) {
+        self.colors.primary = color;
     }
 
     pub const fn set_neutral(&mut self, color: Color) {
@@ -59,7 +59,7 @@ impl Settings {
 pub struct General {}
 
 pub struct Colors {
-    pub accent: Color,
+    pub primary: Color,
     pub neutral: Color,
     pub syntax_highlighting: &'static str,
 }

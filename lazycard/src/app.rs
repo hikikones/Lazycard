@@ -39,7 +39,7 @@ impl App {
         title_line.push_span(Span::styled("lazycard", settings.neutral()));
 
         let markup = Markup::new(settings.syntax_highlighting());
-        let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.accent());
+        let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
         Self {
             route: Route::Review,
@@ -183,7 +183,7 @@ impl App {
                     Route::Cards => ("Cards", matches!(self.route, Route::Cards)),
                 };
                 let style = if is_current {
-                    Style::new().bold().fg(self.settings.accent())
+                    Style::new().bold().fg(self.settings.primary())
                 } else {
                     Style::new()
                 };
