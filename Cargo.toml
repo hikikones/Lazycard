@@ -10,7 +10,6 @@ license = "MIT"
 # todo: add msrs and other fields
 
 [workspace.dependencies]
-arboard = { version = "3.6", default-features = false }
 clap = { version = "4.6", default-features = false, features = [
   "color",
   "derive",

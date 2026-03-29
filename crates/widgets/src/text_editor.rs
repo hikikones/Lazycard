@@ -100,33 +100,6 @@ impl TextEditor {
                     self.push_char(c);
                     return true;
                 }
-                'c' => {
-                    if ctrl {
-                        if let Some(selector) = self.selection_start {
-                            if let Some(range) = self.get_selection_range(selector) {
-                                if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                                    let _ = clipboard.set_text(&self.input[range]);
-                                }
-                            }
-                        }
-                    } else {
-                        self.push_char(c);
-                        return true;
-                    }
-                }
-                'v' => {
-                    if ctrl {
-                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                            if let Ok(s) = clipboard.get_text() {
-                                self.push_str(&s);
-                                return true;
-                            }
-                        }
-                    } else {
-                        self.push_char(c);
-                        return true;
-                    }
-                }
                 _ => {
                     self.push_char(c);
                     return true;
