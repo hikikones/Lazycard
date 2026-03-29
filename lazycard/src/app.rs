@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use database::{Card, CardId, Database, UnixTime};
 use ratatui::{
     CompletedFrame,
@@ -28,8 +30,15 @@ pub enum Action {
 }
 
 impl App {
-    pub fn new(database: Database) -> Self {
-        let settings = Settings::default();
+    pub fn new(database: Database, settings_path: Option<PathBuf>) -> Self {
+        let settings = Settings::read(settings_path.clone())
+            .inspect_err(|err| {
+                // TODO
+                // let log = Log::new(err);
+                // logs.enqueue(log);
+            })
+            .unwrap_or_default()
+            .with_path(settings_path);
         let markup = Markup::new(settings.syntax_highlighting());
         let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 

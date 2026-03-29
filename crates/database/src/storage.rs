@@ -32,6 +32,18 @@ impl Storage {
     }
 
     pub(crate) fn write(&self, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(&parent).map_err(|err| {
+                    format!(
+                        "Unable to save database as creating directory \"{}\" failed due to {}",
+                        parent.display(),
+                        err
+                    )
+                })?;
+            }
+        }
+
         let ron_options = ron::Options::default()
             .with_default_extension(ron::extensions::Extensions::UNWRAP_NEWTYPES);
         let ron_string = ron_options.to_string_pretty(self, ron::ser::PrettyConfig::default())?;

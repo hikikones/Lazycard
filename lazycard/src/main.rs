@@ -4,13 +4,23 @@ mod settings;
 mod symbols;
 mod terminal;
 
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const APP_QUALIFIER: &str = "org";
+const APP_ORGANIZATION: &str = "hikikones";
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Args = clap::Parser::parse();
-    let db = database::Database::new(args.database)?;
+
+    let Some(database_file) = args.database.or_else(|| get_database_file()) else {
+        return Err("No database file path specified or a \
+        default one could not be retrieved from the operating system")?;
+    };
+    let db = database::Database::new(database_file)?;
 
     let terminal = terminal::Terminal::init()?;
 
-    let mut app = app::App::new(db);
+    let mut app = app::App::new(db, args.settings);
     let res = app.run(terminal);
     app.quit()?;
 
@@ -19,12 +29,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     res
 }
 
+fn get_database_file() -> Option<std::path::PathBuf> {
+    const FILENAME: &str = "database.ron";
+    directories::ProjectDirs::from(APP_QUALIFIER, APP_ORGANIZATION, APP_NAME)
+        .map(|project_dirs| project_dirs.config_dir().join(FILENAME))
+}
+
 #[derive(Debug, clap::Parser)]
 #[command(version, about, styles = CLAP_STYLING)]
 struct Args {
-    /// Where to store your cards [example: ~/lazycard.ron]
-    #[arg(value_name = "DATABASE_FILE", value_hint = clap::ValueHint::FilePath)]
-    database: std::path::PathBuf,
+    /// The path for your database file. If not set,
+    /// the location will be determined by the conventions of your operating system.
+    #[arg(long, value_name = "DATABASE_FILE.ron", value_hint = clap::ValueHint::FilePath)]
+    database: Option<std::path::PathBuf>,
+
+    /// The path for your settings file. If not set,
+    /// the location will be determined by the conventions of your operating system.
+    #[arg(long, value_name = "SETTINGS_FILE.toml", value_hint = clap::ValueHint::FilePath)]
+    settings: Option<std::path::PathBuf>,
 }
 
 const CLAP_STYLING: clap::builder::styling::Styles = clap::builder::styling::Styles::styled()
