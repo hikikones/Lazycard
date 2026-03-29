@@ -196,28 +196,36 @@ impl TextInput {
     }
 
     pub fn delete(&mut self, cd: CursorDelete) -> bool {
-        if self.delete_selection() {
-            return true;
-        }
-
         match cd {
-            CursorDelete::Forward => match self.input[self.cursor..].graphemes(true).next() {
-                Some(g) => {
-                    self.input
-                        .replace_range(self.cursor..self.cursor + g.len(), "");
-                    true
+            CursorDelete::Forward => {
+                if self.delete_selection() {
+                    return true;
                 }
-                None => false,
-            },
-            CursorDelete::Back => match self.input[..self.cursor].graphemes(true).rev().next() {
-                Some(g) => {
-                    self.cursor -= g.len();
-                    self.input
-                        .replace_range(self.cursor..self.cursor + g.len(), "");
-                    true
+
+                match self.input[self.cursor..].graphemes(true).next() {
+                    Some(g) => {
+                        self.input
+                            .replace_range(self.cursor..self.cursor + g.len(), "");
+                        true
+                    }
+                    None => false,
                 }
-                None => false,
-            },
+            }
+            CursorDelete::Back => {
+                if self.delete_selection() {
+                    return true;
+                }
+
+                match self.input[..self.cursor].graphemes(true).rev().next() {
+                    Some(g) => {
+                        self.cursor -= g.len();
+                        self.input
+                            .replace_range(self.cursor..self.cursor + g.len(), "");
+                        true
+                    }
+                    None => false,
+                }
+            }
             CursorDelete::Selection => self.delete_selection(),
         }
     }
