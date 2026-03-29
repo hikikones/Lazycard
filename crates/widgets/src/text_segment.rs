@@ -7,8 +7,8 @@ use ratatui::{
 pub struct TextSegment {
     text: String,
     segments: Vec<(usize, Style)>,
-    total_width: usize,
     alignment: Alignment,
+    total_width: usize,
 }
 
 impl TextSegment {
@@ -16,8 +16,8 @@ impl TextSegment {
         Self {
             text: String::new(),
             segments: Vec::new(),
-            total_width: 0,
             alignment: Alignment::Left,
+            total_width: 0,
         }
     }
 
