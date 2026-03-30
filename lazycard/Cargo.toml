@@ -19,4 +19,6 @@ seahash = { workspace = true }
 serde = { workspace = true }
 terminal-colorsaurus = { workspace = true }
 toml = { workspace = true }
+unicode-width = { workspace = true }
+utils = { workspace = true }
 widgets = { workspace = true }

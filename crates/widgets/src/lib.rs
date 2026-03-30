@@ -1,4 +1,5 @@
 mod ansi;
+mod list;
 mod markup;
 mod shortcut;
 mod text_editor;
@@ -7,6 +8,7 @@ mod text_segment;
 mod utils;
 
 pub use ansi::*;
+pub use list::*;
 pub use markup::*;
 pub use shortcut::*;
 pub use text_editor::*;

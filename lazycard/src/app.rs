@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use database::{Card, CardId, Database, UnixTime};
 use ratatui::{
     CompletedFrame,
-    crossterm::event::{Event, KeyCode, KeyEventKind},
+    crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
     layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Style},
 };
@@ -13,6 +13,7 @@ use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
 pub struct App {
     route: Route,
+    state: State,
     pages: Pages,
     database: Database,
     settings: Settings,
@@ -22,29 +23,49 @@ pub struct App {
     shortcuts: Shortcuts,
 }
 
+enum State {
+    Route,
+    Logs,
+}
+
 pub enum Action {
     None,
     Render,
     Route(Route),
+    Log(Log),
     Quit,
 }
 
 impl App {
     pub fn new(database: Database, settings_path: Option<PathBuf>) -> Self {
+        let mut logs = LogsPage::new();
+        logs.enqueue(Log::new("message"));
+        logs.enqueue(Log::new("message"));
+        logs.enqueue(Log::new("message"));
+        logs.enqueue(Log::new("message"));
+        logs.enqueue(Log::new("message"));
+        logs.enqueue(Log::new("message"));
+        logs.enqueue(Log::new("message dlkaj waj ioajioawjd ioajdioajd ioajdioajdioajdioajidoajdioajdioajdioajdioajwidoajiodjaidojaiodjwiodjaioj"));
+
         let settings = Settings::read(settings_path.clone())
-            .inspect_err(|err| {
-                // TODO
-                // let log = Log::new(err);
-                // logs.enqueue(log);
-            })
+            .inspect_err(|err| logs.enqueue(Log::new(err)))
             .unwrap_or_default()
             .with_path(settings_path);
         let markup = Markup::new(settings.syntax_highlighting());
         let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
+        let colors = settings.colors();
+        let pages = Pages {
+            review: ReviewPage::new(),
+            editor: CardEditorPage::new(colors),
+            cards: CardsPage::new(colors),
+            logs,
+        };
+
         Self {
             route: Route::Review,
-            pages: Pages::new(settings.colors()),
+            state: State::Route,
+            pages,
             database,
             settings,
             markup,
@@ -64,30 +85,40 @@ impl App {
                     if key.kind == KeyEventKind::Press {
                         match key.code {
                             KeyCode::Esc => Action::Quit,
-                            KeyCode::Tab => Action::Route(self.route.next()),
-                            KeyCode::BackTab => Action::Route(self.route.prev()),
-                            _ => match self.route {
-                                Route::Review => self.pages.review.on_input(
-                                    key.code,
-                                    key.modifiers,
-                                    &mut self.markup,
-                                    &mut self.database,
-                                ),
-                                Route::Editor(_) => self.pages.editor.on_input(
-                                    key.code,
-                                    key.modifiers,
-                                    &mut self.markup,
-                                    &mut self.database,
-                                    &mut terminal,
-                                )?,
-                                Route::Cards => self.pages.cards.on_input(
-                                    key.code,
-                                    key.modifiers,
-                                    &mut self.markup,
-                                    &mut self.database,
-                                    &mut self.matcher,
-                                ),
+                            KeyCode::Tab | KeyCode::BackTab => match self.state {
+                                State::Route => {
+                                    let next_route = if key.code == KeyCode::Tab {
+                                        self.route.next()
+                                    } else {
+                                        self.route.prev()
+                                    };
+                                    Action::Route(next_route)
+                                }
+                                State::Logs => {
+                                    self.state = State::Route;
+                                    self.pages.logs.on_exit();
+                                    Action::Render
+                                }
                             },
+                            KeyCode::Char('l') => {
+                                let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                                if ctrl && !self.pages.logs.is_empty() {
+                                    match self.state {
+                                        State::Route => {
+                                            self.state = State::Logs;
+                                            self.pages.logs.on_enter();
+                                        }
+                                        State::Logs => {
+                                            self.state = State::Route;
+                                            self.pages.logs.on_exit();
+                                        }
+                                    }
+                                    Action::Render
+                                } else {
+                                    self.on_input(key, &mut terminal)
+                                }
+                            }
+                            _ => self.on_input(key, &mut terminal),
                         }
                     } else {
                         Action::None
@@ -120,6 +151,10 @@ impl App {
 
                     self.render(&mut terminal)?;
                 }
+                Action::Log(log) => {
+                    self.pages.logs.enqueue(log);
+                    self.render(&mut terminal)?;
+                }
                 Action::Quit => {
                     break;
                 }
@@ -140,6 +175,7 @@ impl App {
 
             let colors = self.settings.colors();
 
+            // Layout
             let [
                 nav_area,
                 menu_area,
@@ -176,38 +212,49 @@ impl App {
 
             // Body
             const MAX_WIDTH: u16 = 64;
-            const MARGIN: u16 = 2;
+            const MARGIN: u16 = 1;
             let body = center_horizontal(body_area, Constraint::Length(MAX_WIDTH + MARGIN))
                 .inner(Margin::new(MARGIN, MARGIN));
-            match self.route {
-                Route::Review => {
-                    self.pages.review.on_render(
+            match self.state {
+                State::Route => match self.route {
+                    Route::Review => {
+                        self.pages.review.on_render(
+                            body,
+                            buf,
+                            colors,
+                            &mut self.text,
+                            &mut self.markup,
+                            &mut self.shortcuts,
+                        );
+                    }
+                    Route::Editor(_) => {
+                        self.pages.editor.on_render(
+                            body,
+                            buf,
+                            colors,
+                            &mut self.text,
+                            &mut self.markup,
+                            &mut self.shortcuts,
+                        );
+                    }
+                    Route::Cards => {
+                        self.pages.cards.on_render(
+                            body,
+                            buf,
+                            &self.database,
+                            colors,
+                            &mut self.text,
+                            &mut self.markup,
+                            &mut self.shortcuts,
+                        );
+                    }
+                },
+                State::Logs => {
+                    self.pages.logs.on_render(
                         body,
                         buf,
                         colors,
                         &mut self.text,
-                        &mut self.markup,
-                        &mut self.shortcuts,
-                    );
-                }
-                Route::Editor(_) => {
-                    self.pages.editor.on_render(
-                        body,
-                        buf,
-                        colors,
-                        &mut self.text,
-                        &mut self.markup,
-                        &mut self.shortcuts,
-                    );
-                }
-                Route::Cards => {
-                    self.pages.cards.on_render(
-                        body,
-                        buf,
-                        &self.database,
-                        colors,
-                        &mut self.text,
-                        &mut self.markup,
                         &mut self.shortcuts,
                     );
                 }
@@ -217,17 +264,67 @@ impl App {
             self.text.render(menu_area, buf);
             self.text.clear();
 
-            // Shortcuts
+            // Page shortcuts
             self.shortcuts.render(shortcuts_page_area, buf);
             self.shortcuts.clear();
 
+            // App shortcuts
             self.shortcuts.extend([
                 Shortcut::new("Quit", symbols::ESCAPE),
                 Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
             ]);
+
+            if !self.pages.logs.is_empty() {
+                let key = symbols::ctrl!("l");
+                let new_logs = self.pages.logs.queue_len();
+                if new_logs > 0 {
+                    utils::format_int(new_logs, |new_logs| {
+                        self.shortcuts.push_iter(["Logs(", new_logs, ")"], key);
+                    });
+                } else {
+                    self.shortcuts.push(Shortcut::new("Logs", key));
+                }
+            }
+
             self.shortcuts.render(shortcuts_app_area, buf);
             self.shortcuts.clear();
         })
+    }
+
+    fn on_input(&mut self, key: KeyEvent, terminal: &mut Terminal) -> Action {
+        match self.state {
+            State::Route => match self.route {
+                Route::Review => self.pages.review.on_input(
+                    key.code,
+                    key.modifiers,
+                    &mut self.markup,
+                    &mut self.database,
+                ),
+                Route::Editor(_) => self.pages.editor.on_input(
+                    key.code,
+                    key.modifiers,
+                    &mut self.markup,
+                    &mut self.database,
+                    terminal,
+                ),
+                Route::Cards => self.pages.cards.on_input(
+                    key.code,
+                    key.modifiers,
+                    &mut self.markup,
+                    &mut self.database,
+                    &mut self.matcher,
+                ),
+            },
+            State::Logs => match self.pages.logs.on_input(key.code, key.modifiers) {
+                LogsAction::None => Action::None,
+                LogsAction::Render => Action::Render,
+                LogsAction::Done => {
+                    self.state = State::Route;
+                    self.pages.logs.on_exit();
+                    Action::Render
+                }
+            },
+        }
     }
 }
 

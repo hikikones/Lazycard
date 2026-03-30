@@ -1,25 +1,18 @@
 mod cards;
 mod editor;
+mod logs;
 mod review;
 
 pub use cards::*;
 pub use editor::*;
+pub use logs::*;
 pub use review::*;
 
 pub struct Pages {
     pub review: ReviewPage,
     pub editor: CardEditorPage,
     pub cards: CardsPage,
-}
-
-impl Pages {
-    pub fn new(colors: &crate::settings::Colors) -> Self {
-        Self {
-            review: ReviewPage::new(),
-            editor: CardEditorPage::new(colors),
-            cards: CardsPage::new(colors),
-        }
-    }
+    pub logs: LogsPage,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

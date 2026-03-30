@@ -6,7 +6,7 @@ use ratatui::{
 };
 use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor, TextSegment};
 
-use crate::{app::Action, settings::Colors, symbols, terminal::Terminal};
+use crate::{app::Action, pages::Log, settings::Colors, symbols, terminal::Terminal};
 
 pub struct CardEditorPage {
     editor: TextEditor,
@@ -80,27 +80,31 @@ impl CardEditorPage {
         markup: &mut Markup,
         db: &mut Database,
         terminal: &mut Terminal,
-    ) -> std::io::Result<Action> {
+    ) -> Action {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
-
         match key {
             KeyCode::Char('e') => {
-                // TODO: Add to logs when failure
                 if ctrl {
-                    let content = terminal.temp_leave(|| edit::edit(self.editor.as_str()))?;
-                    self.editor.clear();
-                    self.editor.push_str(&content);
-                    self.editor.move_cursor(CursorMove::Start, false);
-                    return Ok(Action::Render);
+                    match terminal.temp_leave(|| edit::edit(self.editor.as_str())) {
+                        Ok(content) => {
+                            self.editor.clear();
+                            self.editor.push_str(&content);
+                            self.editor.move_cursor(CursorMove::Start, false);
+                            return Action::Render;
+                        }
+                        Err(err) => {
+                            return Action::Log(Log::new(err));
+                        }
+                    }
                 }
             }
             KeyCode::Char('p') => {
                 if ctrl {
                     self.preview = !self.preview;
-                    return Ok(Action::Render);
+                    return Action::Render;
                 } else if !self.preview {
                     self.editor.push_char('p');
-                    return Ok(Action::Render);
+                    return Action::Render;
                 }
             }
             KeyCode::Char('s') => {
@@ -108,25 +112,25 @@ impl CardEditorPage {
                     if !self.editor.is_empty() {
                         self.save(db);
                         markup.clear();
-                        return Ok(Action::Render);
+                        return Action::Render;
                     }
                 } else if !self.preview {
                     self.editor.push_char('s');
-                    return Ok(Action::Render);
+                    return Action::Render;
                 }
             }
             _ => {
                 if self.preview {
                     if markup.input(key, modifiers) {
-                        return Ok(Action::Render);
+                        return Action::Render;
                     }
                 } else if self.editor.input(key, modifiers) {
-                    return Ok(Action::Render);
+                    return Action::Render;
                 }
             }
         }
 
-        Ok(Action::None)
+        Action::None
     }
 
     pub fn on_exit(&mut self) {
