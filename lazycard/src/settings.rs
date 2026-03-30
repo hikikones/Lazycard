@@ -137,8 +137,8 @@ impl Settings {
 
     pub fn save(&self) -> Result<(), String> {
         let Some(file) = self.path.clone().or_else(|| get_config_file()) else {
-            return Err("Unable to save settings due to no path found \
-                either manually or from the operating system")?;
+            return Err("Unable to save settings due to no path specified or \
+                a default one could not be retrieved from the operating system")?;
         };
 
         if let Some(parent) = file.parent() {
