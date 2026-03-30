@@ -83,27 +83,15 @@ impl TextSegment {
         self.total_width += unicode_width::UnicodeWidthStr::width(text);
     }
 
-    pub fn push_int(&mut self, int: impl itoa::Integer, style: impl Into<Style>) {
-        let mut buffer = itoa::Buffer::new();
-        self.push_str(buffer.format(int), style);
-    }
-
-    pub fn extend(&mut self, items: impl IntoIterator<Item = (impl AsRef<str>, impl Into<Style>)>) {
-        for (text, style) in items.into_iter() {
-            self.push_str(text.as_ref(), style);
-        }
-    }
-
-    pub fn extend_as_one(
+    pub fn push_str_iter<'a>(
         &mut self,
-        slices: impl IntoIterator<Item = impl AsRef<str>>,
+        slices: impl IntoIterator<Item = &'a str>,
         style: impl Into<Style>,
     ) {
         let mut len = 0;
         let mut width = 0;
 
         for text in slices.into_iter() {
-            let text = text.as_ref();
             if text.is_empty() {
                 continue;
             }
@@ -115,6 +103,17 @@ impl TextSegment {
 
         self.segments.push((len, style.into()));
         self.total_width += width;
+    }
+
+    pub fn push_int(&mut self, int: impl itoa::Integer, style: impl Into<Style>) {
+        let mut buffer = itoa::Buffer::new();
+        self.push_str(buffer.format(int), style);
+    }
+
+    pub fn extend(&mut self, items: impl IntoIterator<Item = (impl AsRef<str>, impl Into<Style>)>) {
+        for (text, style) in items.into_iter() {
+            self.push_str(text.as_ref(), style);
+        }
     }
 
     pub fn pop(&mut self) {
