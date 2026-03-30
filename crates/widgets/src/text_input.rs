@@ -108,20 +108,18 @@ impl TextInput {
             KeyCode::End => self.move_cursor(CursorMove::End, shift),
             KeyCode::Backspace => self.delete(CursorDelete::Back),
             KeyCode::Delete => self.delete(CursorDelete::Forward),
-            KeyCode::Char(c) => match c {
-                'a' => {
-                    if ctrl {
-                        self.select_all()
-                    } else {
-                        self.push_char(c);
-                        true
-                    }
-                }
-                _ => {
-                    self.push_char(c);
+            KeyCode::Char('a') => {
+                if ctrl {
+                    self.select_all()
+                } else {
+                    self.push_char('a');
                     true
                 }
-            },
+            }
+            KeyCode::Char(c) => {
+                self.push_char(c);
+                true
+            }
             _ => false,
         }
     }
