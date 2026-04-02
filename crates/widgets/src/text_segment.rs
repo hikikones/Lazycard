@@ -45,6 +45,10 @@ impl TextSegment {
     }
 
     pub fn push_chars(&mut self, chars: &[char], style: impl Into<Style>) {
+        if chars.is_empty() {
+            return;
+        }
+
         let mut len = 0;
         let mut width = 0;
 
@@ -91,14 +95,14 @@ impl TextSegment {
         let mut len = 0;
         let mut width = 0;
 
-        for text in slices.into_iter() {
-            if text.is_empty() {
-                continue;
-            }
-
+        for text in slices.into_iter().filter(|s| !s.is_empty()) {
             len += text.len();
             width += unicode_width::UnicodeWidthStr::width(text);
             self.text.push_str(text);
+        }
+
+        if len == 0 {
+            return;
         }
 
         self.segments.push((len, style.into()));
@@ -110,17 +114,30 @@ impl TextSegment {
         self.push_str(buffer.format(int), style);
     }
 
-    pub fn extend(&mut self, items: impl IntoIterator<Item = (impl AsRef<str>, impl Into<Style>)>) {
+    pub fn extend<'a>(&mut self, items: impl IntoIterator<Item = (&'a str, Style)>) {
         for (text, style) in items.into_iter() {
-            self.push_str(text.as_ref(), style);
+            self.push_str(text, style);
         }
     }
 
+    pub fn write(&mut self, style: impl Into<Style>, f: impl FnOnce(&mut dyn std::fmt::Write)) {
+        let start = self.text.len();
+
+        f(&mut self.text);
+
+        if self.text.len() == start {
+            return;
+        }
+
+        let text = &self.text[start..];
+        self.segments.push((text.len(), style.into()));
+        self.total_width += unicode_width::UnicodeWidthStr::width(text);
+    }
+
     pub fn pop(&mut self) {
-        if let Some((i, _)) = self.segments.pop() {
-            let start = self.text.len() - i;
-            let end = self.text.len();
-            let slice = &self.text[start..end];
+        if let Some((len, _)) = self.segments.pop() {
+            let start = self.text.len() - len;
+            let slice = &self.text[start..];
 
             self.total_width -= unicode_width::UnicodeWidthStr::width(slice);
             self.text.truncate(start);
