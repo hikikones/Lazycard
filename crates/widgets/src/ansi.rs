@@ -90,6 +90,10 @@ impl AnsiWriter {
         }
     }
 
+    pub const fn as_str(&self) -> &str {
+        self.inner.as_str()
+    }
+
     pub fn push_char(&mut self, c: char) {
         self.inner.push(c);
     }

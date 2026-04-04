@@ -3,8 +3,13 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
+    style::Style,
+    text::{Line, Span},
+    widgets::Widget,
 };
-use widgets::{BreakParser, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
+use widgets::{
+    AnsiTag, AnsiWriter, BreakParser, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment,
+};
 
 use crate::{
     app::{Action, CardsIterExt},
@@ -95,6 +100,15 @@ impl ReviewPage {
         markup: &mut Markup,
         shortcuts: &mut Shortcuts,
     ) {
+        // let mut writer = AnsiWriter::new();
+        // writer.push_str("Hello, ");
+        // writer.push_tag(AnsiTag::FgRed);
+        // writer.push_str("World!");
+        // writer.push_tag(AnsiTag::Reset);
+        // buf.set_string(area.x, area.y, writer.as_str(), Style::new());
+        // Span::raw(writer.as_str()).render(area, buf);
+        // Line::raw(writer.as_str()).render(area, buf);
+        // return;
         match self.state {
             ReviewState::None => {
                 markup.render("| No cards to review", area, buf);

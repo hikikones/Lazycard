@@ -57,7 +57,7 @@ impl App {
         let colors = settings.colors();
         let pages = Pages {
             review: ReviewPage::new(),
-            editor: CardEditorPage::new(colors),
+            editor: CardEditorPage2::new(colors),
             cards: CardsPage::new(colors),
             logs,
         };

@@ -1,16 +1,18 @@
 mod cards;
 mod editor;
+mod editor2;
 mod logs;
 mod review;
 
 pub use cards::*;
 pub use editor::*;
+pub use editor2::*;
 pub use logs::*;
 pub use review::*;
 
 pub struct Pages {
     pub review: ReviewPage,
-    pub editor: CardEditorPage,
+    pub editor: CardEditorPage2,
     pub cards: CardsPage,
     pub logs: LogsPage,
 }

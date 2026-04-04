@@ -10,6 +10,13 @@ const APP_QUALIFIER: &str = "org";
 const APP_ORGANIZATION: &str = "hikikones";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // use unicode_segmentation::UnicodeSegmentation;
+    // let s = "The quick (\"brown\")  fox\nNew       line\r\nAnother *one*";
+    // let w = s.split_word_bound_indices().collect::<Vec<(usize, &str)>>();
+    // dbg!(w);
+
+    // return Ok(());
+
     let args: Args = clap::Parser::parse();
 
     let Some(database_file) = args.database.or_else(|| get_database_file()) else {
