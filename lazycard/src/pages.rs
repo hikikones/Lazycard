@@ -12,7 +12,7 @@ pub use review::*;
 
 pub struct Pages {
     pub review: ReviewPage,
-    pub editor: CardEditorPage2,
+    pub editor: CardEditorPage,
     pub cards: CardsPage,
     pub logs: LogsPage,
 }

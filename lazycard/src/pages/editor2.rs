@@ -4,7 +4,7 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
 };
-use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor, TextEditor2, TextSegment};
+use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor2, TextSegment};
 
 use crate::{app::Action, pages::Log, settings::Colors, symbols, terminal::Terminal};
 
@@ -31,10 +31,10 @@ impl CardEditorPage2 {
     pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
         match id {
             Some(id) => {
-                // let card = db.get(id).unwrap();
-                // self.editor.clear();
-                // self.editor.push_str(card.content.as_str());
-                // self.editor.move_cursor(CursorMove::Start, false);
+                let card = db.get(id).unwrap();
+                self.editor.clear();
+                self.editor.push_str(card.content.as_str());
+                self.editor.move_cursor(CursorMove::Start);
                 self.state = CardEditorState::Edit(id);
             }
             None => {
@@ -85,10 +85,10 @@ impl CardEditorPage2 {
                 if ctrl {
                     match terminal.temp_leave(|| edit::edit(self.editor.as_str())) {
                         Ok(content) => {
-                            // self.editor.clear();
-                            // self.editor.push_str(&content);
-                            // self.editor.move_cursor(CursorMove::Start, false);
-                            // return Action::Render;
+                            self.editor.clear();
+                            self.editor.push_str(&content);
+                            self.editor.move_cursor(CursorMove::Start);
+                            return Action::Render;
                         }
                         Err(err) => {
                             return Action::Log(Log::new(err));

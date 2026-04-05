@@ -38,6 +38,11 @@ impl TextEditor2 {
         self.cursor += c.len_utf8();
     }
 
+    pub fn push_str(&mut self, s: &str) {
+        self.input.insert_str(self.cursor, s);
+        self.cursor += s.len();
+    }
+
     pub fn move_cursor(&mut self, cm: CursorMove) -> bool {
         match cm {
             CursorMove::Forward => {
@@ -188,6 +193,7 @@ impl TextEditor2 {
         // }
 
         let cursor = self.cursor + self.cursor_offset;
+        // let cursor = self.cursor;
         let Rect { mut x, mut y, .. } = area;
         for (i, g) in self.lines.grapheme_indices(true) {
             let is_cursor = i == cursor;
@@ -202,9 +208,15 @@ impl TextEditor2 {
                 buf[(x, y)].set_style(style);
                 x = area.x;
                 y += 1;
-                continue;
+
+                if y >= area.y + area.height {
+                    break;
+                } else {
+                    continue;
+                }
             }
 
+            // (x, _) = buf.set_stringn(x, y, g, usize::MAX, style);
             buf[(x, y)].set_symbol(g).set_style(style);
             x += unicode_width::UnicodeWidthStr::width(g) as u16;
         }
