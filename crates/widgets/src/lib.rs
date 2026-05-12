@@ -1,4 +1,5 @@
 mod ansi;
+mod kitty_graphics;
 mod list;
 mod markup;
 mod shortcut;
@@ -9,6 +10,7 @@ mod text_segment;
 mod utils;
 
 pub use ansi::*;
+pub use kitty_graphics::*;
 pub use list::*;
 pub use markup::*;
 pub use shortcut::*;
