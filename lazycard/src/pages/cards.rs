@@ -8,7 +8,7 @@ use ratatui::{
     widgets::Widget,
 };
 use widgets::{
-    KittyGraphics, Markup, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment,
+    KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment,
 };
 
 use crate::{
@@ -261,7 +261,7 @@ impl CardsPage {
                 KeyCode::Right => {
                     if self.cards.len() > 1 {
                         self.index = (self.index + 1) % self.cards.len();
-                        // todo markup.desired_scroll(ScrollMove::Start);
+                        markup.scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }
@@ -272,7 +272,7 @@ impl CardsPage {
                         } else {
                             self.index -= 1;
                         }
-                        // todo markup.desired_scroll(ScrollMove::Start);
+                        markup.scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }
@@ -286,7 +286,7 @@ impl CardsPage {
                         }
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
-                            // todo markup.desired_scroll(ScrollMove::Start);
+                            markup.scroll(ScrollMove::Start);
                         }
                         return Action::Render;
                     }
@@ -313,7 +313,7 @@ impl CardsPage {
                     };
                     self.index = 0;
                     self.sort_cards();
-                    // todo markup.desired_scroll(ScrollMove::Start);
+                    markup.scroll(ScrollMove::Start);
                     return Action::Render;
                 }
                 KeyCode::Char('/') => {
@@ -326,7 +326,7 @@ impl CardsPage {
                     self.cards.clear();
                     self.fetch_cards(db, matcher);
                     self.sort_cards();
-                    // todo markup.desired_scroll(ScrollMove::Start);
+                    markup.scroll(ScrollMove::Start);
                     return Action::Render;
                 }
                 KeyCode::Char('r') => {
@@ -335,13 +335,13 @@ impl CardsPage {
                         db.update(id, |card| card.archived = false);
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
-                            // todo markup.desired_scroll(ScrollMove::Start);
+                            markup.scroll(ScrollMove::Start);
                         }
                         return Action::Render;
                     }
                 }
                 _ => {
-                    if markup.input(key, modifiers) {
+                    if markup.input(key) {
                         return Action::Render;
                     }
                 }

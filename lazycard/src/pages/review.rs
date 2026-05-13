@@ -5,7 +5,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
 };
-use widgets::{BreakParser, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
+use widgets::{BreakParser, KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt},
@@ -154,7 +154,7 @@ impl ReviewPage {
                     self.total = self.total.saturating_sub(1);
                     if let Some(next_id) = self.next_card() {
                         self.start_review(next_id, db);
-                        // todo markup.desired_scroll(ScrollMove::Start);
+                        markup.scroll(ScrollMove::Start);
                     } else {
                         self.state = ReviewState::Done;
                     }
@@ -162,7 +162,7 @@ impl ReviewPage {
                 }
                 KeyCode::Char(' ') => {
                     if self.reveal_next() {
-                        // todo markup.desired_scroll(ScrollMove::End);
+                        markup.set_desired_scroll(ScrollMove::End);
                         return Action::Render;
                     }
                 }
@@ -173,7 +173,7 @@ impl ReviewPage {
                         self.progress += 1;
                         if let Some(next_id) = self.next_card() {
                             self.start_review(next_id, db);
-                            // todo markup.desired_scroll(ScrollMove::Start);
+                            markup.scroll(ScrollMove::Start);
                         } else {
                             self.state = ReviewState::Done;
                         }
@@ -184,12 +184,12 @@ impl ReviewPage {
                     if let Some(next_id) = self.next_card() {
                         self.due.push(id);
                         self.start_review(next_id, db);
-                        // todo markup.desired_scroll(ScrollMove::Start);
+                        markup.scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }
                 _ => {
-                    if markup.input(key, modifiers) {
+                    if markup.input(key) {
                         return Action::Render;
                     }
                 }

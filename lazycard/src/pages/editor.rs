@@ -128,7 +128,7 @@ impl CardEditorPage {
             }
             _ => {
                 if self.preview {
-                    if markup.input(key, modifiers) {
+                    if markup.input(key) {
                         return Action::Render;
                     }
                 } else if self.editor.input(key, modifiers) {

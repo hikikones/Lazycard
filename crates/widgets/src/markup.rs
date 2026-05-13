@@ -6,10 +6,7 @@ use std::{
     str::CharIndices,
 };
 
-use ratatui::{
-    crossterm::event::{KeyCode, KeyModifiers},
-    prelude::*,
-};
+use ratatui::{crossterm::event::KeyCode, prelude::*};
 use syntect::{
     easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::LinesWithEndings,
 };
@@ -22,8 +19,6 @@ use crate::{
     utils,
 };
 
-// todo: desired scroll
-
 pub struct Markup {
     items: Vec<Item>,
     ansi: AnsiWriter,
@@ -31,11 +26,21 @@ pub struct Markup {
     code_highlighter: CodeHighlighter,
     text_segment: TextSegment,
     scroll: u16,
-    total_lines: u16,
+    desired_scroll: Option<ScrollMove>,
     area: Rect,
     hash: u64,
     id_start: u32,
     id_counter: u32,
+    total_lines: u16,
+}
+
+pub enum ScrollMove {
+    Up,
+    Down,
+    PageUp,
+    PageDown,
+    Start,
+    End,
 }
 
 #[derive(Debug, Clone)]
@@ -117,39 +122,47 @@ impl Markup {
             code_highlighter: CodeHighlighter::new(),
             text_segment: TextSegment::new(),
             scroll: 0,
-            total_lines: 0,
+            desired_scroll: None,
             area: Rect::ZERO,
             hash: 0,
             id_start: 90,
             id_counter: 0,
+            total_lines: 0,
         }
     }
 
-    pub fn input(&mut self, key: KeyCode, _modifiers: KeyModifiers) -> bool {
+    pub fn input(&mut self, key: KeyCode) -> bool {
         match key {
-            KeyCode::Down => {
-                self.scroll += 1;
-            }
-            KeyCode::Up => {
-                self.scroll = self.scroll.saturating_sub(1);
-            }
-            KeyCode::PageDown => {
-                self.scroll += self.area.height;
-            }
-            KeyCode::PageUp => {
-                self.scroll = self.scroll.saturating_sub(self.area.height);
-            }
-            KeyCode::Home => {
-                self.scroll = 0;
-            }
-            KeyCode::End => {
-                self.scroll = u16::MAX;
-            }
-            _ => {}
+            KeyCode::Down => self.scroll(ScrollMove::Down),
+            KeyCode::Up => self.scroll(ScrollMove::Up),
+            KeyCode::PageDown => self.scroll(ScrollMove::PageDown),
+            KeyCode::PageUp => self.scroll(ScrollMove::PageUp),
+            KeyCode::Home => self.scroll(ScrollMove::Start),
+            KeyCode::End => self.scroll(ScrollMove::End),
+            _ => false,
         }
+    }
 
-        // todo: return only true when scroll differs
-        true
+    pub fn scroll(&mut self, sm: ScrollMove) -> bool {
+        let old_scroll = self.scroll;
+
+        self.scroll = match sm {
+            ScrollMove::Up => self.scroll.saturating_sub(1),
+            ScrollMove::Down => {
+                (self.scroll + 1).min(self.total_lines.saturating_sub(self.area.height))
+            }
+            ScrollMove::PageUp => self.scroll.saturating_sub(self.area.height),
+            ScrollMove::PageDown => (self.scroll + self.area.height)
+                .min(self.total_lines.saturating_sub(self.area.height)),
+            ScrollMove::Start => 0,
+            ScrollMove::End => self.total_lines.saturating_sub(self.area.height),
+        };
+
+        self.scroll != old_scroll
+    }
+
+    pub fn set_desired_scroll(&mut self, sm: ScrollMove) {
+        self.desired_scroll = Some(sm);
     }
 
     pub fn render(
@@ -218,10 +231,17 @@ impl Markup {
             text_segment.clear();
         }
 
+        if let Some(sm) = self.desired_scroll.take() {
+            if self.total_lines == 0 {
+                self.total_lines = self.compute_total_lines(kitty);
+            }
+            self.scroll(sm);
+        }
+
         // Restrict scroll
-        self.scroll = self
-            .scroll
-            .min(self.total_lines.saturating_sub(area.height));
+        // self.scroll = self
+        //     .scroll
+        //     .min(self.total_lines.saturating_sub(area.height));
 
         // Setup
         let top_y = area.y;
@@ -379,12 +399,12 @@ impl Markup {
 
     pub fn clear(&mut self) {
         self.items.clear();
-        self.ansi.clear();
         self.buffer.clear();
         self.scroll = 0;
-        // TODO: self.desired_scroll = None;
+        self.desired_scroll = None;
         self.area = Rect::ZERO;
         self.hash = 0;
+        self.total_lines = 0;
     }
 
     pub fn delete_images(&self, kitty: &KittyGraphics) -> std::io::Result<()> {
@@ -402,6 +422,7 @@ impl Markup {
     fn compute(&mut self, text: &str, width: u16, kitty: &mut KittyGraphics) {
         self.items.clear();
         self.buffer.clear();
+        self.total_lines = 0;
         self.id_counter = 0;
 
         for (block, _) in BlockParser::new(text) {
@@ -472,6 +493,41 @@ impl Markup {
 
         // Remove last empty line
         self.items.pop();
+    }
+
+    fn compute_total_lines(&self, kitty: &KittyGraphics) -> u16 {
+        let mut total_lines = 0;
+
+        for item in self.items.iter().cloned() {
+            match item {
+                Item::Paragraph { text, .. } => {
+                    let text = &self.buffer[text];
+                    total_lines += text.lines().count() as u16;
+                }
+                Item::ListItem { text } => {
+                    let text = &self.buffer[text];
+                    total_lines += text.lines().count() as u16;
+                }
+                Item::Code { text, .. } => {
+                    let text = &self.buffer[text];
+                    total_lines += text.lines().count() as u16;
+                }
+                Item::Image { dims, .. } => {
+                    let max_width = kitty.width(self.area.width);
+                    let resized_dims = KittyGraphics::resize(dims, dims.width(max_width));
+                    let resized_area = kitty.area(resized_dims);
+                    total_lines += resized_area.rows;
+                }
+                Item::Break => {
+                    total_lines += 1;
+                }
+                Item::EmptyLine => {
+                    total_lines += 1;
+                }
+            }
+        }
+
+        total_lines
     }
 
     fn parse_text(&mut self, text: &str, width: u16) -> Range<usize> {
