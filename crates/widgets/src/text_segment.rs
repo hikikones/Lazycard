@@ -26,6 +26,11 @@ impl TextSegment {
         self
     }
 
+    pub const fn set_alignment(&mut self, alignment: Alignment) -> &mut Self {
+        self.alignment = alignment;
+        self
+    }
+
     pub const fn is_empty(&self) -> bool {
         self.text.is_empty()
     }
@@ -45,36 +50,21 @@ impl TextSegment {
     }
 
     pub fn push_chars(&mut self, chars: &[char], style: impl Into<Style>) {
-        if chars.is_empty() {
-            return;
-        }
-
-        let mut len = 0;
-        let mut width = 0;
-
-        for ch in chars.iter().copied() {
-            len += ch.len_utf8();
-            width += unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
-            self.text.push(ch);
-        }
-
-        self.segments.push((len, style.into()));
-        self.total_width += width;
+        let start = self.text.len();
+        self.text.extend(chars);
+        self.push_segment(start, style);
     }
 
     pub fn repeat_char(&mut self, ch: char, n: usize, style: impl Into<Style>) {
-        if n == 0 {
+        let start = self.text.len();
+        self.text.extend(std::iter::repeat_n(ch, n));
+
+        if self.text.len() == start {
             return;
         }
 
-        for _ in 0..n {
-            self.text.push(ch);
-        }
-
-        let width = unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
-        let len = ch.len_utf8() * n;
-        self.segments.push((len, style.into()));
-        self.total_width += width * n;
+        self.segments.push((n * ch.len_utf8(), style.into()));
+        self.total_width += n * unicode_width::UnicodeWidthChar::width(ch).unwrap_or(0);
     }
 
     pub fn push_str(&mut self, text: &str, style: impl Into<Style>) {
@@ -92,21 +82,9 @@ impl TextSegment {
         slices: impl IntoIterator<Item = &'a str>,
         style: impl Into<Style>,
     ) {
-        let mut len = 0;
-        let mut width = 0;
-
-        for text in slices.into_iter().filter(|s| !s.is_empty()) {
-            len += text.len();
-            width += unicode_width::UnicodeWidthStr::width(text);
-            self.text.push_str(text);
-        }
-
-        if len == 0 {
-            return;
-        }
-
-        self.segments.push((len, style.into()));
-        self.total_width += width;
+        let start = self.text.len();
+        self.text.extend(slices);
+        self.push_segment(start, style);
     }
 
     pub fn push_int(&mut self, int: impl itoa::Integer, style: impl Into<Style>) {
@@ -114,24 +92,17 @@ impl TextSegment {
         self.push_str(buffer.format(int), style);
     }
 
+    pub fn push_fmt(&mut self, args: std::fmt::Arguments<'_>, style: impl Into<Style>) {
+        use std::fmt::Write;
+        let start = self.text.len();
+        let _ = self.text.write_fmt(args);
+        self.push_segment(start, style);
+    }
+
     pub fn extend<'a>(&mut self, items: impl IntoIterator<Item = (&'a str, Style)>) {
         for (text, style) in items.into_iter() {
             self.push_str(text, style);
         }
-    }
-
-    pub fn write(&mut self, style: impl Into<Style>, f: impl FnOnce(&mut dyn std::fmt::Write)) {
-        let start = self.text.len();
-
-        f(&mut self.text);
-
-        if self.text.len() == start {
-            return;
-        }
-
-        let text = &self.text[start..];
-        self.segments.push((text.len(), style.into()));
-        self.total_width += unicode_width::UnicodeWidthStr::width(text);
     }
 
     pub fn pop(&mut self) {
@@ -183,5 +154,15 @@ impl TextSegment {
             x = next_x;
             start = end;
         }
+    }
+
+    fn push_segment(&mut self, start: usize, style: impl Into<Style>) {
+        if self.text.len() == start {
+            return;
+        }
+
+        let text = &self.text[start..];
+        self.segments.push((text.len(), style.into()));
+        self.total_width += unicode_width::UnicodeWidthStr::width(text);
     }
 }

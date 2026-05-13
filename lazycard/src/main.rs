@@ -19,6 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args: Args = clap::Parser::parse();
 
+    let cell_size = widgets::CellSize::query()?.unwrap();
     let Some(database_file) = args.database.or_else(|| get_database_file()) else {
         return Err("No database file path specified or a \
         default one could not be retrieved from the operating system")?;
@@ -27,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let terminal = terminal::Terminal::init()?;
 
-    let mut app = app::App::new(db, args.settings);
+    let mut app = app::App::new(db, cell_size, args.settings);
     let res = app.run(terminal);
     app.quit()?;
 

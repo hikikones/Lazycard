@@ -10,6 +10,10 @@ license = "MIT"
 # todo: add msrs and other fields
 
 [workspace.dependencies]
+ahash = { version = "0.8", default-features = false, features = [
+  "runtime-rng",
+  "std"
+] }
 base64 = { version = "0.22", default-features = false, features = [
   "alloc",
   "std"
@@ -59,6 +63,11 @@ syntect = { version = "5.3", default-features = false, features = [
   "regex-onig"
 ] }
 terminal-colorsaurus = { version = "1.0", default-features = false }
+textwrap = { version = "0.16", default-features = false, features = [
+  "smawk",
+  "unicode-linebreak",
+  "unicode-width"
+] }
 toml = { version = "1.0", default-features = false, features = [
   "display",
   "parse",

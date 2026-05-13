@@ -4,7 +4,7 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
 };
-use widgets::{CursorMove, Markup, Shortcut, Shortcuts, TextEditor2, TextSegment};
+use widgets::{CursorMove, KittyGraphics, Markup, Shortcut, Shortcuts, TextEditor2, TextSegment};
 
 use crate::{app::Action, pages::Log, settings::Colors, symbols, terminal::Terminal};
 
@@ -50,6 +50,7 @@ impl CardEditorPage2 {
         colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
+        kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
         let title = match self.state {
@@ -59,7 +60,7 @@ impl CardEditorPage2 {
         menu.push_str(title, colors.neutral);
 
         if self.preview {
-            markup.render(self.editor.as_str(), area, buf);
+            markup.render(area, buf, self.editor.as_str(), kitty);
         } else {
             self.editor.render(area, buf);
         }
@@ -77,6 +78,7 @@ impl CardEditorPage2 {
         modifiers: KeyModifiers,
         markup: &mut Markup,
         db: &mut Database,
+        kitty: &KittyGraphics,
         terminal: &mut Terminal,
     ) -> Action {
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);

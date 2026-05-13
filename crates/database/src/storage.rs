@@ -69,15 +69,17 @@ fn add_test_data(cards: &mut BTreeMap<CardId, Card>) {
         Card::new(
             r#"
 # this is a comment
-left paragraph with *bold*, _italic_ and maybe `verbatim text` that *should wrap* when line becomes _tooooooooo_ long...
+*left* paragraph with *bold*, _italic_ and maybe `verbatim text` that *should wrap* when line becomes _*tooooooooo*_ long..*.*
 
 - item 1
-- item 2 with lots of text that can wrap to next line but also keeping the indent so it looks nice ohhh yeah
+- item 2 with *lots of text* that can wrap to next line but also keeping the indent so it looks nice ohhh yeah
 - item 3
 
 > right paragraph
 
 | center paragraph
+
+![ image description text ]( assets/wallpaper.jpg )
 
 ```rust
 fn main() {
@@ -86,6 +88,8 @@ fn main() {
 ```
 
 ---
+
+![ image description text ]( assets/meow.png )
 
 Lorem ipsum dolor sit amet,
 consectetur adipiscing elit.
@@ -100,6 +104,8 @@ another one
 ---
 
 and another one
+
+![ image description text ]( assets/tall.gif )
 "#,
         ),
     );

@@ -4,12 +4,8 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
     style::Style,
-    text::{Line, Span},
-    widgets::Widget,
 };
-use widgets::{
-    AnsiTag, AnsiWriter, BreakParser, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment,
-};
+use widgets::{BreakParser, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt},
@@ -98,27 +94,25 @@ impl ReviewPage {
         colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
+        kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
-        // let mut writer = AnsiWriter::new();
-        // writer.push_str("Hello, ");
-        // writer.push_tag(AnsiTag::FgRed);
-        // writer.push_str("World!");
-        // writer.push_tag(AnsiTag::Reset);
-        // buf.set_string(area.x, area.y, writer.as_str(), Style::new());
-        // Span::raw(writer.as_str()).render(area, buf);
-        // Line::raw(writer.as_str()).render(area, buf);
-        // return;
         match self.state {
             ReviewState::None => {
-                markup.render("| No cards to review", area, buf);
+                widgets::print_ascii(
+                    area,
+                    buf,
+                    "No cards to review",
+                    Style::new(),
+                    Some(widgets::Alignment::Center),
+                );
             }
             ReviewState::Review(_) => {
                 menu.push_int(self.progress, colors.neutral);
                 menu.push_str(" / ", colors.neutral);
                 menu.push_int(self.total, colors.neutral);
 
-                markup.render(&self.text, area, buf);
+                markup.render(area, buf, self.text.as_str(), kitty);
 
                 if !self.reveals.is_empty() {
                     shortcuts.extend([Shortcut::new("Show", symbols::SPACE)]);
@@ -134,7 +128,13 @@ impl ReviewPage {
                 ]);
             }
             ReviewState::Done => {
-                markup.render("| Good job!", area, buf);
+                widgets::print_ascii(
+                    area,
+                    buf,
+                    "Good job!",
+                    Style::new(),
+                    Some(widgets::Alignment::Center),
+                );
             }
         }
     }
@@ -154,7 +154,7 @@ impl ReviewPage {
                     self.total = self.total.saturating_sub(1);
                     if let Some(next_id) = self.next_card() {
                         self.start_review(next_id, db);
-                        markup.desired_scroll(ScrollMove::Start);
+                        // todo markup.desired_scroll(ScrollMove::Start);
                     } else {
                         self.state = ReviewState::Done;
                     }
@@ -162,7 +162,7 @@ impl ReviewPage {
                 }
                 KeyCode::Char(' ') => {
                     if self.reveal_next() {
-                        markup.desired_scroll(ScrollMove::End);
+                        // todo markup.desired_scroll(ScrollMove::End);
                         return Action::Render;
                     }
                 }
@@ -173,7 +173,7 @@ impl ReviewPage {
                         self.progress += 1;
                         if let Some(next_id) = self.next_card() {
                             self.start_review(next_id, db);
-                            markup.desired_scroll(ScrollMove::Start);
+                            // todo markup.desired_scroll(ScrollMove::Start);
                         } else {
                             self.state = ReviewState::Done;
                         }
@@ -184,7 +184,7 @@ impl ReviewPage {
                     if let Some(next_id) = self.next_card() {
                         self.due.push(id);
                         self.start_review(next_id, db);
-                        markup.desired_scroll(ScrollMove::Start);
+                        // todo markup.desired_scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }

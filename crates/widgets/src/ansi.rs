@@ -94,6 +94,18 @@ impl AnsiWriter {
         self.inner.as_str()
     }
 
+    pub const fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    pub const fn inner(&self) -> &String {
+        &self.inner
+    }
+
+    pub const fn inner_mut(&mut self) -> &mut String {
+        &mut self.inner
+    }
+
     pub fn push_char(&mut self, c: char) {
         self.inner.push(c);
     }
@@ -106,6 +118,14 @@ impl AnsiWriter {
         self.inner.push_str(ANSI_SEQUENCE_START);
         self.write_tag(tag);
         self.inner.push(ANSI_SEQUENCE_END);
+    }
+
+    pub fn extend<'a>(&mut self, iter: impl IntoIterator<Item = &'a str>) {
+        self.inner.extend(iter);
+    }
+
+    pub fn clear(&mut self) {
+        self.inner.clear();
     }
 
     fn write_tag(&mut self, tag: AnsiTag) {
@@ -392,11 +412,12 @@ impl<'a> Iterator for AnsiParser<'a> {
             }
         }
 
+        self.start = self.input.len();
+
         let remaining = &self.input[self.text_start..];
         if remaining.is_empty() {
             None
         } else {
-            self.start = self.input.len();
             Some(AnsiEvent::Text(remaining))
         }
     }

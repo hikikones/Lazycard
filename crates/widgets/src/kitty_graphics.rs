@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::utils;
@@ -292,6 +294,66 @@ impl KittyGraphics {
         }
 
         self.formatter.clear();
+    }
+
+    pub fn delete_id(&self, id: u32) -> std::io::Result<()> {
+        use std::io::Write;
+
+        let mut stdout = std::io::stdout();
+        write!(
+            stdout,
+            "\x1b_G{},{},{}\x1b\\",
+            KittyAction::Delete(KittyDelete::Id),
+            KittyId(id),
+            self.kitty_verbosity
+        )?;
+        stdout.flush()?;
+
+        Ok(())
+    }
+
+    pub fn delete_ids<I>(&self, ids: I) -> std::io::Result<()>
+    where
+        I: IntoIterator<Item = u32>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        use std::io::Write;
+
+        let ids = ids.into_iter();
+        if ids.len() == 0 {
+            return Ok(());
+        }
+
+        let mut stdout = std::io::stdout().lock();
+        for id in ids {
+            write!(
+                stdout,
+                "\x1b_G{},{},{}\x1b\\",
+                KittyAction::Delete(KittyDelete::Id),
+                KittyId(id),
+                self.kitty_verbosity
+            )?;
+        }
+        stdout.flush()?;
+
+        Ok(())
+    }
+
+    pub fn delete_range(&self, min: u32, max: u32) -> std::io::Result<()> {
+        use std::io::Write;
+
+        debug_assert!(min <= max);
+
+        let mut stdout = std::io::stdout();
+        write!(
+            stdout,
+            "\x1b_G{},{}\x1b\\",
+            KittyAction::Delete(KittyDelete::Range(min, max)),
+            self.kitty_verbosity
+        )?;
+        stdout.flush()?;
+
+        Ok(())
     }
 
     pub fn delete_all(&self) -> std::io::Result<()> {
@@ -642,13 +704,15 @@ impl std::fmt::Display for KittyCrop {
 enum KittyDelete {
     AllVisible,
     Id,
+    Range(u32, u32),
 }
 
 impl std::fmt::Display for KittyDelete {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
+        match *self {
             Self::AllVisible => f.write_str("d=a"),
             Self::Id => f.write_str("d=i"),
+            Self::Range(min, max) => f.write_fmt(format_args!("d=r,x={},y={}", min, max)),
         }
     }
 }

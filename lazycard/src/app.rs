@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
     style::{Color, Style},
 };
-use widgets::{Markup, Shortcut, Shortcuts, TextSegment};
+use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
 
 use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
@@ -18,6 +18,7 @@ pub struct App {
     database: Database,
     settings: Settings,
     markup: Markup,
+    kitty: KittyGraphics,
     matcher: Matcher,
     text: TextSegment,
     shortcuts: Shortcuts,
@@ -37,7 +38,7 @@ pub enum Action {
 }
 
 impl App {
-    pub fn new(database: Database, settings_path: Option<PathBuf>) -> Self {
+    pub fn new(database: Database, cell_size: CellSize, settings_path: Option<PathBuf>) -> Self {
         let mut logs = LogsPage::new();
         logs.enqueue(Log::new("message"));
         logs.enqueue(Log::new("message"));
@@ -51,7 +52,6 @@ impl App {
             .inspect_err(|err| logs.enqueue(Log::new(err)))
             .unwrap_or_default()
             .with_path(settings_path);
-        let markup = Markup::new(settings.syntax_highlighting());
         let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
         let colors = settings.colors();
@@ -68,7 +68,8 @@ impl App {
             pages,
             database,
             settings,
-            markup,
+            markup: Markup::new(),
+            kitty: KittyGraphics::new(cell_size),
             matcher: Matcher::new(),
             text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts,
@@ -142,6 +143,7 @@ impl App {
 
                     self.route = route;
                     self.markup.clear();
+                    self.markup.delete_images(&self.kitty).unwrap();
 
                     match route {
                         Route::Review => self.pages.review.on_enter(&self.database),
@@ -224,6 +226,7 @@ impl App {
                             colors,
                             &mut self.text,
                             &mut self.markup,
+                            &mut self.kitty,
                             &mut self.shortcuts,
                         );
                     }
@@ -234,6 +237,7 @@ impl App {
                             colors,
                             &mut self.text,
                             &mut self.markup,
+                            &mut self.kitty,
                             &mut self.shortcuts,
                         );
                     }
@@ -245,6 +249,7 @@ impl App {
                             colors,
                             &mut self.text,
                             &mut self.markup,
+                            &mut self.kitty,
                             &mut self.shortcuts,
                         );
                     }
@@ -305,6 +310,7 @@ impl App {
                     key.modifiers,
                     &mut self.markup,
                     &mut self.database,
+                    &self.kitty,
                     terminal,
                 ),
                 Route::Cards => self.pages.cards.on_input(

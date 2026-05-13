@@ -1,9 +1,9 @@
 use std::{
     borrow::BorrowMut,
-    hash::{DefaultHasher, Hash, Hasher},
+    hash::{Hash, Hasher},
     iter::Peekable,
     ops::Range,
-    sync::LazyLock,
+    str::CharIndices,
 };
 
 use ratatui::{
@@ -11,295 +11,491 @@ use ratatui::{
     prelude::*,
 };
 use syntect::{
-    easy::HighlightLines,
-    highlighting::{FontStyle, ThemeSet},
-    parsing::SyntaxSet,
-    util::LinesWithEndings,
+    easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::LinesWithEndings,
 };
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
-#[derive(Debug)]
+use crate::{
+    ansi::{AnsiEvent, AnsiParser, AnsiTag, AnsiWriter},
+    kitty_graphics::{Dimensions, KittyGraphics, ResizeMode},
+    text_segment::TextSegment,
+    utils,
+};
+
+// todo: desired scroll
+
 pub struct Markup {
-    width: usize,
-    height: usize,
+    items: Vec<Item>,
+    ansi: AnsiWriter,
+    buffer: String,
+    code_highlighter: CodeHighlighter,
+    text_segment: TextSegment,
+    scroll: u16,
+    total_lines: u16,
+    area: Rect,
     hash: u64,
-    scroll: usize,
-    desired_scroll: Option<usize>,
-    syntax_highlight_theme: &'static str,
-    lines: Vec<Line<'static>>,
-    word_buffer: Vec<Span<'static>>,
+    id_start: u32,
+    id_counter: u32,
 }
 
-pub enum ScrollMove {
-    Up(usize),
-    Down(usize),
-    Start,
-    End,
+#[derive(Debug, Clone)]
+enum Item {
+    Paragraph {
+        text: Range<usize>,
+        alignment: Alignment,
+    },
+    ListItem {
+        text: Range<usize>,
+    },
+    Code {
+        text: Range<usize>,
+        _language: Range<usize>,
+    },
+    Image {
+        id: u32,
+        dims: Dimensions,
+    },
+    Break,
+    EmptyLine,
+}
+
+const LIST_ITEM_INDENT: &str = "  • ";
+const LIST_ITEM_INDENT_WIDTH: u16 = 4;
+
+struct CodeHighlighter {
+    syntax_set: SyntaxSet,
+    theme_set: ThemeSet,
+    dark: bool,
+}
+
+impl CodeHighlighter {
+    fn new() -> Self {
+        Self {
+            syntax_set: SyntaxSet::load_defaults_newlines(),
+            theme_set: ThemeSet::load_defaults(),
+            dark: true,
+        }
+    }
+
+    fn highlight(&self, language: &str, code: &str, mut f: impl FnMut(&str, Option<(u8, u8, u8)>)) {
+        let syntax = if language.is_empty() {
+            self.syntax_set.find_syntax_plain_text()
+        } else {
+            self.syntax_set
+                .find_syntax_by_token(language)
+                .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
+        };
+        let theme_name = if self.dark {
+            "base16-eighties.dark"
+        } else {
+            "InspiredGitHub"
+        };
+
+        let mut highlighter = HighlightLines::new(syntax, &self.theme_set.themes[theme_name]);
+        for code_line in LinesWithEndings::from(code) {
+            match highlighter.highlight_line(code_line, &self.syntax_set) {
+                Ok(spans) => {
+                    for (style, span) in spans {
+                        let syntect::highlighting::Color { r, g, b, .. } = style.foreground;
+                        f(span, Some((r, g, b)));
+                    }
+                }
+                Err(_) => {
+                    f(code_line, None);
+                }
+            }
+        }
+    }
 }
 
 impl Markup {
-    pub const fn new(syntax_highlight_theme: &'static str) -> Self {
+    pub fn new() -> Self {
         Self {
-            width: 0,
-            height: 0,
-            hash: 0,
+            items: Vec::new(),
+            ansi: AnsiWriter::new(),
+            buffer: String::new(),
+            code_highlighter: CodeHighlighter::new(),
+            text_segment: TextSegment::new(),
             scroll: 0,
-            desired_scroll: None,
-            syntax_highlight_theme,
-            lines: Vec::new(),
-            word_buffer: Vec::new(),
+            total_lines: 0,
+            area: Rect::ZERO,
+            hash: 0,
+            id_start: 90,
+            id_counter: 0,
         }
     }
 
-    pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
-        let _ctrl = key_modifiers.contains(KeyModifiers::CONTROL);
-        let _shift = key_modifiers.contains(KeyModifiers::SHIFT);
-
-        match key_pressed {
-            KeyCode::Down => self.scroll(ScrollMove::Down(1)),
-            KeyCode::Up => self.scroll(ScrollMove::Up(1)),
-            KeyCode::Home => self.scroll(ScrollMove::Start),
-            KeyCode::End => self.scroll(ScrollMove::End),
-            _ => false,
+    pub fn input(&mut self, key: KeyCode, _modifiers: KeyModifiers) -> bool {
+        match key {
+            KeyCode::Down => {
+                self.scroll += 1;
+            }
+            KeyCode::Up => {
+                self.scroll = self.scroll.saturating_sub(1);
+            }
+            KeyCode::PageDown => {
+                self.scroll += self.area.height;
+            }
+            KeyCode::PageUp => {
+                self.scroll = self.scroll.saturating_sub(self.area.height);
+            }
+            KeyCode::Home => {
+                self.scroll = 0;
+            }
+            KeyCode::End => {
+                self.scroll = u16::MAX;
+            }
+            _ => {}
         }
+
+        // todo: return only true when scroll differs
+        true
     }
 
-    pub fn scroll(&mut self, sm: ScrollMove) -> bool {
-        let lines = self.lines.len();
-        let height = self.height;
-        let old_scroll = self.scroll;
+    pub fn render(
+        &mut self,
+        mut area: Rect,
+        buf: &mut Buffer,
+        text: &str,
+        kitty: &mut KittyGraphics,
+    ) {
+        // Delete existing images
+        self.delete_images(kitty).unwrap();
 
-        self.scroll = match sm {
-            ScrollMove::Up(n) => calculate_scroll(self.scroll.saturating_sub(n), lines, height),
-            ScrollMove::Down(n) => calculate_scroll(self.scroll.saturating_add(n), lines, height),
-            ScrollMove::Start => 0,
-            ScrollMove::End => calculate_scroll(usize::MAX, lines, height),
+        let hash = {
+            let mut hasher = ahash::AHasher::default();
+            text.hash(&mut hasher);
+            hasher.finish()
         };
 
-        self.scroll != old_scroll
-    }
-
-    pub fn desired_scroll(&mut self, sm: ScrollMove) {
-        match sm {
-            ScrollMove::Up(n) => match self.desired_scroll.as_mut() {
-                Some(scroll) => *scroll = scroll.saturating_sub(n),
-                None => self.desired_scroll = Some(self.scroll.saturating_sub(n)),
-            },
-            ScrollMove::Down(n) => match self.desired_scroll.as_mut() {
-                Some(scroll) => *scroll = scroll.saturating_add(n),
-                None => self.desired_scroll = Some(self.scroll.saturating_add(n)),
-            },
-            ScrollMove::Start => self.desired_scroll = Some(0),
-            ScrollMove::End => self.desired_scroll = Some(usize::MAX),
-        }
-    }
-
-    pub fn render(&mut self, text: &str, area: Rect, buf: &mut Buffer) {
-        let width = area.width as usize;
-        self.height = area.height as usize;
-
-        // todo: switch hasher?
-        let mut hasher = DefaultHasher::new();
-        text.hash(&mut hasher);
-        let hash = hasher.finish();
-
-        if self.width != width || self.hash != hash {
-            self.lines.clear();
-            self.width = width;
+        if self.area != area || self.hash != hash {
+            self.area = area;
             self.hash = hash;
-
-            // Process markup
-            for (block, _) in BlockParser::new(text) {
-                match block {
-                    BlockElement::Paragraph { text, alignment } => {
-                        self.parse_text(text, alignment, "", "");
-                    }
-                    BlockElement::Code { language, text } => {
-                        self.parse_code(language, text);
-                    }
-                    BlockElement::List { items } => {
-                        for item in items {
-                            self.parse_text(item, Alignment::Left, " • ", "   ");
-                        }
-                    }
-                    BlockElement::Comment { .. } => continue,
-                    BlockElement::Break => self.lines.push(
-                        Line::styled("——————————", Style::new().fg(Color::DarkGray))
-                            .alignment(Alignment::Center),
-                    ),
-                }
-                self.lines.push(Line::default());
-            }
-            self.lines.pop();
+            self.compute(text, area.width, kitty);
         }
 
-        // Update scroll
-        let scroll = self.desired_scroll.take().unwrap_or(self.scroll);
-        self.scroll = calculate_scroll(scroll, self.lines.len(), self.height);
+        fn is_in_viewport(curr_line: u16, top: u16, bot: u16) -> bool {
+            curr_line >= top && curr_line < bot
+        }
 
-        // Render lines
-        let mut line_area = Rect { height: 1, ..area };
-        self.lines
-            .iter()
-            .skip(self.scroll)
-            .take(self.height)
-            .for_each(|line| {
-                line.render(line_area, buf);
-                line_area.y += 1;
-            });
+        fn render_ansi_line(
+            area: Rect,
+            buf: &mut Buffer,
+            s: &str,
+            text_segment: &mut TextSegment,
+            style: &mut Style,
+            alignment: Alignment,
+        ) {
+            for event in AnsiParser::new(s) {
+                match event {
+                    AnsiEvent::Text(s) => {
+                        text_segment.push_str(s, *style);
+                    }
+                    AnsiEvent::Tag(tag) => match tag {
+                        AnsiTag::Reset => {
+                            *style = Style::new();
+                        }
+                        AnsiTag::Bold => {
+                            style.add_modifier.insert(Modifier::BOLD);
+                        }
+                        AnsiTag::Italic => {
+                            style.add_modifier.insert(Modifier::ITALIC);
+                        }
+                        AnsiTag::NotBold => {
+                            style.add_modifier.remove(Modifier::BOLD);
+                        }
+                        AnsiTag::NotItalic => {
+                            style.add_modifier.remove(Modifier::ITALIC);
+                        }
+                        AnsiTag::FgTrueColor(r, g, b) => {
+                            style.fg = Some(Color::Rgb(r, g, b));
+                        }
+                        _ => {}
+                    },
+                }
+            }
+            text_segment.set_alignment(alignment).render(area, buf);
+            text_segment.clear();
+        }
+
+        // Restrict scroll
+        self.scroll = self
+            .scroll
+            .min(self.total_lines.saturating_sub(area.height));
+
+        // Setup
+        let top_y = area.y;
+        let viewport_top = self.scroll;
+        let viewport_bot = self.scroll + area.height;
+        let mut lines_counter = 0;
+
+        // Render
+        for item in self.items.iter().cloned() {
+            match item {
+                Item::Paragraph { text, alignment } => {
+                    let text = &self.buffer[text];
+                    let mut style = Style::new();
+                    for line in text.lines() {
+                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                            render_ansi_line(
+                                area,
+                                buf,
+                                line,
+                                &mut self.text_segment,
+                                &mut style,
+                                alignment,
+                            );
+                            area.y += 1;
+                            area.height = area.height.saturating_sub(1);
+                        }
+
+                        lines_counter += 1;
+                    }
+                }
+                Item::ListItem { text } => {
+                    let text = &self.buffer[text];
+                    let mut style = Style::new();
+
+                    for (i, line) in text.lines().enumerate() {
+                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                            if i == 0 {
+                                buf.set_stringn(
+                                    area.x,
+                                    area.y,
+                                    LIST_ITEM_INDENT,
+                                    LIST_ITEM_INDENT_WIDTH as usize,
+                                    style,
+                                );
+                            }
+                            render_ansi_line(
+                                Rect {
+                                    x: area.x + LIST_ITEM_INDENT_WIDTH,
+                                    width: area.width.saturating_sub(LIST_ITEM_INDENT_WIDTH),
+                                    ..area
+                                },
+                                buf,
+                                line,
+                                &mut self.text_segment,
+                                &mut style,
+                                Alignment::Left,
+                            );
+                            area.y += 1;
+                            area.height = area.height.saturating_sub(1);
+                        }
+
+                        lines_counter += 1;
+                    }
+                }
+                Item::Code { text, .. } => {
+                    let text = &self.buffer[text];
+                    let mut style = Style::new();
+
+                    for line in text.lines() {
+                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                            render_ansi_line(
+                                area,
+                                buf,
+                                line,
+                                &mut self.text_segment,
+                                &mut style,
+                                Alignment::Left,
+                            );
+                            area.y += 1;
+                            area.height = area.height.saturating_sub(1);
+                        }
+
+                        lines_counter += 1;
+                    }
+                }
+                Item::Image { id, dims } => {
+                    let max_width = kitty.width(area.width);
+                    let resized_dims = KittyGraphics::resize(dims, dims.width(max_width));
+                    let resized_area = kitty.area(resized_dims);
+
+                    if is_in_viewport(
+                        lines_counter,
+                        viewport_top.saturating_sub(resized_area.rows),
+                        viewport_bot,
+                    ) {
+                        let mut available_rows = {
+                            let curr_height = area.height;
+                            let post_height = area.height.saturating_sub(resized_area.rows);
+                            curr_height - post_height
+                        };
+
+                        let is_top = area.y == top_y;
+                        if is_top {
+                            let outside = lines_counter.abs_diff(self.scroll);
+                            available_rows = available_rows.saturating_sub(outside);
+                        }
+
+                        let image_area = Rect {
+                            height: available_rows,
+                            ..area
+                        };
+                        kitty.render(
+                            image_area,
+                            buf,
+                            id,
+                            dims,
+                            ResizeMode::FitWidthCropHeight(is_top),
+                            utils::Alignment::CenterHorizontal,
+                        );
+                        // ratatui::widgets::Block::bordered().render(image_area, buf);
+
+                        area.y += available_rows;
+                        area.height = area.height.saturating_sub(available_rows);
+                    }
+
+                    lines_counter += resized_area.rows;
+                }
+                Item::Break => {
+                    if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                        let half = area.width / 2;
+                        let mut x = area.x + half / 2;
+                        for _ in 0..half {
+                            (x, _) = buf.set_stringn(x, area.y, "—", 1, Style::new());
+                        }
+                        area.y += 1;
+                        area.height = area.height.saturating_sub(1);
+                    }
+
+                    lines_counter += 1;
+                }
+                Item::EmptyLine => {
+                    if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                        area.y += 1;
+                        area.height = area.height.saturating_sub(1);
+                    }
+
+                    lines_counter += 1;
+                }
+            }
+        }
+
+        // Store total lines count
+        self.total_lines = lines_counter;
     }
 
     pub fn clear(&mut self) {
-        self.width = 0;
-        self.height = 0;
-        self.hash = 0;
+        self.items.clear();
+        self.ansi.clear();
+        self.buffer.clear();
         self.scroll = 0;
-        self.desired_scroll = None;
-        self.lines.clear();
+        // TODO: self.desired_scroll = None;
+        self.area = Rect::ZERO;
+        self.hash = 0;
     }
 
-    fn parse_text(
-        &mut self,
-        text: &str,
-        alignment: Alignment,
-        first_indent: &'static str,
-        wrap_indent: &'static str,
-    ) {
-        fn new_line(indent: &'static str, alignment: Alignment) -> (Line<'static>, usize) {
-            let mut line = Line::default().alignment(alignment);
-            let indent_span = Span::raw(indent);
-            let indent_width = indent_span.width();
-            line.push_span(indent_span);
-            (line, indent_width)
+    pub fn delete_images(&self, kitty: &KittyGraphics) -> std::io::Result<()> {
+        // let range = 1..(self.id_counter + 1);
+        // kitty.delete_ids(range)
+        if self.id_counter > 0 {
+            return kitty.delete_range(
+                self.id_start,
+                self.id_start + self.id_counter.saturating_sub(1),
+            );
         }
+        Ok(())
+    }
 
-        let width = self.width;
-        let (mut line, mut column) = new_line(first_indent, alignment);
-        let mut word_width = 0;
+    fn compute(&mut self, text: &str, width: u16, kitty: &mut KittyGraphics) {
+        self.items.clear();
+        self.buffer.clear();
+        self.id_counter = 0;
 
-        for (tag, span) in InlineParser::new(text) {
-            let style = match tag {
-                InlineTag::Normal => Style::new(),
-                InlineTag::Bold => Style::new().bold(),
-                InlineTag::Italic => Style::new().italic(),
-            };
-            for g in span.graphemes(true) {
-                if g.chars().any(|c| c.is_whitespace()) {
-                    if self.word_buffer.is_empty() {
-                        if column + 1 > width {
-                            self.lines.push(line);
-                            (line, column) = new_line(wrap_indent, alignment);
-                        } else {
-                            line.push_span(Span::styled(" ", style));
-                            column += 1;
-                        }
-                    } else {
-                        if column + word_width > width {
-                            if word_width > width / 2 {
-                                // break word
-                                for g_span in self.word_buffer.drain(..) {
-                                    let g_width = g_span.width();
-                                    if column + g_width > width {
-                                        self.lines.push(line);
-                                        (line, column) = new_line(wrap_indent, alignment);
-                                    }
-                                    line.push_span(g_span);
-                                    column += g_width;
-                                }
-                            } else {
-                                // push word to next line
-                                self.lines.push(line);
-                                (line, column) = new_line(wrap_indent, alignment);
-                                line.extend(self.word_buffer.drain(..));
-                                column += word_width;
+        for (block, _) in BlockParser::new(text) {
+            match block {
+                BlockElement::Paragraph { text, alignment } => {
+                    let range = self.parse_text(text, width);
+                    self.items.push(Item::Paragraph {
+                        text: range,
+                        alignment,
+                    });
+                }
+                BlockElement::List { items } => {
+                    for item in items {
+                        let range =
+                            self.parse_text(item, width.saturating_sub(LIST_ITEM_INDENT_WIDTH));
+                        self.items.push(Item::ListItem { text: range });
+                    }
+                }
+                BlockElement::Code { language, text } => {
+                    self.code_highlighter
+                        .highlight(language, text, |span, color| match color {
+                            Some((r, g, b)) => {
+                                self.ansi.push_tag(AnsiTag::FgTrueColor(r, g, b));
+                                self.ansi.push_str(span);
+                                self.ansi.push_tag(AnsiTag::Reset);
                             }
-                        } else {
-                            line.extend(self.word_buffer.drain(..));
-                            column += word_width;
-                        }
-                        line.push_span(Span::styled(" ", style));
-                        column += 1;
-                    }
-                    word_width = 0;
-                } else {
-                    let g_span = Span::styled(g.to_string(), style);
-                    word_width += g_span.width();
-                    self.word_buffer.push(g_span);
+                            None => {
+                                self.ansi.push_str(span);
+                            }
+                        });
+
+                    // Store results in text buffer
+                    let start = self.buffer.len();
+                    self.buffer.push_str(language);
+                    let middle = self.buffer.len();
+                    self.buffer.push_str(self.ansi.as_str());
+                    let end = self.buffer.len();
+                    self.ansi.clear();
+                    self.items.push(Item::Code {
+                        _language: start..middle,
+                        text: middle..end,
+                    });
                 }
+                BlockElement::Image { description, path } => {
+                    kitty.load(path).unwrap();
+                    let id = self.id_start + self.id_counter;
+                    let dims = kitty.encode(id).unwrap();
+                    self.items.push(Item::Image { id, dims });
+                    self.id_counter += 1;
+
+                    if !description.is_empty() {
+                        let range = self.parse_text(description, width);
+                        self.items.push(Item::Paragraph {
+                            text: range,
+                            alignment: Alignment::Center,
+                        });
+                    }
+                }
+                BlockElement::Break => {
+                    self.items.push(Item::Break);
+                }
+                BlockElement::Comment { .. } => continue,
             }
+
+            // Add empty line between each block element
+            self.items.push(Item::EmptyLine);
         }
 
-        if !self.word_buffer.is_empty() {
-            if column + word_width > width {
-                if word_width > width / 2 {
-                    // break word
-                    for g_span in self.word_buffer.drain(..) {
-                        let g_width = g_span.width();
-                        if column + g_width > width {
-                            self.lines.push(line);
-                            (line, column) = new_line(wrap_indent, alignment);
-                        }
-                        line.push_span(g_span);
-                        column += g_width;
-                    }
-                } else {
-                    // push word to next line
-                    self.lines.push(line);
-                    (line, _) = new_line(wrap_indent, alignment);
-                    line.extend(self.word_buffer.drain(..));
-                }
-            } else {
-                line.extend(self.word_buffer.drain(..));
-            }
-        }
-
-        self.lines.push(line);
+        // Remove last empty line
+        self.items.pop();
     }
 
-    fn parse_code(&mut self, language: &str, text: &str) {
-        static SYNTAX_SET: LazyLock<SyntaxSet> =
-            LazyLock::new(|| SyntaxSet::load_defaults_newlines());
-        static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(|| ThemeSet::load_defaults());
-
-        let syntax = if language.is_empty() {
-            SYNTAX_SET.find_syntax_plain_text()
-        } else {
-            SYNTAX_SET
-                .find_syntax_by_token(language)
-                .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text())
-        };
-        let mut highlighter =
-            HighlightLines::new(syntax, &THEME_SET.themes[self.syntax_highlight_theme]);
-
-        for code_line in LinesWithEndings::from(text.replace('\t', "    ").as_str()) {
-            match highlighter.highlight_line(code_line, &SYNTAX_SET) {
-                Ok(spans) => {
-                    let mut line = Line::default();
-                    for (style, span) in spans {
-                        let mut modifiers = Modifier::empty();
-                        if style.font_style.contains(FontStyle::BOLD) {
-                            modifiers.insert(Modifier::BOLD);
-                        }
-                        if style.font_style.contains(FontStyle::ITALIC) {
-                            modifiers.insert(Modifier::ITALIC);
-                        }
-                        if style.font_style.contains(FontStyle::UNDERLINE) {
-                            modifiers.insert(Modifier::UNDERLINED);
-                        }
-                        let fg =
-                            Color::Rgb(style.foreground.r, style.foreground.g, style.foreground.b);
-                        line.push_span(Span::styled(
-                            span.to_owned(),
-                            Style::new().add_modifier(modifiers).fg(fg),
-                        ));
-                    }
-                    self.lines.push(line);
-                }
-                Err(_) => {
-                    self.lines.push(Line::raw(code_line.to_owned()));
-                }
+    fn parse_text(&mut self, text: &str, width: u16) -> Range<usize> {
+        for event in InlineParser::new(text) {
+            match event {
+                InlineEvent::Text(s) => self.ansi.push_str(s),
+                InlineEvent::Tag(tag) => match tag {
+                    InlineTag::BoldStart => self.ansi.push_tag(AnsiTag::Bold),
+                    InlineTag::BoldEnd => self.ansi.push_tag(AnsiTag::NotBold),
+                    InlineTag::ItalicStart => self.ansi.push_tag(AnsiTag::Italic),
+                    InlineTag::ItalicEnd => self.ansi.push_tag(AnsiTag::NotItalic),
+                },
             }
         }
+
+        // Break text into lines using textwrap which ignores ansi codes
+        textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
+
+        // Push text to buffer and use later with returned range
+        let start = self.buffer.len();
+        self.buffer.push_str(self.ansi.as_str());
+        let end = self.buffer.len();
+        self.ansi.clear();
+        start..end
     }
 }
 
@@ -323,19 +519,12 @@ impl<'a> Iterator for BreakParser<'a> {
     }
 }
 
-fn calculate_scroll(scroll: usize, lines: usize, height: usize) -> usize {
-    if lines <= height {
-        0
-    } else {
-        usize::min(scroll, lines - height)
-    }
-}
-
 #[derive(Debug)]
 enum BlockElement<'a> {
     Paragraph { text: &'a str, alignment: Alignment },
     List { items: ListItems<'a> },
     Code { language: &'a str, text: &'a str },
+    Image { description: &'a str, path: &'a str },
     Comment { _text: &'a str },
     Break,
 }
@@ -475,6 +664,46 @@ impl<'a> BlockParser<'a> {
             }
         }
     }
+
+    fn parse_image(&mut self, start: usize) -> (BlockElement<'a>, Range<usize>) {
+        let Some((start_descr, "[")) = self.graphemes.next() else {
+            return self.parse_paragraph(start, Alignment::Left);
+        };
+        let Some((end_descr, _)) = self.graphemes.find("]") else {
+            return self.parse_paragraph(start, Alignment::Left);
+        };
+
+        let Some((start_path, "(")) = self.graphemes.next() else {
+            return self.parse_paragraph(start, Alignment::Left);
+        };
+        let Some((end_path, _)) = self.graphemes.find(")") else {
+            return self.parse_paragraph(start, Alignment::Left);
+        };
+
+        let description = self.input[start_descr + 1..end_descr].trim();
+        let path = self.input[start_path + 1..end_path].trim();
+
+        let Some((end, g)) = self.graphemes.next() else {
+            return (
+                BlockElement::Image { description, path },
+                start..self.input.len(),
+            );
+        };
+
+        if !g.contains("\n") {
+            return self.parse_paragraph(start, Alignment::Left);
+        }
+
+        let Some((_, g)) = self.graphemes.next() else {
+            return (BlockElement::Image { description, path }, start..end);
+        };
+
+        if !g.contains("\n") {
+            return self.parse_paragraph(start, Alignment::Left);
+        }
+
+        return (BlockElement::Image { description, path }, start..end);
+    }
 }
 
 impl<'a> Iterator for BlockParser<'a> {
@@ -491,6 +720,7 @@ impl<'a> Iterator for BlockParser<'a> {
                     "|" => self.parse_paragraph(i, Alignment::Center),
                     ">" => self.parse_paragraph(i, Alignment::Right),
                     "#" => self.parse_comment(i),
+                    "!" => self.parse_image(i),
                     "`" => {
                         let ticks = 1 + self.graphemes.count_consecutive("`", usize::MAX);
                         if ticks >= 3 {
@@ -562,119 +792,6 @@ impl<'a> Iterator for ListItems<'a> {
     }
 }
 
-// todo: rework with start/end tags?
-#[derive(Debug, Clone, Copy)]
-enum InlineTag {
-    Normal,
-    Bold,
-    Italic,
-}
-
-struct InlineParser<'a> {
-    input: &'a str,
-    graphemes: CustomGraphemeIter<'a>,
-    start: usize,
-    tag: InlineTag,
-}
-
-impl<'a> InlineParser<'a> {
-    fn new(input: &'a str) -> Self {
-        Self {
-            input,
-            graphemes: CustomGraphemeIter::new(input),
-            start: 0,
-            tag: InlineTag::Normal,
-        }
-    }
-
-    fn _continue_with(&mut self, input: &'a str) -> &mut Self {
-        self.input = input;
-        self.graphemes = CustomGraphemeIter::new(input);
-        self.start = 0;
-        self
-    }
-}
-
-impl<'a> Iterator for InlineParser<'a> {
-    type Item = (InlineTag, &'a str);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.start == self.input.len() {
-            return None;
-        }
-
-        loop {
-            match self.tag {
-                InlineTag::Normal => loop {
-                    let Some((i, g)) = self.graphemes.next() else {
-                        let text = &self.input[self.start..];
-                        self.start = self.input.len();
-                        return Some((InlineTag::Normal, text));
-                    };
-
-                    match g {
-                        "*" => {
-                            if let Some(p) = self.graphemes.peek() {
-                                if p != "*" && !p.chars().any(|c| c.is_whitespace()) {
-                                    self.tag = InlineTag::Bold;
-                                    let text = &self.input[self.start..i];
-                                    self.start = i + 1;
-                                    if text.is_empty() {
-                                        break;
-                                    }
-                                    return Some((InlineTag::Normal, text));
-                                }
-                            }
-                        }
-                        "_" => {
-                            if let Some(p) = self.graphemes.peek() {
-                                if p != "_" && !p.chars().any(|c| c.is_whitespace()) {
-                                    self.tag = InlineTag::Italic;
-                                    let text = &self.input[self.start..i];
-                                    self.start = i + 1;
-                                    if text.is_empty() {
-                                        break;
-                                    }
-                                    return Some((InlineTag::Normal, text));
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                },
-                InlineTag::Bold => {
-                    let (text_end, next_start) = match self.graphemes.find_with_previous("*", |p| {
-                        p != "*" && !p.chars().any(|c| c.is_whitespace())
-                    }) {
-                        Some((i, g)) => {
-                            self.tag = InlineTag::Normal;
-                            (i, i + g.len())
-                        }
-                        None => (self.input.len(), self.input.len()),
-                    };
-                    let text = &self.input[self.start..text_end];
-                    self.start = next_start;
-                    return Some((InlineTag::Bold, text));
-                }
-                InlineTag::Italic => {
-                    let (text_end, next_start) = match self.graphemes.find_with_previous("_", |p| {
-                        p != "_" && !p.chars().any(|c| c.is_whitespace())
-                    }) {
-                        Some((i, g)) => {
-                            self.tag = InlineTag::Normal;
-                            (i, i + g.len())
-                        }
-                        None => (self.input.len(), self.input.len()),
-                    };
-                    let text = &self.input[self.start..text_end];
-                    self.start = next_start;
-                    return Some((InlineTag::Italic, text));
-                }
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 struct CustomGraphemeIter<'a> {
     graphemes: Peekable<GraphemeIndices<'a>>,
@@ -708,11 +825,11 @@ impl<'a> CustomGraphemeIter<'a> {
         None
     }
 
-    fn _next_if_eq(&mut self, g: &str) -> Option<(usize, &'a str)> {
+    fn next_if_eq(&mut self, g: &str) -> Option<(usize, &'a str)> {
         self.next_if(|n| n == g)
     }
 
-    fn _find(&mut self, g: &str) -> Option<(usize, &'a str)> {
+    fn find(&mut self, g: &str) -> Option<(usize, &'a str)> {
         self.find_by(|n| n == g)
     }
 
@@ -754,7 +871,7 @@ impl<'a> CustomGraphemeIter<'a> {
         }
     }
 
-    fn _find_pattern(&mut self, prev: &str, next: &str) -> Option<(usize, &'a str, &'a str)> {
+    fn find_pattern(&mut self, prev: &str, next: &str) -> Option<(usize, &'a str, &'a str)> {
         self.find_pattern_by(|p, n| p == prev && n == next)
     }
 
@@ -775,7 +892,7 @@ impl<'a> CustomGraphemeIter<'a> {
         }
     }
 
-    fn _find_consecutive(&mut self, g: &str, n: usize) -> Option<(usize, &'a str)> {
+    fn find_consecutive(&mut self, g: &str, n: usize) -> Option<(usize, &'a str)> {
         self.find_consecutive_by(|s| s == g, n)
     }
 
@@ -837,5 +954,283 @@ impl<'a> Iterator for CustomGraphemeIter<'a> {
 
         self.current = Some((i, n));
         self.current
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum InlineEvent<'a> {
+    Text(&'a str),
+    Tag(InlineTag),
+}
+
+#[derive(Debug, Clone, Copy)]
+enum InlineTag {
+    BoldStart,
+    BoldEnd,
+    ItalicStart,
+    ItalicEnd,
+}
+
+struct InlineParser<'a> {
+    input: &'a str,
+    chars: CustomCharsIter<'a>,
+    start: usize,
+    tag: Option<InlineTag>,
+    bold: bool,
+    italic: bool,
+}
+
+impl<'a> InlineParser<'a> {
+    fn new(input: &'a str) -> Self {
+        Self {
+            input,
+            chars: CustomCharsIter::new(input),
+            start: 0,
+            tag: None,
+            bold: false,
+            italic: false,
+        }
+    }
+}
+
+impl<'a> Iterator for InlineParser<'a> {
+    type Item = InlineEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(tag) = self.tag.take() {
+            return Some(InlineEvent::Tag(tag));
+        }
+
+        /// Looks for valid inline tag from the current, previous and next chars.
+        /// If valid, either a start tag or end tag is returned based on the tag condition.
+        /// That is, if tag condition is true, then the end tag will be returned,
+        /// since this implies that a start tag has been found earlier.
+        fn parse_tag(
+            curr: char,
+            prev: Option<char>,
+            next: Option<char>,
+            tag_start: InlineTag,
+            tag_end: InlineTag,
+            tag_cond: &mut bool,
+        ) -> Option<InlineTag> {
+            match (prev, next) {
+                // Look for both tags based on tag condition
+                (Some(prev), Some(next)) => {
+                    if *tag_cond {
+                        if !prev.is_whitespace() && prev != curr {
+                            *tag_cond = false;
+                            return Some(tag_end);
+                        }
+                    } else {
+                        if !next.is_whitespace() && next != curr {
+                            *tag_cond = true;
+                            return Some(tag_start);
+                        }
+                    }
+                }
+                // First char, only need to look for start tag
+                (None, Some(next)) => {
+                    if !*tag_cond {
+                        if !next.is_whitespace() && next != curr {
+                            *tag_cond = true;
+                            return Some(tag_start);
+                        }
+                    }
+                }
+                // Last char, only need to look for end tag
+                (Some(prev), None) => {
+                    if *tag_cond {
+                        if !prev.is_whitespace() && prev != curr {
+                            *tag_cond = false;
+                            return Some(tag_end);
+                        }
+                    }
+                }
+                // Nothing to look for
+                (None, None) => {}
+            }
+
+            None
+        }
+
+        while let Some((i, c)) = self.chars.next() {
+            let tag = match c {
+                '*' => parse_tag(
+                    c,
+                    self.chars.previous,
+                    self.chars.peek(),
+                    InlineTag::BoldStart,
+                    InlineTag::BoldEnd,
+                    &mut self.bold,
+                ),
+                '_' => parse_tag(
+                    c,
+                    self.chars.previous,
+                    self.chars.peek(),
+                    InlineTag::ItalicStart,
+                    InlineTag::ItalicEnd,
+                    &mut self.italic,
+                ),
+                _ => None,
+            };
+
+            if let Some(tag) = tag {
+                let text = &self.input[self.start..i];
+                self.start = i + c.len_utf8();
+                if text.is_empty() {
+                    return Some(InlineEvent::Tag(tag));
+                } else {
+                    self.tag = Some(tag);
+                    return Some(InlineEvent::Text(text));
+                }
+            }
+        }
+
+        let remaining = &self.input[self.start..];
+        if remaining.is_empty() {
+            None
+        } else {
+            self.start = self.input.len();
+            Some(InlineEvent::Text(remaining))
+        }
+    }
+}
+
+#[derive(Debug)]
+struct CustomCharsIter<'a> {
+    chars: Peekable<CharIndices<'a>>,
+    current: Option<(usize, char)>,
+    previous: Option<char>,
+}
+
+impl<'a> CustomCharsIter<'a> {
+    fn new(input: &'a str) -> Self {
+        Self {
+            chars: input.char_indices().peekable(),
+            current: None,
+            previous: None,
+        }
+    }
+
+    const fn previous(&self) -> Option<char> {
+        self.previous
+    }
+
+    fn peek(&mut self) -> Option<char> {
+        self.chars.peek().copied().map(|(_, c)| c)
+    }
+
+    fn next_if(&mut self, f: impl Fn(char) -> bool) -> Option<(usize, char)> {
+        if let Some(p) = self.peek() {
+            if f(p) {
+                return self.next();
+            }
+        }
+        None
+    }
+
+    fn next_if_eq(&mut self, c: char) -> Option<(usize, char)> {
+        self.next_if(|n| n == c)
+    }
+
+    fn find(&mut self, c: char) -> Option<(usize, char)> {
+        self.find_by(|n| n == c)
+    }
+
+    fn find_by(&mut self, f: impl Fn(char) -> bool) -> Option<(usize, char)> {
+        loop {
+            let Some((i, n)) = self.next() else {
+                return None;
+            };
+
+            if f(n) {
+                return Some((i, n));
+            }
+        }
+    }
+
+    fn find_with_previous(
+        &mut self,
+        c: char,
+        prev_func: impl Fn(char) -> bool,
+    ) -> Option<(usize, char)> {
+        self.find_by_with_previous(|n| n == c, prev_func)
+    }
+
+    fn find_by_with_previous(
+        &mut self,
+        next_func: impl Fn(char) -> bool,
+        prev_func: impl Fn(char) -> bool,
+    ) -> Option<(usize, char)> {
+        loop {
+            let Some((i, n)) = self.find_by(&next_func) else {
+                return None;
+            };
+
+            if let Some(p) = self.previous {
+                if prev_func(p) {
+                    return Some((i, n));
+                }
+            };
+        }
+    }
+
+    fn find_consecutive(&mut self, c: char, n: usize) -> Option<(usize, char)> {
+        self.find_consecutive_by(|s| s == c, n)
+    }
+
+    fn find_consecutive_by(&mut self, f: impl Fn(char) -> bool, n: usize) -> Option<(usize, char)> {
+        match n {
+            0 => None,
+            1 => self.find_by(f),
+            _ => loop {
+                if self.find_by(&f).is_none() {
+                    return None;
+                };
+
+                let mut count = 1;
+                while let Some((i, c)) = self.next_if(&f) {
+                    count += 1;
+                    if count == n {
+                        return Some((i, c));
+                    }
+                }
+            },
+        }
+    }
+
+    fn count_consecutive(&mut self, c: char, max: usize) -> usize {
+        self.count_consecutive_by(|n| n == c, max)
+    }
+
+    fn count_consecutive_by(&mut self, c: impl Fn(char) -> bool, max: usize) -> usize {
+        if max == 0 {
+            return 0;
+        }
+
+        let mut count = 0;
+        while self.next_if(&c).is_some() {
+            count += 1;
+            if count == max {
+                break;
+            }
+        }
+        count
+    }
+}
+
+impl<'a> Iterator for CustomCharsIter<'a> {
+    type Item = (usize, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.chars.next();
+
+        if next.is_none() {
+            return None;
+        }
+
+        self.previous = self.current.map(|(_, c)| c);
+        self.current = next;
+        next
     }
 }

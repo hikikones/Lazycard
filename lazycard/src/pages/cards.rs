@@ -7,7 +7,9 @@ use ratatui::{
     text::{Line, Span},
     widgets::Widget,
 };
-use widgets::{Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment};
+use widgets::{
+    KittyGraphics, Markup, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment,
+};
 
 use crate::{
     app::{Action, CardsIterExt, Matcher},
@@ -145,6 +147,7 @@ impl CardsPage {
         colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
+        kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
         const SPACING: (&str, Style) = ("    ", Style::new());
@@ -180,7 +183,7 @@ impl CardsPage {
                 match self.cards.get(self.index) {
                     Some((id, _)) => {
                         let card = db.get(*id).unwrap();
-                        markup.render(card.content.as_str(), area, buf);
+                        markup.render(area, buf, card.content.as_str(), kitty);
 
                         shortcuts.extend([
                             Shortcut::new("Browse", symbols::ARROW_RIGHT_LEFT),
@@ -202,21 +205,28 @@ impl CardsPage {
                     }
                     None => {
                         let msg = if db.is_empty() {
-                            "| You have no cards"
+                            "You have no cards"
                         } else if self.show_archived && self.search.is_empty() {
-                            "| You have no archived cards"
+                            "You have no archived cards"
                         } else if !self.search.is_empty() {
                             if self.show_archived {
-                                "| Found no archived cards from search query"
+                                "Found no archived cards from search query"
                             } else {
-                                "| Found no cards from search query"
+                                "Found no cards from search query"
                             }
                         } else if db.iter().active().count() == 0 {
-                            "| You have no active cards"
+                            "You have no active cards"
                         } else {
-                            "| todo: oops no card found"
+                            "todo: oops no card found"
                         };
-                        markup.render(msg, area, buf);
+                        widgets::print_ascii(
+                            area,
+                            buf,
+                            msg,
+                            Style::new(),
+                            Some(widgets::Alignment::Center),
+                        );
+
                         shortcuts.extend([
                             Shortcut::new("Search", "/"),
                             Shortcut::new("Sort", "s"),
@@ -251,7 +261,7 @@ impl CardsPage {
                 KeyCode::Right => {
                     if self.cards.len() > 1 {
                         self.index = (self.index + 1) % self.cards.len();
-                        markup.desired_scroll(ScrollMove::Start);
+                        // todo markup.desired_scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }
@@ -262,7 +272,7 @@ impl CardsPage {
                         } else {
                             self.index -= 1;
                         }
-                        markup.desired_scroll(ScrollMove::Start);
+                        // todo markup.desired_scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }
@@ -276,7 +286,7 @@ impl CardsPage {
                         }
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
-                            markup.desired_scroll(ScrollMove::Start);
+                            // todo markup.desired_scroll(ScrollMove::Start);
                         }
                         return Action::Render;
                     }
@@ -303,7 +313,7 @@ impl CardsPage {
                     };
                     self.index = 0;
                     self.sort_cards();
-                    markup.desired_scroll(ScrollMove::Start);
+                    // todo markup.desired_scroll(ScrollMove::Start);
                     return Action::Render;
                 }
                 KeyCode::Char('/') => {
@@ -316,7 +326,7 @@ impl CardsPage {
                     self.cards.clear();
                     self.fetch_cards(db, matcher);
                     self.sort_cards();
-                    markup.desired_scroll(ScrollMove::Start);
+                    // todo markup.desired_scroll(ScrollMove::Start);
                     return Action::Render;
                 }
                 KeyCode::Char('r') => {
@@ -325,7 +335,7 @@ impl CardsPage {
                         db.update(id, |card| card.archived = false);
                         if !self.cards.is_empty() {
                             self.index = self.index.min(self.cards.len() - 1);
-                            markup.desired_scroll(ScrollMove::Start);
+                            // todo markup.desired_scroll(ScrollMove::Start);
                         }
                         return Action::Render;
                     }
