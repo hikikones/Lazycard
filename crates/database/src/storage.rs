@@ -89,7 +89,7 @@ fn main() {
 
 ---
 
-![ image description text ]( assets/meow.png )
+![  ]( assets/meow.png )
 
 Lorem ipsum dolor sit amet,
 consectetur adipiscing elit.

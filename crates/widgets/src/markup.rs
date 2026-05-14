@@ -32,6 +32,7 @@ pub struct Markup {
     id_start: u32,
     id_counter: u32,
     total_lines: u16,
+    max_items: Option<usize>,
 }
 
 pub enum ScrollMove {
@@ -54,12 +55,26 @@ enum Item {
     },
     Code {
         text: Range<usize>,
-        _language: Range<usize>,
+        language: Range<usize>,
     },
     Image {
         id: u32,
         dims: Dimensions,
     },
+    ImageDescription {
+        text: Range<usize>,
+    },
+    Break,
+    EmptyLine,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Item2 {
+    Paragraph,
+    ListItem,
+    Code,
+    Image,
+    ImageDescription,
     Break,
     EmptyLine,
 }
@@ -128,7 +143,25 @@ impl Markup {
             id_start: 90,
             id_counter: 0,
             total_lines: 0,
+            max_items: None,
         }
+    }
+
+    pub const fn set_desired_scroll(&mut self, sm: ScrollMove) {
+        self.desired_scroll = Some(sm);
+    }
+
+    pub const fn set_max_items(&mut self, max: Option<usize>) {
+        self.max_items = max;
+    }
+
+    // pub fn items(&self) -> std::slice::Iter<'_, Item> {
+    //     self.items.iter()
+    // }
+
+    pub fn items(&self) -> impl Iterator<Item = Item2> {
+        //todo
+        [Item2::Break].into_iter()
     }
 
     pub fn input(&mut self, key: KeyCode) -> bool {
@@ -159,10 +192,6 @@ impl Markup {
         };
 
         self.scroll != old_scroll
-    }
-
-    pub fn set_desired_scroll(&mut self, sm: ScrollMove) {
-        self.desired_scroll = Some(sm);
     }
 
     pub fn render(
@@ -250,7 +279,7 @@ impl Markup {
         let mut lines_counter = 0;
 
         // Render
-        for item in self.items.iter().cloned() {
+        for item in self.items.iter().cloned().take(self.max_items()) {
             match item {
                 Item::Paragraph { text, alignment } => {
                     let text = &self.buffer[text];
@@ -369,6 +398,26 @@ impl Markup {
 
                     lines_counter += resized_area.rows;
                 }
+                Item::ImageDescription { text } => {
+                    let text = &self.buffer[text];
+                    let mut style = Style::new();
+                    for line in text.lines() {
+                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                            render_ansi_line(
+                                area,
+                                buf,
+                                line,
+                                &mut self.text_segment,
+                                &mut style,
+                                Alignment::Center,
+                            );
+                            area.y += 1;
+                            area.height = area.height.saturating_sub(1);
+                        }
+
+                        lines_counter += 1;
+                    }
+                }
                 Item::Break => {
                     if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
                         let half = area.width / 2;
@@ -462,7 +511,7 @@ impl Markup {
                     let end = self.buffer.len();
                     self.ansi.clear();
                     self.items.push(Item::Code {
-                        _language: start..middle,
+                        language: start..middle,
                         text: middle..end,
                     });
                 }
@@ -475,10 +524,11 @@ impl Markup {
 
                     if !description.is_empty() {
                         let range = self.parse_text(description, width);
-                        self.items.push(Item::Paragraph {
-                            text: range,
-                            alignment: Alignment::Center,
-                        });
+                        // self.items.push(Item::Paragraph {
+                        //     text: range,
+                        //     alignment: Alignment::Center,
+                        // });
+                        self.items.push(Item::ImageDescription { text: range });
                     }
                 }
                 BlockElement::Break => {
@@ -495,10 +545,17 @@ impl Markup {
         self.items.pop();
     }
 
+    const fn max_items(&self) -> usize {
+        match self.max_items {
+            Some(max) => max,
+            None => self.items.len(),
+        }
+    }
+
     fn compute_total_lines(&self, kitty: &KittyGraphics) -> u16 {
         let mut total_lines = 0;
 
-        for item in self.items.iter().cloned() {
+        for item in self.items.iter().cloned().take(self.max_items()) {
             match item {
                 Item::Paragraph { text, .. } => {
                     let text = &self.buffer[text];
@@ -517,6 +574,10 @@ impl Markup {
                     let resized_dims = KittyGraphics::resize(dims, dims.width(max_width));
                     let resized_area = kitty.area(resized_dims);
                     total_lines += resized_area.rows;
+                }
+                Item::ImageDescription { text } => {
+                    let text = &self.buffer[text];
+                    total_lines += text.lines().count() as u16;
                 }
                 Item::Break => {
                     total_lines += 1;
