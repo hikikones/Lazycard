@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use ratatui::{buffer::Buffer, layout::Rect};
 
 use crate::utils;

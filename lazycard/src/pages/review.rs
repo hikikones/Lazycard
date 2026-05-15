@@ -5,7 +5,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
 };
-use widgets::{Item2, KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
+use widgets::{KittyGraphics, Markup, MarkupItem, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt},
@@ -19,7 +19,7 @@ pub struct ReviewPage {
     total: usize,
     progress: usize,
     state: ReviewState,
-    markup_items: Vec<Item2>,
+    markup_items: Vec<MarkupItem>,
     reveal_len: usize,
     is_fully_revealed: bool,
     rng: fastrand::Rng,
@@ -197,7 +197,7 @@ impl ReviewPage {
             .iter()
             .copied()
             .enumerate()
-            .filter(|&(i, b)| matches!(b, Item2::Break) && i > self.reveal_len)
+            .filter(|&(i, b)| matches!(b, MarkupItem::Break) && i > self.reveal_len)
             .map(|(i, _)| i)
             .next()
             .unwrap_or(self.markup_items.len());

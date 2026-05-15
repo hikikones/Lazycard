@@ -1,5 +1,4 @@
 use std::{
-    borrow::BorrowMut,
     hash::{Hash, Hasher},
     iter::Peekable,
     ops::Range,
@@ -55,7 +54,7 @@ enum Item {
     },
     Code {
         text: Range<usize>,
-        language: Range<usize>,
+        _language: Range<usize>,
     },
     Image {
         id: u32,
@@ -69,7 +68,7 @@ enum Item {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Item2 {
+pub enum MarkupItem {
     Paragraph,
     ListItem,
     Code,
@@ -81,52 +80,6 @@ pub enum Item2 {
 
 const LIST_ITEM_INDENT: &str = "  • ";
 const LIST_ITEM_INDENT_WIDTH: u16 = 4;
-
-struct CodeHighlighter {
-    syntax_set: SyntaxSet,
-    theme_set: ThemeSet,
-    dark: bool,
-}
-
-impl CodeHighlighter {
-    fn new() -> Self {
-        Self {
-            syntax_set: SyntaxSet::load_defaults_newlines(),
-            theme_set: ThemeSet::load_defaults(),
-            dark: true,
-        }
-    }
-
-    fn highlight(&self, language: &str, code: &str, mut f: impl FnMut(&str, Option<(u8, u8, u8)>)) {
-        let syntax = if language.is_empty() {
-            self.syntax_set.find_syntax_plain_text()
-        } else {
-            self.syntax_set
-                .find_syntax_by_token(language)
-                .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
-        };
-        let theme_name = if self.dark {
-            "base16-eighties.dark"
-        } else {
-            "InspiredGitHub"
-        };
-
-        let mut highlighter = HighlightLines::new(syntax, &self.theme_set.themes[theme_name]);
-        for code_line in LinesWithEndings::from(code) {
-            match highlighter.highlight_line(code_line, &self.syntax_set) {
-                Ok(spans) => {
-                    for (style, span) in spans {
-                        let syntect::highlighting::Color { r, g, b, .. } = style.foreground;
-                        f(span, Some((r, g, b)));
-                    }
-                }
-                Err(_) => {
-                    f(code_line, None);
-                }
-            }
-        }
-    }
-}
 
 impl Markup {
     pub fn new() -> Self {
@@ -253,19 +206,12 @@ impl Markup {
 
         self.total_lines = self.compute_total_lines(kitty);
         if let Some(sm) = self.desired_scroll.take() {
-            // if self.total_lines == 0 {
-            // }
             self.scroll(sm);
         } else {
             self.scroll = self
                 .scroll
                 .min(self.total_lines.saturating_sub(area.height));
         }
-
-        // Restrict scroll
-        // self.scroll = self
-        //     .scroll
-        //     .min(self.total_lines.saturating_sub(area.height));
 
         // Setup
         let top_y = area.y;
@@ -385,7 +331,6 @@ impl Markup {
                             ResizeMode::FitWidthCropHeight(is_top),
                             utils::Alignment::CenterHorizontal,
                         );
-                        // ratatui::widgets::Block::bordered().render(image_area, buf);
 
                         area.y += available_rows;
                         area.height = area.height.saturating_sub(available_rows);
@@ -436,9 +381,6 @@ impl Markup {
                 }
             }
         }
-
-        // Store total lines count
-        // self.total_lines = lines_counter;
     }
 
     pub fn clear(&mut self) {
@@ -452,8 +394,6 @@ impl Markup {
     }
 
     pub fn delete_images(&self, kitty: &KittyGraphics) -> std::io::Result<()> {
-        // let range = 1..(self.id_counter + 1);
-        // kitty.delete_ids(range)
         if self.image_id_counter > 0 {
             return kitty.delete_range(
                 self.image_id_start,
@@ -463,32 +403,32 @@ impl Markup {
         Ok(())
     }
 
-    pub fn parse_items(markup: &str, v: &mut Vec<Item2>) {
+    pub fn parse_items(markup: &str, v: &mut Vec<MarkupItem>) {
         for (block, _) in BlockParser::new(markup) {
             match block {
                 BlockElement::Paragraph { .. } => {
-                    v.push(Item2::Paragraph);
+                    v.push(MarkupItem::Paragraph);
                 }
                 BlockElement::List { items } => {
                     for _ in items {
-                        v.push(Item2::ListItem);
+                        v.push(MarkupItem::ListItem);
                     }
                 }
                 BlockElement::Code { .. } => {
-                    v.push(Item2::Code);
+                    v.push(MarkupItem::Code);
                 }
                 BlockElement::Image { description, .. } => {
-                    v.push(Item2::Image);
+                    v.push(MarkupItem::Image);
                     if !description.is_empty() {
-                        v.push(Item2::ImageDescription);
+                        v.push(MarkupItem::ImageDescription);
                     }
                 }
                 BlockElement::Comment { _text } => continue,
                 BlockElement::Break => {
-                    v.push(Item2::Break);
+                    v.push(MarkupItem::Break);
                 }
             }
-            v.push(Item2::EmptyLine);
+            v.push(MarkupItem::EmptyLine);
         }
         v.pop();
     }
@@ -496,7 +436,6 @@ impl Markup {
     fn compute(&mut self, text: &str, width: u16, kitty: &mut KittyGraphics) {
         self.items.clear();
         self.buffer.clear();
-        // self.total_lines = 0;
         self.image_id_counter = 0;
 
         for (block, _) in BlockParser::new(text) {
@@ -536,7 +475,7 @@ impl Markup {
                     let end = self.buffer.len();
                     self.ansi.clear();
                     self.items.push(Item::Code {
-                        language: start..middle,
+                        _language: start..middle,
                         text: middle..end,
                     });
                 }
@@ -549,10 +488,6 @@ impl Markup {
 
                     if !description.is_empty() {
                         let range = self.parse_text(description, width);
-                        // self.items.push(Item::Paragraph {
-                        //     text: range,
-                        //     alignment: Alignment::Center,
-                        // });
                         self.items.push(Item::ImageDescription { text: range });
                     }
                 }
@@ -638,26 +573,6 @@ impl Markup {
         let end = self.buffer.len();
         self.ansi.clear();
         start..end
-    }
-}
-
-pub struct BreakParser<'a>(BlockParser<'a>);
-
-impl<'a> BreakParser<'a> {
-    pub fn new(input: &'a str) -> Self {
-        Self(BlockParser::new(input))
-    }
-}
-
-impl<'a> Iterator for BreakParser<'a> {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0
-            .borrow_mut()
-            .filter(|(block, _)| matches!(block, BlockElement::Break))
-            .map(|(_, range)| range.start)
-            .next()
     }
 }
 
@@ -931,6 +846,52 @@ impl<'a> Iterator for ListItems<'a> {
         let item = self.text[self.start..end].trim();
         self.start = next_start;
         Some(item)
+    }
+}
+
+struct CodeHighlighter {
+    syntax_set: SyntaxSet,
+    theme_set: ThemeSet,
+    dark: bool,
+}
+
+impl CodeHighlighter {
+    fn new() -> Self {
+        Self {
+            syntax_set: SyntaxSet::load_defaults_newlines(),
+            theme_set: ThemeSet::load_defaults(),
+            dark: true,
+        }
+    }
+
+    fn highlight(&self, language: &str, code: &str, mut f: impl FnMut(&str, Option<(u8, u8, u8)>)) {
+        let syntax = if language.is_empty() {
+            self.syntax_set.find_syntax_plain_text()
+        } else {
+            self.syntax_set
+                .find_syntax_by_token(language)
+                .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
+        };
+        let theme_name = if self.dark {
+            "base16-eighties.dark"
+        } else {
+            "InspiredGitHub"
+        };
+
+        let mut highlighter = HighlightLines::new(syntax, &self.theme_set.themes[theme_name]);
+        for code_line in LinesWithEndings::from(code) {
+            match highlighter.highlight_line(code_line, &self.syntax_set) {
+                Ok(spans) => {
+                    for (style, span) in spans {
+                        let syntect::highlighting::Color { r, g, b, .. } = style.foreground;
+                        f(span, Some((r, g, b)));
+                    }
+                }
+                Err(_) => {
+                    f(code_line, None);
+                }
+            }
+        }
     }
 }
 
