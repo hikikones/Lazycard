@@ -304,23 +304,19 @@ impl Markup {
 
                     if is_in_viewport(
                         current_line,
-                        viewport_top.saturating_sub(resized_area.rows),
+                        viewport_top.saturating_sub(resized_area.rows - 1),
                         viewport_bot,
                     ) {
-                        let mut available_rows = {
-                            let curr_height = area.height;
-                            let post_height = area.height.saturating_sub(resized_area.rows);
-                            curr_height - post_height
+                        let is_at_top = area.y == top_y;
+                        let rows_outside_top = if is_at_top {
+                            current_line.abs_diff(self.scroll)
+                        } else {
+                            0
                         };
-
-                        let is_top = area.y == top_y;
-                        if is_top {
-                            let outside = current_line.abs_diff(self.scroll);
-                            available_rows = available_rows.saturating_sub(outside);
-                        }
+                        let image_rows = (resized_area.rows - rows_outside_top).min(area.height);
 
                         let image_area = Rect {
-                            height: available_rows,
+                            height: image_rows,
                             ..area
                         };
                         kitty.render(
@@ -328,12 +324,12 @@ impl Markup {
                             buf,
                             id,
                             dims,
-                            ResizeMode::FitWidthCropHeight(is_top),
+                            ResizeMode::FitWidthCropHeight { rows_outside_top },
                             utils::Alignment::CenterHorizontal,
                         );
 
-                        area.y += available_rows;
-                        area.height = area.height.saturating_sub(available_rows);
+                        area.y += image_rows;
+                        area.height = area.height.saturating_sub(image_rows);
                     }
 
                     current_line += resized_area.rows;

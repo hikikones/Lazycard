@@ -222,35 +222,24 @@ impl KittyGraphics {
                 ));
                 Area::from_rect(area)
             }
-            ResizeMode::FitWidthCropHeight(is_top) => {
-                let max_dims = self.dimensions(area);
-                let resized_dims = Self::resize(dims, dims.with_width(max_dims.width));
+            ResizeMode::FitWidthCropHeight { rows_outside_top } => {
+                let max_width = self.width(area.width);
+                let resized_dims = Self::resize(dims, dims.with_width(max_width));
                 let resized_area = self.area(resized_dims);
-
-                // TODO: Fix cropping when height exceeds both top and bot.
-                // That is, the image is taller than the entire viewport.
 
                 if resized_area.rows > area.height {
                     // Need to crop height with source rectangle x, y, width, height
+                    let y = self.height(rows_outside_top);
+                    let height = self.height(area.height);
                     let h_ratio = dims.height as f64 / resized_dims.height as f64;
-                    let y = if is_top {
-                        let h = self.height(resized_area.rows - area.height);
-                        (h as f64 * h_ratio).round() as u32
-                    } else {
-                        0
-                    };
-                    let height = {
-                        let h = self.height(area.height);
-                        (h as f64 * h_ratio).round() as u32
-                    };
                     self.formatter.push_fmt(format_args!(
                         ",{},{}",
                         KittyScale::Columns(area.width.min(resized_area.columns)),
                         KittyCrop {
                             x: 0,
-                            y,
+                            y: (y as f64 * h_ratio).round() as u32,
                             width: dims.width,
-                            height
+                            height: (height as f64 * h_ratio).round() as u32
                         }
                     ));
                     resized_area.with_rows(area.height)
@@ -531,9 +520,9 @@ pub enum ResizeMode {
     #[default]
     Fit,
     Stretch,
-    FitWidthCropHeight(bool),
-    // TODO: Maybe FitWidthCropTop and FitWidthCropBottom instead?
-    // Or a CropDir enum?
+    FitWidthCropHeight {
+        rows_outside_top: u16,
+    },
 }
 
 /// The area for an image.

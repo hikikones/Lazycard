@@ -79,7 +79,7 @@ fn add_test_data(cards: &mut BTreeMap<CardId, Card>) {
 
 | center paragraph
 
-![ image description text ]( assets/tall2.jpg )
+![ image description text ]( assets/wallpaper.jpg )
 
 ```rust
 fn main() {
@@ -96,6 +96,8 @@ consectetur adipiscing elit.
 Donec fermentum ipsum nec sagittis feugiat.
 Curabitur pulvinar et orci luctus faucibus.
 In erat justo, placerat et risus quis, cursus elementum mi.
+
+![ image description text ]( assets/tall2.jpg )
 
 ---
 
