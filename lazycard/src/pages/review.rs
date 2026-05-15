@@ -5,7 +5,7 @@ use ratatui::{
     layout::Rect,
     style::Style,
 };
-use widgets::{BreakParser, KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
+use widgets::{Item2, KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
     app::{Action, CardsIterExt},
@@ -19,8 +19,9 @@ pub struct ReviewPage {
     total: usize,
     progress: usize,
     state: ReviewState,
-    reveals: Vec<String>,
-    text: String,
+    markup_items: Vec<Item2>,
+    reveal_len: usize,
+    is_fully_revealed: bool,
     rng: fastrand::Rng,
 }
 
@@ -37,53 +38,19 @@ impl ReviewPage {
             total: 0,
             progress: 0,
             state: ReviewState::None,
-            reveals: Vec::new(),
-            text: String::new(),
+            markup_items: Vec::new(),
+            reveal_len: 0,
+            is_fully_revealed: false,
             rng: fastrand::Rng::new(),
         }
     }
 
-    pub fn on_enter(&mut self, db: &Database) {
+    pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
         self.due.extend(db.iter().due().map(|(id, _)| id));
         self.total = self.due.len();
 
-        if let Some(id) = self.next_card() {
-            self.start_review(id, db);
-        }
-    }
-
-    fn next_card(&mut self) -> Option<CardId> {
-        if self.due.is_empty() {
-            None
-        } else {
-            let random_index = self.rng.usize(0..self.due.len());
-            Some(self.due.remove(random_index))
-        }
-    }
-
-    fn start_review(&mut self, id: CardId, db: &Database) {
-        self.reveals.clear();
-        self.text.clear();
-
-        let card_content = db.get(id).unwrap().content.as_str();
-
-        let mut start = 0;
-        for i in BreakParser::new(card_content) {
-            self.reveals.push(card_content[start..i].to_owned());
-            start = i;
-        }
-        self.reveals.push(card_content[start..].to_owned());
-        self.reveals.reverse();
-        self.state = ReviewState::Review(id);
-        self.reveal_next();
-    }
-
-    fn reveal_next(&mut self) -> bool {
-        if let Some(s) = self.reveals.pop() {
-            self.text.push_str(s.as_str());
-            true
-        } else {
-            false
+        if self.total > 0 {
+            self.next_card(db, markup);
         }
     }
 
@@ -92,6 +59,7 @@ impl ReviewPage {
         area: Rect,
         buf: &mut Buffer,
         colors: &Colors,
+        db: &Database,
         menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
@@ -107,21 +75,24 @@ impl ReviewPage {
                     Some(widgets::Alignment::Center),
                 );
             }
-            ReviewState::Review(_) => {
+            ReviewState::Review(id) => {
                 menu.push_int(self.progress, colors.neutral);
                 menu.push_str(" / ", colors.neutral);
                 menu.push_int(self.total, colors.neutral);
 
-                markup.render(area, buf, self.text.as_str(), kitty);
+                let card_content = db.get(id).unwrap().content.as_str();
+                markup.render(area, buf, card_content, kitty);
 
-                if !self.reveals.is_empty() {
-                    shortcuts.extend([Shortcut::new("Show", symbols::SPACE)]);
-                } else {
+                if self.is_fully_revealed {
                     shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
+                } else {
+                    shortcuts.extend([Shortcut::new("Show", symbols::SPACE)]);
                 }
+
                 if !self.due.is_empty() {
                     shortcuts.push(Shortcut::new("Skip", symbols::ARROW_RIGHT));
                 }
+
                 shortcuts.extend([
                     Shortcut::new("Edit", "e"),
                     Shortcut::new("Archive", symbols::DELETE),
@@ -152,39 +123,29 @@ impl ReviewPage {
                 KeyCode::Delete => {
                     db.update(id, |card| card.archived = true);
                     self.total = self.total.saturating_sub(1);
-                    if let Some(next_id) = self.next_card() {
-                        self.start_review(next_id, db);
-                        markup.scroll(ScrollMove::Start);
-                    } else {
-                        self.state = ReviewState::Done;
-                    }
+                    self.next_card(db, markup);
                     return Action::Render;
                 }
                 KeyCode::Char(' ') => {
-                    if self.reveal_next() {
+                    if !self.is_fully_revealed {
+                        self.reveal_more(markup);
                         markup.set_desired_scroll(ScrollMove::End);
                         return Action::Render;
                     }
                 }
                 KeyCode::Char('y' | 'n') => {
-                    if self.reveals.is_empty() {
+                    if self.is_fully_revealed {
                         let success = key == KeyCode::Char('y');
                         db.schedule(id, success);
                         self.progress += 1;
-                        if let Some(next_id) = self.next_card() {
-                            self.start_review(next_id, db);
-                            markup.scroll(ScrollMove::Start);
-                        } else {
-                            self.state = ReviewState::Done;
-                        }
+                        self.next_card(db, markup);
                         return Action::Render;
                     }
                 }
                 KeyCode::Right => {
-                    if let Some(next_id) = self.next_card() {
+                    if !self.due.is_empty() {
+                        self.next_card(db, markup);
                         self.due.push(id);
-                        self.start_review(next_id, db);
-                        markup.scroll(ScrollMove::Start);
                         return Action::Render;
                     }
                 }
@@ -200,12 +161,47 @@ impl ReviewPage {
         Action::None
     }
 
-    pub fn on_exit(&mut self) {
+    pub fn on_exit(&mut self, markup: &mut Markup) {
         self.due.clear();
         self.total = 0;
         self.progress = 0;
         self.state = ReviewState::None;
-        self.reveals.clear();
-        self.text.clear();
+        self.markup_items.clear();
+        self.reveal_len = 0;
+        self.is_fully_revealed = false;
+        markup.set_max_items(None);
+    }
+
+    fn next_card(&mut self, db: &Database, markup: &mut Markup) {
+        if self.due.is_empty() {
+            self.state = ReviewState::Done;
+            return;
+        }
+
+        let random_index = self.rng.usize(0..self.due.len());
+        let id = self.due.swap_remove(random_index);
+
+        self.markup_items.clear();
+        let card_content = db.get(id).unwrap().content.as_str();
+        Markup::parse_items(card_content, &mut self.markup_items);
+
+        self.reveal_len = 0;
+        self.state = ReviewState::Review(id);
+        self.reveal_more(markup);
+        markup.scroll(ScrollMove::Start);
+    }
+
+    fn reveal_more(&mut self, markup: &mut Markup) {
+        self.reveal_len = self
+            .markup_items
+            .iter()
+            .copied()
+            .enumerate()
+            .filter(|&(i, b)| matches!(b, Item2::Break) && i > self.reveal_len)
+            .map(|(i, _)| i)
+            .next()
+            .unwrap_or(self.markup_items.len());
+        self.is_fully_revealed = self.reveal_len == self.markup_items.len();
+        markup.set_max_items(Some(self.reveal_len));
     }
 }

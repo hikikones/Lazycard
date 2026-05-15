@@ -27,12 +27,12 @@ pub struct Markup {
     text_segment: TextSegment,
     scroll: u16,
     desired_scroll: Option<ScrollMove>,
-    area: Rect,
-    hash: u64,
-    id_start: u32,
-    id_counter: u32,
     total_lines: u16,
     max_items: Option<usize>,
+    image_id_start: u32,
+    image_id_counter: u32,
+    area: Rect,
+    hash: u64,
 }
 
 pub enum ScrollMove {
@@ -138,12 +138,12 @@ impl Markup {
             text_segment: TextSegment::new(),
             scroll: 0,
             desired_scroll: None,
-            area: Rect::ZERO,
-            hash: 0,
-            id_start: 90,
-            id_counter: 0,
             total_lines: 0,
             max_items: None,
+            image_id_start: 90,
+            image_id_counter: 0,
+            area: Rect::ZERO,
+            hash: 0,
         }
     }
 
@@ -153,15 +153,6 @@ impl Markup {
 
     pub const fn set_max_items(&mut self, max: Option<usize>) {
         self.max_items = max;
-    }
-
-    // pub fn items(&self) -> std::slice::Iter<'_, Item> {
-    //     self.items.iter()
-    // }
-
-    pub fn items(&self) -> impl Iterator<Item = Item2> {
-        //todo
-        [Item2::Break].into_iter()
     }
 
     pub fn input(&mut self, key: KeyCode) -> bool {
@@ -260,11 +251,15 @@ impl Markup {
             text_segment.clear();
         }
 
+        self.total_lines = self.compute_total_lines(kitty);
         if let Some(sm) = self.desired_scroll.take() {
-            if self.total_lines == 0 {
-                self.total_lines = self.compute_total_lines(kitty);
-            }
+            // if self.total_lines == 0 {
+            // }
             self.scroll(sm);
+        } else {
+            self.scroll = self
+                .scroll
+                .min(self.total_lines.saturating_sub(area.height));
         }
 
         // Restrict scroll
@@ -276,7 +271,7 @@ impl Markup {
         let top_y = area.y;
         let viewport_top = self.scroll;
         let viewport_bot = self.scroll + area.height;
-        let mut lines_counter = 0;
+        let mut current_line = 0;
 
         // Render
         for item in self.items.iter().cloned().take(self.max_items()) {
@@ -285,7 +280,7 @@ impl Markup {
                     let text = &self.buffer[text];
                     let mut style = Style::new();
                     for line in text.lines() {
-                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
                             render_ansi_line(
                                 area,
                                 buf,
@@ -298,7 +293,7 @@ impl Markup {
                             area.height = area.height.saturating_sub(1);
                         }
 
-                        lines_counter += 1;
+                        current_line += 1;
                     }
                 }
                 Item::ListItem { text } => {
@@ -306,7 +301,7 @@ impl Markup {
                     let mut style = Style::new();
 
                     for (i, line) in text.lines().enumerate() {
-                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
                             if i == 0 {
                                 buf.set_stringn(
                                     area.x,
@@ -332,7 +327,7 @@ impl Markup {
                             area.height = area.height.saturating_sub(1);
                         }
 
-                        lines_counter += 1;
+                        current_line += 1;
                     }
                 }
                 Item::Code { text, .. } => {
@@ -340,7 +335,7 @@ impl Markup {
                     let mut style = Style::new();
 
                     for line in text.lines() {
-                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
                             render_ansi_line(
                                 area,
                                 buf,
@@ -353,7 +348,7 @@ impl Markup {
                             area.height = area.height.saturating_sub(1);
                         }
 
-                        lines_counter += 1;
+                        current_line += 1;
                     }
                 }
                 Item::Image { id, dims } => {
@@ -362,7 +357,7 @@ impl Markup {
                     let resized_area = kitty.area(resized_dims);
 
                     if is_in_viewport(
-                        lines_counter,
+                        current_line,
                         viewport_top.saturating_sub(resized_area.rows),
                         viewport_bot,
                     ) {
@@ -374,7 +369,7 @@ impl Markup {
 
                         let is_top = area.y == top_y;
                         if is_top {
-                            let outside = lines_counter.abs_diff(self.scroll);
+                            let outside = current_line.abs_diff(self.scroll);
                             available_rows = available_rows.saturating_sub(outside);
                         }
 
@@ -396,13 +391,13 @@ impl Markup {
                         area.height = area.height.saturating_sub(available_rows);
                     }
 
-                    lines_counter += resized_area.rows;
+                    current_line += resized_area.rows;
                 }
                 Item::ImageDescription { text } => {
                     let text = &self.buffer[text];
                     let mut style = Style::new();
                     for line in text.lines() {
-                        if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
                             render_ansi_line(
                                 area,
                                 buf,
@@ -415,11 +410,11 @@ impl Markup {
                             area.height = area.height.saturating_sub(1);
                         }
 
-                        lines_counter += 1;
+                        current_line += 1;
                     }
                 }
                 Item::Break => {
-                    if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                    if is_in_viewport(current_line, viewport_top, viewport_bot) {
                         let half = area.width / 2;
                         let mut x = area.x + half / 2;
                         for _ in 0..half {
@@ -429,21 +424,21 @@ impl Markup {
                         area.height = area.height.saturating_sub(1);
                     }
 
-                    lines_counter += 1;
+                    current_line += 1;
                 }
                 Item::EmptyLine => {
-                    if is_in_viewport(lines_counter, viewport_top, viewport_bot) {
+                    if is_in_viewport(current_line, viewport_top, viewport_bot) {
                         area.y += 1;
                         area.height = area.height.saturating_sub(1);
                     }
 
-                    lines_counter += 1;
+                    current_line += 1;
                 }
             }
         }
 
         // Store total lines count
-        self.total_lines = lines_counter;
+        // self.total_lines = lines_counter;
     }
 
     pub fn clear(&mut self) {
@@ -459,20 +454,50 @@ impl Markup {
     pub fn delete_images(&self, kitty: &KittyGraphics) -> std::io::Result<()> {
         // let range = 1..(self.id_counter + 1);
         // kitty.delete_ids(range)
-        if self.id_counter > 0 {
+        if self.image_id_counter > 0 {
             return kitty.delete_range(
-                self.id_start,
-                self.id_start + self.id_counter.saturating_sub(1),
+                self.image_id_start,
+                self.image_id_start + self.image_id_counter.saturating_sub(1),
             );
         }
         Ok(())
     }
 
+    pub fn parse_items(markup: &str, v: &mut Vec<Item2>) {
+        for (block, _) in BlockParser::new(markup) {
+            match block {
+                BlockElement::Paragraph { .. } => {
+                    v.push(Item2::Paragraph);
+                }
+                BlockElement::List { items } => {
+                    for _ in items {
+                        v.push(Item2::ListItem);
+                    }
+                }
+                BlockElement::Code { .. } => {
+                    v.push(Item2::Code);
+                }
+                BlockElement::Image { description, .. } => {
+                    v.push(Item2::Image);
+                    if !description.is_empty() {
+                        v.push(Item2::ImageDescription);
+                    }
+                }
+                BlockElement::Comment { _text } => continue,
+                BlockElement::Break => {
+                    v.push(Item2::Break);
+                }
+            }
+            v.push(Item2::EmptyLine);
+        }
+        v.pop();
+    }
+
     fn compute(&mut self, text: &str, width: u16, kitty: &mut KittyGraphics) {
         self.items.clear();
         self.buffer.clear();
-        self.total_lines = 0;
-        self.id_counter = 0;
+        // self.total_lines = 0;
+        self.image_id_counter = 0;
 
         for (block, _) in BlockParser::new(text) {
             match block {
@@ -517,10 +542,10 @@ impl Markup {
                 }
                 BlockElement::Image { description, path } => {
                     kitty.load(path).unwrap();
-                    let id = self.id_start + self.id_counter;
+                    let id = self.image_id_start + self.image_id_counter;
                     let dims = kitty.encode(id).unwrap();
                     self.items.push(Item::Image { id, dims });
-                    self.id_counter += 1;
+                    self.image_id_counter += 1;
 
                     if !description.is_empty() {
                         let range = self.parse_text(description, width);

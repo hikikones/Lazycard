@@ -77,7 +77,7 @@ impl App {
     }
 
     pub fn run(&mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
-        self.pages.review.on_enter(&self.database);
+        self.pages.review.on_enter(&self.database, &mut self.markup);
         self.render(&mut terminal)?;
 
         loop {
@@ -136,7 +136,7 @@ impl App {
                 }
                 Action::Route(route) => {
                     match self.route {
-                        Route::Review => self.pages.review.on_exit(),
+                        Route::Review => self.pages.review.on_exit(&mut self.markup),
                         Route::Editor(_) => self.pages.editor.on_exit(),
                         Route::Cards => self.pages.cards.on_exit(),
                     }
@@ -146,7 +146,9 @@ impl App {
                     self.markup.delete_images(&self.kitty).unwrap();
 
                     match route {
-                        Route::Review => self.pages.review.on_enter(&self.database),
+                        Route::Review => {
+                            self.pages.review.on_enter(&self.database, &mut self.markup)
+                        }
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
                         Route::Cards => self.pages.cards.on_enter(&mut self.database),
                     }
@@ -224,6 +226,7 @@ impl App {
                             body,
                             buf,
                             colors,
+                            &self.database,
                             &mut self.text,
                             &mut self.markup,
                             &mut self.kitty,
