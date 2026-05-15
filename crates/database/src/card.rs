@@ -34,4 +34,4 @@ impl Card {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct CardId(pub(crate) u64); // todo: seahash?
+pub struct CardId(pub(crate) u64);

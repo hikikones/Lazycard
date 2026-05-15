@@ -103,7 +103,7 @@ impl KittyGraphics {
         debug_assert_ne!(id, 0);
 
         let rgba = self.frames[0].buffer();
-        let dims = Dimensions::from(rgba.dimensions());
+        let dims = Dimensions::from_tuple(rgba.dimensions());
         let compressed = self.zlib_deflate.compress(rgba.as_raw()).unwrap();
         let b64 = self.base64.encode(compressed);
 
@@ -130,7 +130,7 @@ impl KittyGraphics {
             for i in 1..self.frames.len() {
                 let delay = self.frames[i].delay().numer_denom_ms().0 as i32;
                 let rgba = self.frames[i].buffer();
-                let dims = Dimensions::from(rgba.dimensions());
+                let dims = Dimensions::from_tuple(rgba.dimensions());
                 let compressed = self.zlib_deflate.compress(rgba.as_raw()).unwrap();
                 let b64 = self.base64.encode(compressed);
 
@@ -220,12 +220,15 @@ impl KittyGraphics {
                     ",{}",
                     KittyScale::Stretch(area.width, area.height)
                 ));
-                Area::from(area)
+                Area::from_rect(area)
             }
             ResizeMode::FitWidthCropHeight(is_top) => {
                 let max_dims = self.dimensions(area);
-                let resized_dims = Self::resize(dims, dims.width(max_dims.width));
+                let resized_dims = Self::resize(dims, dims.with_width(max_dims.width));
                 let resized_area = self.area(resized_dims);
+
+                // TODO: Fix cropping when height exceeds both top and bot.
+                // That is, the image is taller than the entire viewport.
 
                 if resized_area.rows > area.height {
                     // Need to crop height with source rectangle x, y, width, height
@@ -250,14 +253,14 @@ impl KittyGraphics {
                             height
                         }
                     ));
-                    resized_area.rows(area.height)
+                    resized_area.with_rows(area.height)
                 } else {
                     // No vertical cropping needed, just scale by width
                     self.formatter.push_fmt(format_args!(
                         ",{}",
                         KittyScale::Columns(area.width.min(self.columns(dims.width))),
                     ));
-                    resized_area.rows(self.rows(dims.height))
+                    resized_area.with_rows(self.rows(dims.height))
                 }
             }
         };
@@ -522,6 +525,17 @@ impl Default for CellSize {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ResizeMode {
+    None,
+    #[default]
+    Fit,
+    Stretch,
+    FitWidthCropHeight(bool),
+    // TODO: Maybe FitWidthCropTop and FitWidthCropBottom instead?
+    // Or a CropDir enum?
+}
+
 /// The area for an image.
 #[derive(Debug, Clone, Copy)]
 pub struct Area {
@@ -534,16 +548,16 @@ impl Area {
         Self { columns, rows }
     }
 
-    pub const fn from(area: Rect) -> Self {
+    pub const fn from_rect(area: Rect) -> Self {
         Self::new(area.width, area.height)
     }
 
-    pub const fn columns(mut self, columns: u16) -> Self {
+    pub const fn with_columns(mut self, columns: u16) -> Self {
         self.columns = columns;
         self
     }
 
-    pub const fn rows(mut self, rows: u16) -> Self {
+    pub const fn with_rows(mut self, rows: u16) -> Self {
         self.rows = rows;
         self
     }
@@ -557,33 +571,22 @@ pub struct Dimensions {
 }
 
 impl Dimensions {
-    pub const fn from(wh: (u32, u32)) -> Self {
+    pub const fn from_tuple(wh: (u32, u32)) -> Self {
         Self {
             width: wh.0,
             height: wh.1,
         }
     }
 
-    pub const fn width(mut self, width: u32) -> Self {
+    pub const fn with_width(mut self, width: u32) -> Self {
         self.width = width;
         self
     }
 
-    pub const fn height(mut self, height: u32) -> Self {
+    pub const fn with_height(mut self, height: u32) -> Self {
         self.height = height;
         self
     }
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum ResizeMode {
-    None,
-    #[default]
-    Fit,
-    Stretch,
-    FitWidthCropHeight(bool),
-    // TODO: Maybe FitWidthCropTop and FitWidthCropBottom instead?
-    // Or a CropDir enum?
 }
 
 #[derive(Debug, Clone, Copy)]

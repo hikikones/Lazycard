@@ -180,7 +180,7 @@ impl Settings {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct General {
-    desired_retention: u8, // TODO: move to database?
+    desired_retention: u8,
 }
 
 #[derive(Clone, Default)]

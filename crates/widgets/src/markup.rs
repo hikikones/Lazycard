@@ -299,7 +299,7 @@ impl Markup {
                 }
                 Item::Image { id, dims } => {
                     let max_width = kitty.width(area.width);
-                    let resized_dims = KittyGraphics::resize(dims, dims.width(max_width));
+                    let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
                     let resized_area = kitty.area(resized_dims);
 
                     if is_in_viewport(
@@ -531,7 +531,7 @@ impl Markup {
                 }
                 Item::Image { dims, .. } => {
                     let max_width = kitty.width(self.area.width);
-                    let resized_dims = KittyGraphics::resize(dims, dims.width(max_width));
+                    let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
                     let resized_area = kitty.area(resized_dims);
                     total_lines += resized_area.rows;
                 }
