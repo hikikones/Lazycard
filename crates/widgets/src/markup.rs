@@ -82,12 +82,12 @@ const LIST_ITEM_INDENT: &str = "  • ";
 const LIST_ITEM_INDENT_WIDTH: u16 = 4;
 
 impl Markup {
-    pub fn new() -> Self {
+    pub fn new(syntax_highlight_theme: &'static str) -> Self {
         Self {
             items: Vec::new(),
             ansi: AnsiWriter::new(),
             buffer: String::new(),
-            code_highlighter: CodeHighlighter::new(),
+            code_highlighter: CodeHighlighter::new(syntax_highlight_theme),
             text_segment: TextSegment::new(),
             scroll: 0,
             desired_scroll: None,
@@ -852,15 +852,15 @@ impl<'a> Iterator for ListItems<'a> {
 struct CodeHighlighter {
     syntax_set: SyntaxSet,
     theme_set: ThemeSet,
-    dark: bool,
+    theme: &'static str,
 }
 
 impl CodeHighlighter {
-    fn new() -> Self {
+    fn new(theme: &'static str) -> Self {
         Self {
             syntax_set: SyntaxSet::load_defaults_newlines(),
             theme_set: ThemeSet::load_defaults(),
-            dark: true,
+            theme,
         }
     }
 
@@ -872,13 +872,8 @@ impl CodeHighlighter {
                 .find_syntax_by_token(language)
                 .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
         };
-        let theme_name = if self.dark {
-            "base16-eighties.dark"
-        } else {
-            "InspiredGitHub"
-        };
 
-        let mut highlighter = HighlightLines::new(syntax, &self.theme_set.themes[theme_name]);
+        let mut highlighter = HighlightLines::new(syntax, &self.theme_set.themes[self.theme]);
         for code_line in LinesWithEndings::from(code) {
             match highlighter.highlight_line(code_line, &self.syntax_set) {
                 Ok(spans) => {

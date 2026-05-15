@@ -52,7 +52,6 @@ impl App {
             .inspect_err(|err| logs.enqueue(Log::new(err)))
             .unwrap_or_default()
             .with_path(settings_path);
-        let shortcuts = Shortcuts::new().with_colors(Color::Reset, settings.primary());
 
         let colors = settings.colors();
         let pages = Pages {
@@ -67,12 +66,12 @@ impl App {
             state: State::Route,
             pages,
             database,
-            settings,
-            markup: Markup::new(),
+            markup: Markup::new(settings.syntax_highlighting()),
             kitty: KittyGraphics::new(cell_size),
             matcher: Matcher::new(),
             text: TextSegment::new().with_alignment(Alignment::Center),
-            shortcuts,
+            shortcuts: Shortcuts::new().with_colors(Color::Reset, settings.primary()),
+            settings,
         }
     }
 
