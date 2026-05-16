@@ -161,7 +161,7 @@ impl TextSegment {
     }
 
     fn push_segment(&mut self, start: usize, style: impl Into<Style>) {
-        if self.text.len() == start {
+        if start >= self.text.len() {
             return;
         }
 
