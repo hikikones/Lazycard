@@ -1,14 +1,12 @@
 use ratatui::{buffer::Buffer, layout::Rect};
 
-use crate::utils;
-
 // TODO: Handle division by zero?
 
 pub struct KittyGraphics {
     frames: Vec<image::Frame>,
     zlib_deflate: ZlibDeflate,
     base64: Base64,
-    formatter: Formatter,
+    formatter: utils::Formatter,
     cell_size: CellSize,
     kitty_verbosity: KittyVerbosity,
 }
@@ -19,7 +17,7 @@ impl KittyGraphics {
             frames: Vec::new(),
             zlib_deflate: ZlibDeflate::new(),
             base64: Base64::new(),
-            formatter: Formatter::new(),
+            formatter: utils::Formatter::new(),
             cell_size,
             kitty_verbosity: KittyVerbosity::Silent,
         }
@@ -122,7 +120,12 @@ impl KittyGraphics {
             ),
             format_args!("{},{}", KittyId(id), self.kitty_verbosity),
         );
-        Self::write_chunks(root_header, chunk_header, b64, &mut stdout)?;
+        Self::write_chunks(
+            self.formatter.slice(root_header),
+            self.formatter.slice(chunk_header),
+            b64,
+            &mut stdout,
+        )?;
         self.formatter.clear();
 
         // Animated image
@@ -152,7 +155,12 @@ impl KittyGraphics {
                         self.kitty_verbosity
                     ),
                 );
-                Self::write_chunks(root_header, chunk_header, b64, &mut stdout)?;
+                Self::write_chunks(
+                    self.formatter.slice(root_header),
+                    self.formatter.slice(chunk_header),
+                    b64,
+                    &mut stdout,
+                )?;
                 self.formatter.clear();
             }
 
@@ -180,7 +188,7 @@ impl KittyGraphics {
         id: u32,
         dims: Dimensions,
         resize: ResizeMode,
-        alignment: utils::Alignment,
+        alignment: crate::utils::Alignment,
     ) {
         let area = area.intersection(buf.area);
 
@@ -258,7 +266,7 @@ impl KittyGraphics {
         self.formatter.push_str("\x1b\\");
 
         // Image alignment
-        let Rect { x, y, .. } = utils::align(
+        let Rect { x, y, .. } = crate::utils::align(
             Rect {
                 width: image_size.columns,
                 height: image_size.rows,
@@ -329,16 +337,16 @@ impl KittyGraphics {
         Ok(())
     }
 
-    pub fn delete_range(&self, min: u32, max: u32) -> std::io::Result<()> {
+    pub fn delete_range(&self, min_inclusive: u32, max_inclusive: u32) -> std::io::Result<()> {
         use std::io::Write;
 
-        debug_assert!(min <= max);
+        debug_assert!(min_inclusive <= max_inclusive);
 
         let mut stdout = std::io::stdout();
         write!(
             stdout,
             "\x1b_G{},{}\x1b\\",
-            KittyAction::Delete(KittyDelete::Range(min, max)),
+            KittyAction::Delete(KittyDelete::Range(min_inclusive, max_inclusive)),
             self.kitty_verbosity
         )?;
         stdout.flush()?;
@@ -357,32 +365,6 @@ impl KittyGraphics {
             self.kitty_verbosity
         )?;
         stdout.flush()?;
-
-        Ok(())
-    }
-
-    fn write_chunks(
-        root_header: &str,
-        chunk_header: &str,
-        b64: &str,
-        w: &mut impl std::io::Write,
-    ) -> std::io::Result<()> {
-        const CHUNK_SIZE: usize = 4096;
-        let b64_len = b64.len();
-
-        if b64_len <= CHUNK_SIZE {
-            return write!(w, "\x1b_G{root_header};{b64}\x1b\\");
-        }
-
-        write!(w, "\x1b_G{root_header},m=1;{}\x1b\\", &b64[0..CHUNK_SIZE])?;
-        let mut start = CHUNK_SIZE;
-        let mut end = CHUNK_SIZE * 2;
-        while end < b64_len {
-            write!(w, "\x1b_G{chunk_header},m=1;{}\x1b\\", &b64[start..end])?;
-            start = end;
-            end += CHUNK_SIZE;
-        }
-        write!(w, "\x1b_G{chunk_header},m=0;{}\x1b\\", &b64[start..])?;
 
         Ok(())
     }
@@ -412,11 +394,38 @@ impl KittyGraphics {
     }
 
     pub fn resize(dims: Dimensions, max: Dimensions) -> Dimensions {
-        let (rw, rh) = resize_dimensions(dims.width, dims.height, max.width, max.height, false);
+        let (rw, rh) =
+            utils::resize_dimensions(dims.width, dims.height, max.width, max.height, false);
         Dimensions {
             width: rw,
             height: rh,
         }
+    }
+
+    fn write_chunks(
+        root_header: &str,
+        chunk_header: &str,
+        b64: &str,
+        w: &mut impl std::io::Write,
+    ) -> std::io::Result<()> {
+        const CHUNK_SIZE: usize = 4096;
+        let b64_len = b64.len();
+
+        if b64_len <= CHUNK_SIZE {
+            return write!(w, "\x1b_G{root_header};{b64}\x1b\\");
+        }
+
+        write!(w, "\x1b_G{root_header},m=1;{}\x1b\\", &b64[0..CHUNK_SIZE])?;
+        let mut start = CHUNK_SIZE;
+        let mut end = CHUNK_SIZE * 2;
+        while end < b64_len {
+            write!(w, "\x1b_G{chunk_header},m=1;{}\x1b\\", &b64[start..end])?;
+            start = end;
+            end += CHUNK_SIZE;
+        }
+        write!(w, "\x1b_G{chunk_header},m=0;{}\x1b\\", &b64[start..])?;
+
+        Ok(())
     }
 }
 
@@ -722,7 +731,7 @@ impl std::fmt::Display for KittyCompression {
 
 #[derive(Debug, Clone, Copy)]
 enum KittyCursorMovement {
-    MoveToAfterImage = 0,
+    // MoveToAfterImage = 0,
     NoMovement = 1,
 }
 
@@ -743,8 +752,8 @@ impl std::fmt::Display for KittyAnimationGap {
 
 #[derive(Debug, Clone, Copy)]
 enum KittyAnimationState {
-    Stop = 1,
-    RunWaitLoad = 2,
+    // Stop = 1,
+    // RunWaitLoad = 2,
     RunNormal = 3,
 }
 
@@ -756,25 +765,25 @@ impl std::fmt::Display for KittyAnimationState {
 
 #[derive(Debug, Clone, Copy)]
 enum KittyAnimationLoop {
-    Ignore,
+    // Ignore,
     Forever,
-    Amount(u32),
+    // Amount(u32),
 }
 
 impl std::fmt::Display for KittyAnimationLoop {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            Self::Ignore => f.write_str("v=0"),
+            // Self::Ignore => f.write_str("v=0"),
             Self::Forever => f.write_str("v=1"),
-            Self::Amount(n) => f.write_fmt(format_args!("v={}", n + 1)),
+            // Self::Amount(n) => f.write_fmt(format_args!("v={}", n + 1)),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 enum KittyVerbosity {
-    All = 0,
-    ErrorsOnly = 1,
+    // All = 0,
+    // ErrorsOnly = 1,
     Silent = 2,
 }
 
@@ -820,90 +829,5 @@ impl Base64 {
         self.0.clear();
         STANDARD.encode_string(input, &mut self.0);
         self.0.as_str()
-    }
-}
-
-struct Formatter(String);
-
-impl Formatter {
-    const fn new() -> Self {
-        Self(String::new())
-    }
-
-    const fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    fn slice(&self, range: std::ops::Range<usize>) -> &str {
-        &self.0[range]
-    }
-
-    fn push_str(&mut self, s: &str) {
-        self.0.push_str(s);
-    }
-
-    fn push_fmt(&mut self, args: std::fmt::Arguments<'_>) {
-        use std::fmt::Write;
-        let _ = self.0.write_fmt(args);
-    }
-
-    fn push_fmt2<'a>(
-        &'a mut self,
-        args1: std::fmt::Arguments<'_>,
-        args2: std::fmt::Arguments<'_>,
-    ) -> (&'a str, &'a str) {
-        use std::fmt::Write;
-
-        let start = self.0.len();
-        let _ = self.0.write_fmt(args1);
-        let end = self.0.len();
-        let _ = self.0.write_fmt(args2);
-
-        (&self.0[start..end], &self.0[end..])
-    }
-
-    fn clear(&mut self) {
-        self.0.clear();
-    }
-}
-
-impl std::fmt::Display for Formatter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-/// Calculates the width and height an image should be resized to.
-/// This preserves aspect ratio, and based on the `fill` parameter
-/// will either fill the dimensions to fit inside the smaller constraint
-/// (will overflow the specified bounds on one axis to preserve
-/// aspect ratio), or will shrink so that both dimensions are
-/// completely contained within the given `width` and `height`,
-/// with empty space on one axis.
-///
-/// Note: this fn is taken from the image crate in math::utils
-fn resize_dimensions(width: u32, height: u32, nwidth: u32, nheight: u32, fill: bool) -> (u32, u32) {
-    use std::cmp::max;
-
-    let wratio = f64::from(nwidth) / f64::from(width);
-    let hratio = f64::from(nheight) / f64::from(height);
-
-    let ratio = if fill {
-        f64::max(wratio, hratio)
-    } else {
-        f64::min(wratio, hratio)
-    };
-
-    let nw = max((f64::from(width) * ratio).round() as u64, 1);
-    let nh = max((f64::from(height) * ratio).round() as u64, 1);
-
-    if nw > u64::from(u32::MAX) {
-        let ratio = f64::from(u32::MAX) / f64::from(width);
-        (u32::MAX, max((f64::from(height) * ratio).round() as u32, 1))
-    } else if nh > u64::from(u32::MAX) {
-        let ratio = f64::from(u32::MAX) / f64::from(height);
-        (max((f64::from(width) * ratio).round() as u32, 1), u32::MAX)
-    } else {
-        (nw as u32, nh as u32)
     }
 }

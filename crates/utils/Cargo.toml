@@ -6,3 +6,4 @@ license.workspace = true
 
 [dependencies]
 itoa = { workspace = true }
+unicode-segmentation = { workspace = true }

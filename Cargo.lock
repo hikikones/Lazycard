@@ -4862,6 +4862,7 @@ name = "utils"
 version = "0.1.0"
 dependencies = [
  "itoa",
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -5320,6 +5321,7 @@ dependencies = [
  "textwrap",
  "unicode-segmentation",
  "unicode-width",
+ "utils",
  "zlib-rs",
 ]
 

@@ -1,21 +1,18 @@
 use std::{
     hash::{Hash, Hasher},
-    iter::Peekable,
     ops::Range,
-    str::CharIndices,
 };
 
 use ratatui::{crossterm::event::KeyCode, prelude::*};
 use syntect::{
     easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::LinesWithEndings,
 };
-use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     ansi::{AnsiEvent, AnsiParser, AnsiTag, AnsiWriter},
     kitty_graphics::{Dimensions, KittyGraphics, ResizeMode},
     text_segment::TextSegment,
-    utils,
 };
 
 pub struct Markup {
@@ -329,7 +326,7 @@ impl Markup {
                             id,
                             dims,
                             ResizeMode::FitWidthCropHeight { rows_outside_top },
-                            utils::Alignment::CenterHorizontal,
+                            crate::utils::Alignment::CenterHorizontal,
                         );
 
                         area.y += image_rows;
@@ -505,6 +502,30 @@ impl Markup {
         self.items.pop();
     }
 
+    fn parse_text(&mut self, text: &str, width: u16) -> Range<usize> {
+        for event in InlineParser::new(text) {
+            match event {
+                InlineEvent::Text(s) => self.ansi.push_str(s),
+                InlineEvent::Tag(tag) => match tag {
+                    InlineTag::BoldStart => self.ansi.push_tag(AnsiTag::Bold),
+                    InlineTag::BoldEnd => self.ansi.push_tag(AnsiTag::NotBold),
+                    InlineTag::ItalicStart => self.ansi.push_tag(AnsiTag::Italic),
+                    InlineTag::ItalicEnd => self.ansi.push_tag(AnsiTag::NotItalic),
+                },
+            }
+        }
+
+        // Break text into lines using textwrap which ignores ansi codes
+        textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
+
+        // Push text to buffer and use later with returned range
+        let start = self.buffer.len();
+        self.buffer.push_str(self.ansi.as_str());
+        let end = self.buffer.len();
+        self.ansi.clear();
+        start..end
+    }
+
     const fn max_items(&self) -> usize {
         match self.max_items {
             Some(max) => max,
@@ -550,30 +571,6 @@ impl Markup {
 
         total_lines
     }
-
-    fn parse_text(&mut self, text: &str, width: u16) -> Range<usize> {
-        for event in InlineParser::new(text) {
-            match event {
-                InlineEvent::Text(s) => self.ansi.push_str(s),
-                InlineEvent::Tag(tag) => match tag {
-                    InlineTag::BoldStart => self.ansi.push_tag(AnsiTag::Bold),
-                    InlineTag::BoldEnd => self.ansi.push_tag(AnsiTag::NotBold),
-                    InlineTag::ItalicStart => self.ansi.push_tag(AnsiTag::Italic),
-                    InlineTag::ItalicEnd => self.ansi.push_tag(AnsiTag::NotItalic),
-                },
-            }
-        }
-
-        // Break text into lines using textwrap which ignores ansi codes
-        textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
-
-        // Push text to buffer and use later with returned range
-        let start = self.buffer.len();
-        self.buffer.push_str(self.ansi.as_str());
-        let end = self.buffer.len();
-        self.ansi.clear();
-        start..end
-    }
 }
 
 #[derive(Debug)]
@@ -588,14 +585,14 @@ enum BlockElement<'a> {
 
 struct BlockParser<'a> {
     input: &'a str,
-    graphemes: CustomGraphemeIter<'a>,
+    graphemes: utils::CustomGraphemeIter<'a>,
 }
 
 impl<'a> BlockParser<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             input,
-            graphemes: CustomGraphemeIter::new(input),
+            graphemes: utils::CustomGraphemeIter::new(input),
         }
     }
 
@@ -813,7 +810,7 @@ impl<'a> Iterator for BlockParser<'a> {
 #[derive(Debug)]
 struct ListItems<'a> {
     text: &'a str,
-    graphemes: CustomGraphemeIter<'a>,
+    graphemes: utils::CustomGraphemeIter<'a>,
     start: usize,
 }
 
@@ -821,7 +818,7 @@ impl<'a> ListItems<'a> {
     fn new(text: &'a str) -> Self {
         Self {
             text,
-            graphemes: CustomGraphemeIter::new(text),
+            graphemes: utils::CustomGraphemeIter::new(text),
             start: 0,
         }
     }
@@ -890,171 +887,6 @@ impl CodeHighlighter {
     }
 }
 
-#[derive(Debug)]
-struct CustomGraphemeIter<'a> {
-    graphemes: Peekable<GraphemeIndices<'a>>,
-    current: Option<(usize, &'a str)>,
-    previous: Option<&'a str>,
-}
-
-impl<'a> CustomGraphemeIter<'a> {
-    fn new(text: &'a str) -> Self {
-        Self {
-            graphemes: text.grapheme_indices(true).peekable(),
-            current: None,
-            previous: None,
-        }
-    }
-
-    fn previous(&self) -> Option<&'a str> {
-        self.previous
-    }
-
-    fn peek(&mut self) -> Option<&'a str> {
-        self.graphemes.peek().map(|(_, g)| *g)
-    }
-
-    fn next_if(&mut self, func: impl Fn(&str) -> bool) -> Option<(usize, &'a str)> {
-        if let Some((_, peek)) = self.graphemes.peek() {
-            if func(peek) {
-                return self.next();
-            }
-        }
-        None
-    }
-
-    fn next_if_eq(&mut self, g: &str) -> Option<(usize, &'a str)> {
-        self.next_if(|n| n == g)
-    }
-
-    fn find(&mut self, g: &str) -> Option<(usize, &'a str)> {
-        self.find_by(|n| n == g)
-    }
-
-    fn find_by(&mut self, func: impl Fn(&str) -> bool) -> Option<(usize, &'a str)> {
-        loop {
-            let Some((i, n)) = self.next() else {
-                return None;
-            };
-
-            if func(n) {
-                return Some((i, n));
-            }
-        }
-    }
-
-    fn find_with_previous(
-        &mut self,
-        g: &str,
-        prev_func: impl Fn(&str) -> bool,
-    ) -> Option<(usize, &'a str)> {
-        self.find_by_with_previous(|n| n == g, prev_func)
-    }
-
-    fn find_by_with_previous(
-        &mut self,
-        next_func: impl Fn(&str) -> bool,
-        prev_func: impl Fn(&str) -> bool,
-    ) -> Option<(usize, &'a str)> {
-        loop {
-            let Some((i, n)) = self.find_by(&next_func) else {
-                return None;
-            };
-
-            if let Some(p) = self.previous {
-                if prev_func(p) {
-                    return Some((i, n));
-                }
-            };
-        }
-    }
-
-    fn find_pattern(&mut self, prev: &str, next: &str) -> Option<(usize, &'a str, &'a str)> {
-        self.find_pattern_by(|p, n| p == prev && n == next)
-    }
-
-    fn find_pattern_by(
-        &mut self,
-        func: impl Fn(&str, &str) -> bool,
-    ) -> Option<(usize, &'a str, &'a str)> {
-        loop {
-            let Some((i, n)) = self.next() else {
-                return None;
-            };
-
-            if let Some(p) = self.previous {
-                if func(p, n) {
-                    return Some((i, p, n));
-                }
-            }
-        }
-    }
-
-    fn find_consecutive(&mut self, g: &str, n: usize) -> Option<(usize, &'a str)> {
-        self.find_consecutive_by(|s| s == g, n)
-    }
-
-    fn find_consecutive_by(
-        &mut self,
-        func: impl Fn(&str) -> bool,
-        n: usize,
-    ) -> Option<(usize, &'a str)> {
-        match n {
-            0 => None,
-            1 => self.find_by(func),
-            _ => loop {
-                if self.find_by(&func).is_none() {
-                    return None;
-                };
-
-                let mut count = 1;
-                while let Some((i, g)) = self.next_if(&func) {
-                    count += 1;
-                    if count == n {
-                        return Some((i, g));
-                    }
-                }
-            },
-        }
-    }
-
-    fn count_consecutive(&mut self, g: &str, max: usize) -> usize {
-        self.count_consecutive_by(|n| n == g, max)
-    }
-
-    fn count_consecutive_by(&mut self, g: impl Fn(&str) -> bool, max: usize) -> usize {
-        if max == 0 {
-            return 0;
-        }
-
-        let mut count = 0;
-        while self.next_if(&g).is_some() {
-            count += 1;
-            if count == max {
-                break;
-            }
-        }
-        count
-    }
-}
-
-impl<'a> Iterator for CustomGraphemeIter<'a> {
-    type Item = (usize, &'a str);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let Some((i, n)) = self.graphemes.next() else {
-            return None;
-        };
-
-        if let Some((_, c)) = self.current {
-            self.previous = Some(c);
-        }
-
-        self.current = Some((i, n));
-        self.current
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 enum InlineEvent<'a> {
     Text(&'a str),
@@ -1071,7 +903,7 @@ enum InlineTag {
 
 struct InlineParser<'a> {
     input: &'a str,
-    chars: CustomCharsIter<'a>,
+    chars: utils::CustomCharsIter<'a>,
     start: usize,
     tag: Option<InlineTag>,
     bold: bool,
@@ -1082,7 +914,7 @@ impl<'a> InlineParser<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             input,
-            chars: CustomCharsIter::new(input),
+            chars: utils::CustomCharsIter::new(input),
             start: 0,
             tag: None,
             bold: false,
@@ -1155,7 +987,7 @@ impl<'a> Iterator for InlineParser<'a> {
             let tag = match c {
                 '*' => parse_tag(
                     c,
-                    self.chars.previous,
+                    self.chars.previous(),
                     self.chars.peek(),
                     InlineTag::BoldStart,
                     InlineTag::BoldEnd,
@@ -1163,7 +995,7 @@ impl<'a> Iterator for InlineParser<'a> {
                 ),
                 '_' => parse_tag(
                     c,
-                    self.chars.previous,
+                    self.chars.previous(),
                     self.chars.peek(),
                     InlineTag::ItalicStart,
                     InlineTag::ItalicEnd,
@@ -1191,144 +1023,5 @@ impl<'a> Iterator for InlineParser<'a> {
             self.start = self.input.len();
             Some(InlineEvent::Text(remaining))
         }
-    }
-}
-
-#[derive(Debug)]
-struct CustomCharsIter<'a> {
-    chars: Peekable<CharIndices<'a>>,
-    current: Option<(usize, char)>,
-    previous: Option<char>,
-}
-
-impl<'a> CustomCharsIter<'a> {
-    fn new(input: &'a str) -> Self {
-        Self {
-            chars: input.char_indices().peekable(),
-            current: None,
-            previous: None,
-        }
-    }
-
-    const fn previous(&self) -> Option<char> {
-        self.previous
-    }
-
-    fn peek(&mut self) -> Option<char> {
-        self.chars.peek().copied().map(|(_, c)| c)
-    }
-
-    fn next_if(&mut self, f: impl Fn(char) -> bool) -> Option<(usize, char)> {
-        if let Some(p) = self.peek() {
-            if f(p) {
-                return self.next();
-            }
-        }
-        None
-    }
-
-    fn next_if_eq(&mut self, c: char) -> Option<(usize, char)> {
-        self.next_if(|n| n == c)
-    }
-
-    fn find(&mut self, c: char) -> Option<(usize, char)> {
-        self.find_by(|n| n == c)
-    }
-
-    fn find_by(&mut self, f: impl Fn(char) -> bool) -> Option<(usize, char)> {
-        loop {
-            let Some((i, n)) = self.next() else {
-                return None;
-            };
-
-            if f(n) {
-                return Some((i, n));
-            }
-        }
-    }
-
-    fn find_with_previous(
-        &mut self,
-        c: char,
-        prev_func: impl Fn(char) -> bool,
-    ) -> Option<(usize, char)> {
-        self.find_by_with_previous(|n| n == c, prev_func)
-    }
-
-    fn find_by_with_previous(
-        &mut self,
-        next_func: impl Fn(char) -> bool,
-        prev_func: impl Fn(char) -> bool,
-    ) -> Option<(usize, char)> {
-        loop {
-            let Some((i, n)) = self.find_by(&next_func) else {
-                return None;
-            };
-
-            if let Some(p) = self.previous {
-                if prev_func(p) {
-                    return Some((i, n));
-                }
-            };
-        }
-    }
-
-    fn find_consecutive(&mut self, c: char, n: usize) -> Option<(usize, char)> {
-        self.find_consecutive_by(|s| s == c, n)
-    }
-
-    fn find_consecutive_by(&mut self, f: impl Fn(char) -> bool, n: usize) -> Option<(usize, char)> {
-        match n {
-            0 => None,
-            1 => self.find_by(f),
-            _ => loop {
-                if self.find_by(&f).is_none() {
-                    return None;
-                };
-
-                let mut count = 1;
-                while let Some((i, c)) = self.next_if(&f) {
-                    count += 1;
-                    if count == n {
-                        return Some((i, c));
-                    }
-                }
-            },
-        }
-    }
-
-    fn count_consecutive(&mut self, c: char, max: usize) -> usize {
-        self.count_consecutive_by(|n| n == c, max)
-    }
-
-    fn count_consecutive_by(&mut self, c: impl Fn(char) -> bool, max: usize) -> usize {
-        if max == 0 {
-            return 0;
-        }
-
-        let mut count = 0;
-        while self.next_if(&c).is_some() {
-            count += 1;
-            if count == max {
-                break;
-            }
-        }
-        count
-    }
-}
-
-impl<'a> Iterator for CustomCharsIter<'a> {
-    type Item = (usize, char);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = self.chars.next();
-
-        if next.is_none() {
-            return None;
-        }
-
-        self.previous = self.current.map(|(_, c)| c);
-        self.current = next;
-        next
     }
 }

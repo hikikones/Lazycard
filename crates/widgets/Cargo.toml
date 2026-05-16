@@ -15,4 +15,5 @@ syntect = { workspace = true }
 textwrap = { workspace = true }
 unicode-segmentation = { workspace = true }
 unicode-width = { workspace = true }
+utils = { workspace = true }
 zlib-rs = { workspace = true }
