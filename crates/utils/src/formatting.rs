@@ -35,6 +35,18 @@ impl Formatter {
         start..self.0.len()
     }
 
+    pub fn push_str2(
+        &mut self,
+        s1: &str,
+        s2: &str,
+    ) -> (std::ops::Range<usize>, std::ops::Range<usize>) {
+        let start = self.0.len();
+        self.0.push_str(s1);
+        let middle = self.0.len();
+        self.0.push_str(s2);
+        (start..middle, middle..self.0.len())
+    }
+
     pub fn push_fmt(&mut self, args: std::fmt::Arguments<'_>) -> std::ops::Range<usize> {
         use std::fmt::Write;
 

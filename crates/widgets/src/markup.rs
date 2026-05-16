@@ -18,7 +18,7 @@ use crate::{
 pub struct Markup {
     items: Vec<Item>,
     ansi: AnsiWriter,
-    buffer: String,
+    wrapped_ansi: utils::Formatter,
     code_highlighter: CodeHighlighter,
     text_segment: TextSegment,
     scroll: u16,
@@ -83,7 +83,7 @@ impl Markup {
         Self {
             items: Vec::new(),
             ansi: AnsiWriter::new(),
-            buffer: String::new(),
+            wrapped_ansi: utils::Formatter::new(),
             code_highlighter: CodeHighlighter::new(syntax_highlight_theme),
             text_segment: TextSegment::new(),
             scroll: 0,
@@ -224,7 +224,7 @@ impl Markup {
 
             match item {
                 Item::Paragraph { text, alignment } => {
-                    let text = &self.buffer[text];
+                    let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
                     for line in text.lines() {
                         if is_in_viewport(current_line, viewport_top, viewport_bot) {
@@ -244,7 +244,7 @@ impl Markup {
                     }
                 }
                 Item::ListItem { text } => {
-                    let text = &self.buffer[text];
+                    let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
 
                     for (i, line) in text.lines().enumerate() {
@@ -278,7 +278,7 @@ impl Markup {
                     }
                 }
                 Item::Code { text, .. } => {
-                    let text = &self.buffer[text];
+                    let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
 
                     for line in text.lines() {
@@ -336,7 +336,7 @@ impl Markup {
                     current_line += resized_area.rows;
                 }
                 Item::ImageDescription { text } => {
-                    let text = &self.buffer[text];
+                    let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
                     for line in text.lines() {
                         if is_in_viewport(current_line, viewport_top, viewport_bot) {
@@ -382,7 +382,7 @@ impl Markup {
 
     pub fn clear(&mut self) {
         self.items.clear();
-        self.buffer.clear();
+        self.wrapped_ansi.clear();
         self.scroll = 0;
         self.desired_scroll = None;
         self.area = Rect::ZERO;
@@ -432,7 +432,7 @@ impl Markup {
 
     fn compute(&mut self, text: &str, width: u16, kitty: &mut KittyGraphics) {
         self.items.clear();
-        self.buffer.clear();
+        self.wrapped_ansi.clear();
         self.image_id_counter = 0;
 
         for (block, _) in BlockParser::new(text) {
@@ -464,17 +464,13 @@ impl Markup {
                             }
                         });
 
-                    // Store results in text buffer
-                    let start = self.buffer.len();
-                    self.buffer.push_str(language);
-                    let middle = self.buffer.len();
-                    self.buffer.push_str(self.ansi.as_str());
-                    let end = self.buffer.len();
-                    self.ansi.clear();
+                    let (lang_range, code_range) =
+                        self.wrapped_ansi.push_str2(language, self.ansi.as_str());
                     self.items.push(Item::Code {
-                        _language: start..middle,
-                        text: middle..end,
+                        _language: lang_range,
+                        text: code_range,
                     });
+                    self.ansi.clear();
                 }
                 BlockElement::Image { description, path } => {
                     kitty.load(path).unwrap();
@@ -503,6 +499,7 @@ impl Markup {
     }
 
     fn parse_text(&mut self, text: &str, width: u16) -> Range<usize> {
+        // Convert markup to ansi
         for event in InlineParser::new(text) {
             match event {
                 InlineEvent::Text(s) => self.ansi.push_str(s),
@@ -518,12 +515,10 @@ impl Markup {
         // Break text into lines using textwrap which ignores ansi codes
         textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
 
-        // Push text to buffer and use later with returned range
-        let start = self.buffer.len();
-        self.buffer.push_str(self.ansi.as_str());
-        let end = self.buffer.len();
+        // Store result and use later with returned range
+        let range = self.wrapped_ansi.push_str(self.ansi.as_str());
         self.ansi.clear();
-        start..end
+        range
     }
 
     const fn max_items(&self) -> usize {
@@ -539,16 +534,13 @@ impl Markup {
         for item in self.items.iter().cloned().take(self.max_items()) {
             match item {
                 Item::Paragraph { text, .. } => {
-                    let text = &self.buffer[text];
-                    total_lines += text.lines().count() as u16;
+                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
                 }
                 Item::ListItem { text } => {
-                    let text = &self.buffer[text];
-                    total_lines += text.lines().count() as u16;
+                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
                 }
                 Item::Code { text, .. } => {
-                    let text = &self.buffer[text];
-                    total_lines += text.lines().count() as u16;
+                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
                 }
                 Item::Image { dims, .. } => {
                     let max_width = kitty.width(self.area.width);
@@ -557,8 +549,7 @@ impl Markup {
                     total_lines += resized_area.rows;
                 }
                 Item::ImageDescription { text } => {
-                    let text = &self.buffer[text];
-                    total_lines += text.lines().count() as u16;
+                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
                 }
                 Item::Break => {
                     total_lines += 1;
