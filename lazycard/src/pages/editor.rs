@@ -103,11 +103,6 @@ impl CardEditorPage {
             KeyCode::Char('p') => {
                 if ctrl {
                     self.preview = !self.preview;
-
-                    if !self.preview {
-                        markup.delete_images(kitty).unwrap();
-                    }
-
                     return Action::Render;
                 } else if !self.preview {
                     self.editor.push_char('p');

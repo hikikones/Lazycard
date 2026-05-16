@@ -27,6 +27,7 @@ pub struct Markup {
     max_items: Option<usize>,
     image_id_start: u32,
     image_id_counter: u32,
+    image_has_rendered: bool,
     area: Rect,
     hash: u64,
 }
@@ -92,6 +93,7 @@ impl Markup {
             max_items: None,
             image_id_start: 90,
             image_id_counter: 0,
+            image_has_rendered: false,
             area: Rect::ZERO,
             hash: 0,
         }
@@ -142,9 +144,6 @@ impl Markup {
         text: &str,
         kitty: &mut KittyGraphics,
     ) {
-        // Delete existing images
-        self.delete_images(kitty).unwrap();
-
         let hash = {
             let mut hasher = ahash::AHasher::default();
             text.hash(&mut hasher);
@@ -315,7 +314,6 @@ impl Markup {
                             0
                         };
                         let image_rows = (resized_area.rows - rows_outside_top).min(area.height);
-
                         let image_area = Rect {
                             height: image_rows,
                             ..area
@@ -328,6 +326,7 @@ impl Markup {
                             ResizeMode::FitWidthCropHeight { rows_outside_top },
                             crate::utils::Alignment::CenterHorizontal,
                         );
+                        self.image_has_rendered = true;
 
                         area.y += image_rows;
                         area.height = area.height.saturating_sub(image_rows);
@@ -390,12 +389,13 @@ impl Markup {
         self.total_lines = 0;
     }
 
-    pub fn delete_images(&self, kitty: &KittyGraphics) -> std::io::Result<()> {
-        if self.image_id_counter > 0 {
-            return kitty.delete_range(
+    pub fn delete_images(&mut self, kitty: &KittyGraphics) -> std::io::Result<()> {
+        if self.image_has_rendered {
+            kitty.delete_range(
                 self.image_id_start,
                 self.image_id_start + self.image_id_counter.saturating_sub(1),
-            );
+            )?;
+            self.image_has_rendered = false;
         }
         Ok(())
     }

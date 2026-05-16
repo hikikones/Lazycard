@@ -142,7 +142,6 @@ impl App {
 
                     self.route = route;
                     self.markup.clear();
-                    self.markup.delete_images(&self.kitty).unwrap();
 
                     match route {
                         Route::Review => {
@@ -172,6 +171,9 @@ impl App {
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
+        // Clear any rendered image from markup before every render
+        self.markup.delete_images(&self.kitty).unwrap();
+
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();
