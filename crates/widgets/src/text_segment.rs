@@ -122,6 +122,10 @@ impl TextSegment {
     }
 
     pub fn render(&self, line: Rect, buf: &mut Buffer) {
+        if buf.cell((line.x, line.y)).is_none() {
+            return;
+        }
+
         let line = match self.alignment {
             Alignment::Left => line,
             Alignment::Center => Rect {

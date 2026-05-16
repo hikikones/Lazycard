@@ -221,6 +221,10 @@ impl Markup {
 
         // Render
         for item in self.items.iter().cloned().take(self.max_items()) {
+            if area.height == 0 {
+                break;
+            }
+
             match item {
                 Item::Paragraph { text, alignment } => {
                     let text = &self.buffer[text];
