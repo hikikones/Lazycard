@@ -76,9 +76,6 @@ pub enum MarkupItem {
     EmptyLine,
 }
 
-const LIST_ITEM_INDENT: &str = "  • ";
-const LIST_ITEM_INDENT_WIDTH: u16 = 4;
-
 impl Markup {
     pub fn new(syntax_highlight_theme: &'static str) -> Self {
         Self {
@@ -225,6 +222,7 @@ impl Markup {
                 Item::Paragraph { text, alignment } => {
                     let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
+
                     for line in text.lines() {
                         if is_in_viewport(current_line, viewport_top, viewport_bot) {
                             render_ansi_line(
@@ -246,23 +244,10 @@ impl Markup {
                     let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
 
-                    for (i, line) in text.lines().enumerate() {
+                    for line in text.lines() {
                         if is_in_viewport(current_line, viewport_top, viewport_bot) {
-                            if i == 0 {
-                                buf.set_stringn(
-                                    area.x,
-                                    area.y,
-                                    LIST_ITEM_INDENT,
-                                    LIST_ITEM_INDENT_WIDTH as usize,
-                                    style,
-                                );
-                            }
                             render_ansi_line(
-                                Rect {
-                                    x: area.x + LIST_ITEM_INDENT_WIDTH,
-                                    width: area.width.saturating_sub(LIST_ITEM_INDENT_WIDTH),
-                                    ..area
-                                },
+                                area,
                                 buf,
                                 line,
                                 &mut self.text_segment,
@@ -337,6 +322,7 @@ impl Markup {
                 Item::ImageDescription { text } => {
                     let text = self.wrapped_ansi.slice(text);
                     let mut style = Style::new();
+
                     for line in text.lines() {
                         if is_in_viewport(current_line, viewport_top, viewport_bot) {
                             render_ansi_line(
@@ -438,7 +424,7 @@ impl Markup {
         for (block, _) in BlockParser::new(text) {
             match block {
                 BlockElement::Paragraph { text, alignment } => {
-                    let range = self.parse_text(text, width);
+                    let range = self.parse_text(text, width, None);
                     self.items.push(Item::Paragraph {
                         text: range,
                         alignment,
@@ -447,7 +433,7 @@ impl Markup {
                 BlockElement::List { items } => {
                     for item in items {
                         let range =
-                            self.parse_text(item, width.saturating_sub(LIST_ITEM_INDENT_WIDTH));
+                            self.parse_text(item, width.saturating_sub(4), Some(("  • ", "    ")));
                         self.items.push(Item::ListItem { text: range });
                     }
                 }
@@ -480,7 +466,7 @@ impl Markup {
                     self.image_id_counter += 1;
 
                     if !description.is_empty() {
-                        let range = self.parse_text(description, width);
+                        let range = self.parse_text(description, width, None);
                         self.items.push(Item::ImageDescription { text: range });
                     }
                 }
@@ -498,7 +484,7 @@ impl Markup {
         self.items.pop();
     }
 
-    fn parse_text(&mut self, text: &str, width: u16) -> Range<usize> {
+    fn parse_text(&mut self, text: &str, width: u16, indent: Option<(&str, &str)>) -> Range<usize> {
         // Convert markup to ansi
         for event in InlineParser::new(text) {
             match event {
@@ -516,7 +502,18 @@ impl Markup {
         textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
 
         // Store result and use later with returned range
-        let range = self.wrapped_ansi.push_str(self.ansi.as_str());
+        let range = match indent {
+            Some((first_indent, other_indent)) => {
+                let start = self.wrapped_ansi.len();
+                for (i, line) in self.ansi.as_str().lines().enumerate() {
+                    let indent = if i == 0 { first_indent } else { other_indent };
+                    self.wrapped_ansi.extend([indent, line, "\n"]);
+                }
+                let end = self.wrapped_ansi.len();
+                start..end
+            }
+            None => self.wrapped_ansi.push_str(self.ansi.as_str()),
+        };
         self.ansi.clear();
         range
     }

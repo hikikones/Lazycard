@@ -69,6 +69,15 @@ impl Formatter {
         (start..middle, middle..self.0.len())
     }
 
+    pub fn extend<'a>(
+        &mut self,
+        iter: impl IntoIterator<Item = &'a str>,
+    ) -> std::ops::Range<usize> {
+        let start = self.0.len();
+        self.0.extend(iter);
+        start..self.0.len()
+    }
+
     pub fn clear(&mut self) {
         self.0.clear();
     }
