@@ -171,9 +171,6 @@ impl App {
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
-        // Clear any rendered image from markup before every render
-        self.markup.delete_images(&self.kitty).unwrap();
-
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();
@@ -214,6 +211,9 @@ impl App {
             }
             self.text.render(nav_area, buf);
             self.text.clear();
+
+            // Clear any rendered image from markup
+            self.markup.delete_images(&self.kitty).unwrap();
 
             // Body
             const MAX_WIDTH: u16 = 64;
