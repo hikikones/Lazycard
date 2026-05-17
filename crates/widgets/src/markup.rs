@@ -157,46 +157,61 @@ impl Markup {
             curr_line >= top && curr_line < bot
         }
 
-        fn render_ansi_line(
-            area: Rect,
+        fn render_ansi_text(
+            area: &mut Rect,
             buf: &mut Buffer,
-            s: &str,
+            text: &str,
+            current_line: &mut u16,
+            viewport_top: u16,
+            viewport_bot: u16,
             text_segment: &mut TextSegment,
-            style: &mut Style,
             alignment: Alignment,
         ) {
-            for event in AnsiParser::new(s) {
-                match event {
-                    AnsiEvent::Text(s) => {
-                        text_segment.push_str(s, *style);
+            let mut style = Style::new();
+            text_segment.set_alignment(alignment);
+
+            for line in text.lines() {
+                if is_in_viewport(*current_line, viewport_top, viewport_bot) {
+                    for event in AnsiParser::new(line) {
+                        match event {
+                            AnsiEvent::Text(s) => {
+                                text_segment.push_str(s, style);
+                            }
+                            AnsiEvent::Tag(tag) => match tag {
+                                AnsiTag::Reset => {
+                                    style = Style::new();
+                                }
+                                AnsiTag::Bold => {
+                                    style.add_modifier.insert(Modifier::BOLD);
+                                }
+                                AnsiTag::Italic => {
+                                    style.add_modifier.insert(Modifier::ITALIC);
+                                }
+                                AnsiTag::NotBold => {
+                                    style.add_modifier.remove(Modifier::BOLD);
+                                }
+                                AnsiTag::NotItalic => {
+                                    style.add_modifier.remove(Modifier::ITALIC);
+                                }
+                                AnsiTag::FgTrueColor(r, g, b) => {
+                                    style.fg = Some(Color::Rgb(r, g, b));
+                                }
+                                _ => {}
+                            },
+                        }
                     }
-                    AnsiEvent::Tag(tag) => match tag {
-                        AnsiTag::Reset => {
-                            *style = Style::new();
-                        }
-                        AnsiTag::Bold => {
-                            style.add_modifier.insert(Modifier::BOLD);
-                        }
-                        AnsiTag::Italic => {
-                            style.add_modifier.insert(Modifier::ITALIC);
-                        }
-                        AnsiTag::NotBold => {
-                            style.add_modifier.remove(Modifier::BOLD);
-                        }
-                        AnsiTag::NotItalic => {
-                            style.add_modifier.remove(Modifier::ITALIC);
-                        }
-                        AnsiTag::FgTrueColor(r, g, b) => {
-                            style.fg = Some(Color::Rgb(r, g, b));
-                        }
-                        _ => {}
-                    },
+                    text_segment.render(*area, buf);
+                    text_segment.clear();
+
+                    area.y += 1;
+                    area.height = area.height.saturating_sub(1);
                 }
+
+                *current_line += 1;
             }
-            text_segment.set_alignment(alignment).render(area, buf);
-            text_segment.clear();
         }
 
+        // Update scroll
         self.total_lines = self.compute_total_lines(kitty);
         if let Some(sm) = self.desired_scroll.take() {
             self.scroll(sm);
@@ -220,67 +235,40 @@ impl Markup {
 
             match item {
                 Item::Paragraph { text, alignment } => {
-                    let text = self.wrapped_ansi.slice(text);
-                    let mut style = Style::new();
-
-                    for line in text.lines() {
-                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
-                            render_ansi_line(
-                                area,
-                                buf,
-                                line,
-                                &mut self.text_segment,
-                                &mut style,
-                                alignment,
-                            );
-                            area.y += 1;
-                            area.height = area.height.saturating_sub(1);
-                        }
-
-                        current_line += 1;
-                    }
+                    render_ansi_text(
+                        &mut area,
+                        buf,
+                        self.wrapped_ansi.slice(text),
+                        &mut current_line,
+                        viewport_top,
+                        viewport_bot,
+                        &mut self.text_segment,
+                        alignment,
+                    );
                 }
                 Item::ListItem { text } => {
-                    let text = self.wrapped_ansi.slice(text);
-                    let mut style = Style::new();
-
-                    for line in text.lines() {
-                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
-                            render_ansi_line(
-                                area,
-                                buf,
-                                line,
-                                &mut self.text_segment,
-                                &mut style,
-                                Alignment::Left,
-                            );
-                            area.y += 1;
-                            area.height = area.height.saturating_sub(1);
-                        }
-
-                        current_line += 1;
-                    }
+                    render_ansi_text(
+                        &mut area,
+                        buf,
+                        self.wrapped_ansi.slice(text),
+                        &mut current_line,
+                        viewport_top,
+                        viewport_bot,
+                        &mut self.text_segment,
+                        Alignment::Left,
+                    );
                 }
                 Item::Code { text, .. } => {
-                    let text = self.wrapped_ansi.slice(text);
-                    let mut style = Style::new();
-
-                    for line in text.lines() {
-                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
-                            render_ansi_line(
-                                area,
-                                buf,
-                                line,
-                                &mut self.text_segment,
-                                &mut style,
-                                Alignment::Left,
-                            );
-                            area.y += 1;
-                            area.height = area.height.saturating_sub(1);
-                        }
-
-                        current_line += 1;
-                    }
+                    render_ansi_text(
+                        &mut area,
+                        buf,
+                        self.wrapped_ansi.slice(text),
+                        &mut current_line,
+                        viewport_top,
+                        viewport_bot,
+                        &mut self.text_segment,
+                        Alignment::Left,
+                    );
                 }
                 Item::Image { id, dims } => {
                     let max_width = kitty.width(area.width);
@@ -320,25 +308,16 @@ impl Markup {
                     current_line += resized_area.rows;
                 }
                 Item::ImageDescription { text } => {
-                    let text = self.wrapped_ansi.slice(text);
-                    let mut style = Style::new();
-
-                    for line in text.lines() {
-                        if is_in_viewport(current_line, viewport_top, viewport_bot) {
-                            render_ansi_line(
-                                area,
-                                buf,
-                                line,
-                                &mut self.text_segment,
-                                &mut style,
-                                Alignment::Center,
-                            );
-                            area.y += 1;
-                            area.height = area.height.saturating_sub(1);
-                        }
-
-                        current_line += 1;
-                    }
+                    render_ansi_text(
+                        &mut area,
+                        buf,
+                        self.wrapped_ansi.slice(text),
+                        &mut current_line,
+                        viewport_top,
+                        viewport_bot,
+                        &mut self.text_segment,
+                        Alignment::Center,
+                    );
                 }
                 Item::Break => {
                     if is_in_viewport(current_line, viewport_top, viewport_bot) {
