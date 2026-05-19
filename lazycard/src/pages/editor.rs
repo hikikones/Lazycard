@@ -6,7 +6,13 @@ use ratatui::{
 };
 use widgets::{CursorMove, KittyGraphics, Markup, Shortcut, Shortcuts, TextEditor, TextSegment};
 
-use crate::{app::Action, pages::Log, settings::Colors, symbols, terminal::Terminal};
+use crate::{
+    app::{Action, AppInput},
+    pages::Log,
+    settings::Colors,
+    symbols,
+    terminal::Terminal,
+};
 
 pub struct CardEditorPage {
     editor: TextEditor,
@@ -76,13 +82,12 @@ impl CardEditorPage {
 
     pub fn on_input(
         &mut self,
-        key: KeyCode,
-        modifiers: KeyModifiers,
+        input: AppInput,
         markup: &mut Markup,
         db: &mut Database,
-        kitty: &KittyGraphics,
         terminal: &mut Terminal,
     ) -> Action {
+        let (key, modifiers) = input.key_pressed_and_modifiers();
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
         match key {
             KeyCode::Char('e') => {

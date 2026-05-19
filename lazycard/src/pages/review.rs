@@ -1,14 +1,9 @@
 use database::{CardId, Database};
-use ratatui::{
-    buffer::Buffer,
-    crossterm::event::{KeyCode, KeyModifiers},
-    layout::Rect,
-    style::Style,
-};
+use ratatui::{buffer::Buffer, crossterm::event::KeyCode, layout::Rect, style::Style};
 use widgets::{KittyGraphics, Markup, MarkupItem, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
-    app::{Action, CardsIterExt},
+    app::{Action, AppInput, CardsIterExt},
     pages::Route,
     settings::Colors,
     symbols,
@@ -110,13 +105,8 @@ impl ReviewPage {
         }
     }
 
-    pub fn on_input(
-        &mut self,
-        key: KeyCode,
-        modifiers: KeyModifiers,
-        markup: &mut Markup,
-        db: &mut Database,
-    ) -> Action {
+    pub fn on_input(&mut self, input: AppInput, markup: &mut Markup, db: &mut Database) -> Action {
+        let key = input.key_pressed();
         match self.state {
             ReviewState::Review(id) => match key {
                 KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),

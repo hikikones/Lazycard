@@ -1,12 +1,12 @@
 mod cards;
 mod editor;
-mod editor2;
+// mod editor2;
 mod logs;
 mod review;
 
 pub use cards::*;
 pub use editor::*;
-pub use editor2::*;
+// pub use editor2::*;
 pub use logs::*;
 pub use review::*;
 

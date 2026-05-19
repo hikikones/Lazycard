@@ -1,7 +1,7 @@
 use database::{Card, CardId, Database, UnixTime};
 use ratatui::{
     buffer::Buffer,
-    crossterm::event::{KeyCode, KeyModifiers},
+    crossterm::event::KeyCode,
     layout::Rect,
     style::{Color, Style},
     text::{Line, Span},
@@ -12,7 +12,7 @@ use widgets::{
 };
 
 use crate::{
-    app::{Action, CardsIterExt, Matcher},
+    app::{Action, AppInput, CardsIterExt, Matcher},
     pages::Route,
     settings::Colors,
     symbols,
@@ -250,12 +250,12 @@ impl CardsPage {
 
     pub fn on_input(
         &mut self,
-        key: KeyCode,
-        modifiers: KeyModifiers,
+        input: AppInput,
         markup: &mut Markup,
         db: &mut Database,
         matcher: &mut Matcher,
     ) -> Action {
+        let (key, modifiers) = input.key_pressed_and_modifiers();
         match self.state {
             CardState::Browse => match key {
                 KeyCode::Right => {

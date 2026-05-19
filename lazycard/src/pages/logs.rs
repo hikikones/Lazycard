@@ -4,7 +4,7 @@ use ratatui::{
 };
 use widgets::{List, ListItem, Shortcut, Shortcuts, TextSegment};
 
-use crate::settings::Colors;
+use crate::{app::AppInput, settings::Colors};
 
 pub struct LogsPage {
     logs: Vec<Log>,
@@ -94,11 +94,12 @@ impl LogsPage {
         shortcuts.push(Shortcut::new("Clear", "c"));
     }
 
-    pub fn on_input(&mut self, key: KeyCode, _modifiers: KeyModifiers) -> LogsAction {
+    pub fn on_input(&mut self, input: AppInput) -> LogsAction {
         if self.logs.is_empty() {
             return LogsAction::None;
         }
 
+        let key = input.key_pressed();
         match key {
             KeyCode::Right => {
                 self.horizontal_scroll += 1;

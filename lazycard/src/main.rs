@@ -5,18 +5,11 @@ mod symbols;
 mod terminal;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const _APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 const APP_QUALIFIER: &str = "org";
 const APP_ORGANIZATION: &str = "hikikones";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // use unicode_segmentation::UnicodeSegmentation;
-    // let s = "The quick (\"brown\")  fox\nNew       line\r\nAnother *one*";
-    // let w = s.split_word_bound_indices().collect::<Vec<(usize, &str)>>();
-    // dbg!(w);
-
-    // return Ok(());
-
     let args: Args = clap::Parser::parse();
 
     let cell_size = widgets::CellSize::query()?.unwrap();

@@ -13,7 +13,7 @@ use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
 pub struct App {
     route: Route,
-    state: State,
+    state: AppState,
     pages: Pages,
     database: Database,
     settings: Settings,
@@ -24,7 +24,7 @@ pub struct App {
     shortcuts: Shortcuts,
 }
 
-enum State {
+enum AppState {
     Route,
     Logs,
 }
@@ -35,6 +35,22 @@ pub enum Action {
     Route(Route),
     Log(Log),
     Quit,
+}
+
+pub struct AppInput(KeyEvent);
+
+impl AppInput {
+    pub const fn key_pressed(&self) -> KeyCode {
+        self.0.code
+    }
+
+    pub const fn _key_modifiers(&self) -> KeyModifiers {
+        self.0.modifiers
+    }
+
+    pub const fn key_pressed_and_modifiers(&self) -> (KeyCode, KeyModifiers) {
+        (self.0.code, self.0.modifiers)
+    }
 }
 
 impl App {
@@ -63,7 +79,7 @@ impl App {
 
         Self {
             route: Route::Review,
-            state: State::Route,
+            state: AppState::Route,
             pages,
             database,
             markup: Markup::new(settings.syntax_highlighting()),
@@ -86,7 +102,7 @@ impl App {
                         match key.code {
                             KeyCode::Esc => Action::Quit,
                             KeyCode::Tab | KeyCode::BackTab => match self.state {
-                                State::Route => {
+                                AppState::Route => {
                                     let next_route = if key.code == KeyCode::Tab {
                                         self.route.next()
                                     } else {
@@ -94,8 +110,8 @@ impl App {
                                     };
                                     Action::Route(next_route)
                                 }
-                                State::Logs => {
-                                    self.state = State::Route;
+                                AppState::Logs => {
+                                    self.state = AppState::Route;
                                     self.pages.logs.on_exit();
                                     Action::Render
                                 }
@@ -104,21 +120,21 @@ impl App {
                                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                                 if ctrl && !self.pages.logs.is_empty() {
                                     match self.state {
-                                        State::Route => {
-                                            self.state = State::Logs;
+                                        AppState::Route => {
+                                            self.state = AppState::Logs;
                                             self.pages.logs.on_enter();
                                         }
-                                        State::Logs => {
-                                            self.state = State::Route;
+                                        AppState::Logs => {
+                                            self.state = AppState::Route;
                                             self.pages.logs.on_exit();
                                         }
                                     }
                                     Action::Render
                                 } else {
-                                    self.on_input(key, &mut terminal)
+                                    self.on_input(AppInput(key), &mut terminal)
                                 }
                             }
-                            _ => self.on_input(key, &mut terminal),
+                            _ => self.on_input(AppInput(key), &mut terminal),
                         }
                     } else {
                         Action::None
@@ -221,7 +237,7 @@ impl App {
             let body = center_horizontal(body_area, Constraint::Length(MAX_WIDTH + MARGIN))
                 .inner(Margin::new(MARGIN, MARGIN));
             match self.state {
-                State::Route => match self.route {
+                AppState::Route => match self.route {
                     Route::Review => {
                         self.pages.review.on_render(
                             body,
@@ -258,7 +274,7 @@ impl App {
                         );
                     }
                 },
-                State::Logs => {
+                AppState::Logs => {
                     self.pages.logs.on_render(
                         body,
                         buf,
@@ -300,36 +316,32 @@ impl App {
         })
     }
 
-    fn on_input(&mut self, key: KeyEvent, terminal: &mut Terminal) -> Action {
+    fn on_input(&mut self, input: AppInput, terminal: &mut Terminal) -> Action {
         match self.state {
-            State::Route => match self.route {
-                Route::Review => self.pages.review.on_input(
-                    key.code,
-                    key.modifiers,
-                    &mut self.markup,
-                    &mut self.database,
-                ),
+            AppState::Route => match self.route {
+                Route::Review => {
+                    self.pages
+                        .review
+                        .on_input(input, &mut self.markup, &mut self.database)
+                }
                 Route::Editor(_) => self.pages.editor.on_input(
-                    key.code,
-                    key.modifiers,
+                    input,
                     &mut self.markup,
                     &mut self.database,
-                    &self.kitty,
                     terminal,
                 ),
                 Route::Cards => self.pages.cards.on_input(
-                    key.code,
-                    key.modifiers,
+                    input,
                     &mut self.markup,
                     &mut self.database,
                     &mut self.matcher,
                 ),
             },
-            State::Logs => match self.pages.logs.on_input(key.code, key.modifiers) {
+            AppState::Logs => match self.pages.logs.on_input(input) {
                 LogsAction::None => Action::None,
                 LogsAction::Render => Action::Render,
                 LogsAction::Done => {
-                    self.state = State::Route;
+                    self.state = AppState::Route;
                     self.pages.logs.on_exit();
                     Action::Render
                 }
