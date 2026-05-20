@@ -687,22 +687,22 @@ impl<'a> BlockParser<'a> {
     }
 
     fn parse_image(&mut self, start: usize) -> (BlockElement<'a>, Range<usize>) {
-        let Some((start_descr, "[")) = self.graphemes.next() else {
+        let Some((descr_start, "[")) = self.graphemes.next() else {
             return self.parse_paragraph(start, Alignment::Left);
         };
-        let Some((end_descr, _)) = self.graphemes.find("]") else {
-            return self.parse_paragraph(start, Alignment::Left);
-        };
-
-        let Some((start_path, "(")) = self.graphemes.next() else {
-            return self.parse_paragraph(start, Alignment::Left);
-        };
-        let Some((end_path, _)) = self.graphemes.find(")") else {
+        let Some((descr_end, _)) = self.graphemes.find("]") else {
             return self.parse_paragraph(start, Alignment::Left);
         };
 
-        let description = self.input[start_descr + 1..end_descr].trim();
-        let path = self.input[start_path + 1..end_path].trim();
+        let Some((path_start, "(")) = self.graphemes.next() else {
+            return self.parse_paragraph(start, Alignment::Left);
+        };
+        let Some((path_end, _)) = self.graphemes.find(")") else {
+            return self.parse_paragraph(start, Alignment::Left);
+        };
+
+        let description = self.input[descr_start + 1..descr_end].trim();
+        let path = self.input[path_start + 1..path_end].trim();
 
         let Some((end, g)) = self.graphemes.next() else {
             return (

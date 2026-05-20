@@ -39,6 +39,10 @@ impl<'a> CustomGraphemeIter<'a> {
         self.next_if(|n| n == g)
     }
 
+    pub fn next_if_newline(&mut self) -> Option<(usize, &'a str)> {
+        self.next_if(|n| n.contains('\n'))
+    }
+
     pub fn find(&mut self, g: &str) -> Option<(usize, &'a str)> {
         self.find_by(|n| n == g)
     }
@@ -53,6 +57,10 @@ impl<'a> CustomGraphemeIter<'a> {
                 return Some((i, n));
             }
         }
+    }
+
+    pub fn find_newline(&mut self) -> Option<(usize, &'a str)> {
+        self.find_by(|n| n.contains('\n'))
     }
 
     pub fn find_with_previous(
