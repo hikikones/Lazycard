@@ -10,7 +10,7 @@ pub(crate) struct Scheduler {
 impl Scheduler {
     pub(crate) fn new() -> Self {
         Self {
-            fsrs: fsrs::FSRS::new(Some(&fsrs::DEFAULT_PARAMETERS)).unwrap(),
+            fsrs: fsrs::FSRS::default(),
             desired_retention: 0.8,
         }
     }
