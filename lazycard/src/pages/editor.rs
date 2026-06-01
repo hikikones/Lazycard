@@ -1,4 +1,4 @@
-use database::{Card, CardId, Database};
+use database::{CardId, Database};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
@@ -39,9 +39,11 @@ impl CardEditorPage {
     pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
         match id {
             Some(id) => {
-                let card = db.get(id).unwrap();
                 self.editor.clear();
-                self.editor.push_str(card.content.as_str());
+                db.get_card_content(id, |content| {
+                    self.editor.push_str(content);
+                })
+                .unwrap();
                 self.editor.move_cursor(CursorMove::Start, false);
                 self.state = CardEditorState::Edit(id);
             }
@@ -149,13 +151,10 @@ impl CardEditorPage {
     fn save(&mut self, db: &mut Database) {
         match self.state {
             CardEditorState::New => {
-                let card = Card::new(self.editor.as_str());
-                db.add(card);
+                db.add_card(self.editor.as_str()).unwrap();
             }
             CardEditorState::Edit(id) => {
-                db.update(id, |card| {
-                    card.content = self.editor.as_str().to_owned();
-                });
+                db.update_card(id, self.editor.as_str()).unwrap();
             }
         }
         self.state = CardEditorState::New;

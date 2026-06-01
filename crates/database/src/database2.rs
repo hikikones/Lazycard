@@ -36,6 +36,14 @@ impl Database {
         Ok(CardId(self.sqlite.last_insert_rowid()))
     }
 
+    pub fn get_cards(&self, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+        self.sqlite.query("SELECT id FROM cards", |row| {
+            let id = row.get(0)?;
+            buf.push(id);
+            Ok(())
+        })
+    }
+
     pub fn get_card_content(&self, id: CardId, f: impl FnOnce(&str)) -> SqliteResult<()> {
         self.sqlite.query_single_with_args(
             "SELECT id, content FROM cards WHERE id = ?",
@@ -52,6 +60,17 @@ impl Database {
         self.sqlite.query_single(
             "SELECT COUNT(id) FROM cards WHERE due_time <= (unixepoch('now'))",
             |row| row.get(0),
+        )
+    }
+
+    pub fn get_due_cards(&self, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+        self.sqlite.query(
+            "SELECT id FROM cards WHERE due_time <= (unixepoch('now'))",
+            |row| {
+                let id = row.get(0)?;
+                buf.push(id);
+                Ok(())
+            },
         )
     }
 
@@ -75,6 +94,12 @@ impl Database {
     pub fn update_card(&self, id: CardId, content: &str) -> SqliteResult<()> {
         self.sqlite
             .execute_with_args("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))?;
+        Ok(())
+    }
+
+    pub fn delete_card(&self, id: CardId) -> SqliteResult<()> {
+        self.sqlite
+            .execute_with_args("DELETE FROM cards WHERE id = ?", [id])?;
         Ok(())
     }
 

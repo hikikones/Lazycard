@@ -3,7 +3,7 @@ use ratatui::{buffer::Buffer, crossterm::event::KeyCode, layout::Rect, style::St
 use widgets::{KittyGraphics, Markup, MarkupItem, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
-    app::{Action, AppInput, CardsIterExt},
+    app::{Action, AppInput},
     pages::Route,
     settings::Colors,
     symbols,
@@ -41,7 +41,7 @@ impl ReviewPage {
     }
 
     pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
-        self.due.extend(db.iter().due().map(|(id, _)| id));
+        db.get_due_cards(&mut self.due).unwrap();
         self.total = self.due.len();
 
         if self.total > 0 {
@@ -75,8 +75,9 @@ impl ReviewPage {
                 menu.push_str(" / ", colors.neutral);
                 menu.push_int(self.total, colors.neutral);
 
-                let card_content = db.get(id).unwrap().content.as_str();
-                markup.render(area, buf, card_content, kitty);
+                db.get_card_content(id, |content| {
+                    markup.render(area, buf, content, kitty);
+                });
 
                 if self.is_fully_revealed {
                     shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
@@ -111,7 +112,7 @@ impl ReviewPage {
             ReviewState::Review(id) => match key {
                 KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                 KeyCode::Delete => {
-                    db.update(id, |card| card.archived = true);
+                    db.delete_card(id).unwrap();
                     self.total = self.total.saturating_sub(1);
                     self.next_card(db, markup);
                     return Action::Render;
@@ -126,7 +127,7 @@ impl ReviewPage {
                 KeyCode::Char('y' | 'n') => {
                     if self.is_fully_revealed {
                         let success = key == KeyCode::Char('y');
-                        db.schedule(id, success);
+                        db.review_card(id, success).unwrap();
                         self.progress += 1;
                         self.next_card(db, markup);
                         return Action::Render;
@@ -172,8 +173,9 @@ impl ReviewPage {
         let id = self.due.swap_remove(random_index);
 
         self.markup_items.clear();
-        let card_content = db.get(id).unwrap().content.as_str();
-        Markup::parse_items(card_content, &mut self.markup_items);
+        db.get_card_content(id, |content| {
+            Markup::parse_items(content, &mut self.markup_items);
+        });
 
         self.reveal_len = 0;
         self.state = ReviewState::Review(id);

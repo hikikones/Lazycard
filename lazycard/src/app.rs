@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use database::{Card, CardId, Database, UnixTime};
+use database::Database;
 use ratatui::{
     CompletedFrame,
     crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{Alignment, Constraint, Flex, Layout, Margin, Rect},
+    layout::{Alignment, Constraint, Layout, Margin},
     style::{Color, Style},
 };
 use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
@@ -182,8 +182,9 @@ impl App {
         Ok(())
     }
 
-    pub fn quit(mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.database.save()
+    pub fn quit(self) -> Result<(), Box<dyn std::error::Error>> {
+        //todo?
+        Ok(())
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
@@ -234,7 +235,8 @@ impl App {
             // Body
             const MAX_WIDTH: u16 = 64;
             const MARGIN: u16 = 1;
-            let body = center_horizontal(body_area, Constraint::Length(MAX_WIDTH + MARGIN))
+            let body = body_area
+                .centered_horizontally(Constraint::Length(MAX_WIDTH + MARGIN))
                 .inner(Margin::new(MARGIN, MARGIN));
             match self.state {
                 AppState::Route => match self.route {
@@ -386,51 +388,52 @@ impl Matcher {
     }
 }
 
-fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {
-    let [area] = Layout::horizontal([constraint])
-        .flex(Flex::Center)
-        .areas(area);
-    area
-}
+// todo: remove
+// fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {
+//     let [area] = Layout::horizontal([constraint])
+//         .flex(Flex::Center)
+//         .areas(area);
+//     area
+// }
 
-pub trait CardsIterExt<'a> {
-    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
-    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)>;
-    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)>;
-    fn search(
-        self,
-        pattern: &str,
-        matcher: &'a mut Matcher,
-    ) -> impl Iterator<Item = (CardId, &'a Card, u32)>;
-}
+// pub trait CardsIterExt<'a> {
+//     fn due(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+//     fn active(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+//     fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)>;
+//     fn search(
+//         self,
+//         pattern: &str,
+//         matcher: &'a mut Matcher,
+//     ) -> impl Iterator<Item = (CardId, &'a Card, u32)>;
+// }
 
-impl<'a, I> CardsIterExt<'a> for I
-where
-    I: Iterator<Item = (CardId, &'a Card)>,
-{
-    fn due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
-        let now = UnixTime::now();
-        self.filter(move |(_, card)| !card.archived && card.is_due(now))
-    }
+// impl<'a, I> CardsIterExt<'a> for I
+// where
+//     I: Iterator<Item = (CardId, &'a Card)>,
+// {
+//     fn due(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+//         let now = UnixTime::now();
+//         self.filter(move |(_, card)| !card.archived && card.is_due(now))
+//     }
 
-    fn active(self) -> impl Iterator<Item = (CardId, &'a Card)> {
-        self.filter(|(_, card)| !card.archived)
-    }
+//     fn active(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+//         self.filter(|(_, card)| !card.archived)
+//     }
 
-    fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)> {
-        self.filter(|(_, card)| card.archived)
-    }
+//     fn _archived(self) -> impl Iterator<Item = (CardId, &'a Card)> {
+//         self.filter(|(_, card)| card.archived)
+//     }
 
-    fn search(
-        self,
-        pattern: &str,
-        matcher: &'a mut Matcher,
-    ) -> impl Iterator<Item = (CardId, &'a Card, u32)> {
-        matcher.update(pattern);
-        self.filter_map(|(id, card)| {
-            matcher
-                .score(card.content.as_str())
-                .map(|score| (id, card, score))
-        })
-    }
-}
+//     fn search(
+//         self,
+//         pattern: &str,
+//         matcher: &'a mut Matcher,
+//     ) -> impl Iterator<Item = (CardId, &'a Card, u32)> {
+//         matcher.update(pattern);
+//         self.filter_map(|(id, card)| {
+//             matcher
+//                 .score(card.content.as_str())
+//                 .map(|score| (id, card, score))
+//         })
+//     }
+// }

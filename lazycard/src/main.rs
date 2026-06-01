@@ -17,7 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("No database file path specified or a \
         default one could not be retrieved from the operating system")?;
     };
-    let db = database::Database::new(database_file)?;
+    // let db = database::Database::open(database_file)?;
+    let db = database::Database::open_in_memory()?;
 
     let terminal = terminal::Terminal::init()?;
 
