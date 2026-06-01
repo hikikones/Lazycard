@@ -59,6 +59,11 @@ ratatui = {
   features = ["crossterm", "serde"]
 }
 ron = { version = "0.12", default-features = false, features = ["std"] }
+rusqlite = {
+  version = "0.40",
+  default-features = false,
+  features = ["bundled", "cache"]
+}
 seahash = { version = "4.1", default-features = false }
 serde = {
   version = "1.0",

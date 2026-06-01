@@ -7,4 +7,5 @@ license.workspace = true
 [dependencies]
 fsrs = { workspace = true }
 ron = { workspace = true }
+rusqlite = { workspace = true }
 serde = { workspace = true }
