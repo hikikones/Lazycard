@@ -77,7 +77,8 @@ impl ReviewPage {
 
                 db.get_card_content(id, |content| {
                     markup.render(area, buf, content, kitty);
-                });
+                })
+                .unwrap();
 
                 if self.is_fully_revealed {
                     shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
@@ -91,7 +92,7 @@ impl ReviewPage {
 
                 shortcuts.extend([
                     Shortcut::new("Edit", "e"),
-                    Shortcut::new("Archive", symbols::DELETE),
+                    Shortcut::new("Delete", symbols::DELETE),
                 ]);
             }
             ReviewState::Done => {
@@ -175,7 +176,8 @@ impl ReviewPage {
         self.markup_items.clear();
         db.get_card_content(id, |content| {
             Markup::parse_items(content, &mut self.markup_items);
-        });
+        })
+        .unwrap();
 
         self.reveal_len = 0;
         self.state = ReviewState::Review(id);

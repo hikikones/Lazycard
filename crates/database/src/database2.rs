@@ -30,6 +30,11 @@ impl Database {
         self.sqlite.path().map(Path::new)
     }
 
+    pub fn is_empty(&self) -> SqliteResult<bool> {
+        self.sqlite
+            .query_single("SELECT NOT EXISTS (SELECT 1 FROM cards)", |row| row.get(0))
+    }
+
     pub fn add_card(&self, content: &str) -> SqliteResult<CardId> {
         self.sqlite
             .execute_with_args("INSERT INTO cards (content) VALUES (?)", [content])?;

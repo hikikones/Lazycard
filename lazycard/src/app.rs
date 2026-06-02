@@ -19,7 +19,7 @@ pub struct App {
     settings: Settings,
     markup: Markup,
     kitty: KittyGraphics,
-    matcher: Matcher,
+    // matcher: Matcher,
     text: TextSegment,
     shortcuts: Shortcuts,
 }
@@ -84,7 +84,7 @@ impl App {
             database,
             markup: Markup::new(settings.syntax_highlighting()),
             kitty: KittyGraphics::new(cell_size),
-            matcher: Matcher::new(),
+            // matcher: Matcher::new(),
             text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts: Shortcuts::new().with_colors(Color::Reset, settings.primary()),
             settings,
@@ -332,12 +332,11 @@ impl App {
                     &mut self.database,
                     terminal,
                 ),
-                Route::Cards => self.pages.cards.on_input(
-                    input,
-                    &mut self.markup,
-                    &mut self.database,
-                    &mut self.matcher,
-                ),
+                Route::Cards => {
+                    self.pages
+                        .cards
+                        .on_input(input, &mut self.markup, &mut self.database)
+                }
             },
             AppState::Logs => match self.pages.logs.on_input(input) {
                 LogsAction::None => Action::None,
@@ -352,41 +351,41 @@ impl App {
     }
 }
 
-pub struct Matcher {
-    matcher: nucleo_matcher::Matcher,
-    pattern: nucleo_matcher::pattern::Pattern,
-    buffer: Vec<char>,
-}
+// pub struct Matcher {
+//     matcher: nucleo_matcher::Matcher,
+//     pattern: nucleo_matcher::pattern::Pattern,
+//     buffer: Vec<char>,
+// }
 
-impl Matcher {
-    pub fn new() -> Self {
-        Self {
-            matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
-            pattern: nucleo_matcher::pattern::Pattern::new(
-                "",
-                nucleo_matcher::pattern::CaseMatching::Smart,
-                nucleo_matcher::pattern::Normalization::Smart,
-                nucleo_matcher::pattern::AtomKind::Fuzzy,
-            ),
-            buffer: Vec::new(),
-        }
-    }
+// impl Matcher {
+//     pub fn new() -> Self {
+//         Self {
+//             matcher: nucleo_matcher::Matcher::new(nucleo_matcher::Config::DEFAULT),
+//             pattern: nucleo_matcher::pattern::Pattern::new(
+//                 "",
+//                 nucleo_matcher::pattern::CaseMatching::Smart,
+//                 nucleo_matcher::pattern::Normalization::Smart,
+//                 nucleo_matcher::pattern::AtomKind::Fuzzy,
+//             ),
+//             buffer: Vec::new(),
+//         }
+//     }
 
-    pub fn update(&mut self, pattern: &str) {
-        self.pattern.reparse(
-            pattern,
-            nucleo_matcher::pattern::CaseMatching::Smart,
-            nucleo_matcher::pattern::Normalization::Smart,
-        );
-    }
+//     pub fn update(&mut self, pattern: &str) {
+//         self.pattern.reparse(
+//             pattern,
+//             nucleo_matcher::pattern::CaseMatching::Smart,
+//             nucleo_matcher::pattern::Normalization::Smart,
+//         );
+//     }
 
-    pub fn score(&mut self, haystack: &str) -> Option<u32> {
-        self.pattern.score(
-            nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
-            &mut self.matcher,
-        )
-    }
-}
+//     pub fn score(&mut self, haystack: &str) -> Option<u32> {
+//         self.pattern.score(
+//             nucleo_matcher::Utf32Str::new(haystack, &mut self.buffer),
+//             &mut self.matcher,
+//         )
+//     }
+// }
 
 // todo: remove
 // fn center_horizontal(area: Rect, constraint: Constraint) -> Rect {

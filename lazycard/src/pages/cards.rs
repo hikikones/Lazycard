@@ -3,7 +3,7 @@ use ratatui::{buffer::Buffer, crossterm::event::KeyCode, layout::Rect, style::St
 use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
-    app::{Action, AppInput, Matcher},
+    app::{Action, AppInput},
     pages::Route,
     settings::Colors,
     symbols,
@@ -66,13 +66,7 @@ impl CardsPage {
         }
     }
 
-    pub fn on_input(
-        &mut self,
-        input: AppInput,
-        markup: &mut Markup,
-        db: &mut Database,
-        matcher: &mut Matcher,
-    ) -> Action {
+    pub fn on_input(&mut self, input: AppInput, markup: &mut Markup, db: &mut Database) -> Action {
         if self.cards.is_empty() {
             return Action::None;
         }

@@ -96,12 +96,14 @@ impl Markup {
         }
     }
 
-    pub const fn set_desired_scroll(&mut self, sm: ScrollMove) {
+    pub const fn set_desired_scroll(&mut self, sm: ScrollMove) -> &mut Self {
         self.desired_scroll = Some(sm);
+        self
     }
 
-    pub const fn set_max_items(&mut self, max: Option<usize>) {
+    pub const fn set_max_items(&mut self, max: Option<usize>) -> &mut Self {
         self.max_items = max;
+        self
     }
 
     pub fn input(&mut self, key: KeyCode) -> bool {

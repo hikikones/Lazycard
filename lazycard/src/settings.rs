@@ -28,6 +28,7 @@ impl Default for Settings {
                 terminal_colorsaurus::ThemeMode::Dark => (
                     Colors {
                         primary: Color::LightYellow,
+                        secondary: Color::Yellow,
                         neutral: Color::Indexed(245),
                     },
                     SyntaxHighlight::Dark,
@@ -35,6 +36,7 @@ impl Default for Settings {
                 terminal_colorsaurus::ThemeMode::Light => (
                     Colors {
                         primary: Color::LightCyan,
+                        secondary: Color::Cyan,
                         neutral: Color::Indexed(245),
                     },
                     SyntaxHighlight::Light,
@@ -67,6 +69,10 @@ impl Settings {
         self.colors.primary
     }
 
+    pub const fn secondary(&self) -> Color {
+        self.colors.secondary
+    }
+
     pub const fn neutral(&self) -> Color {
         self.colors.neutral
     }
@@ -77,6 +83,10 @@ impl Settings {
 
     pub const fn set_primary(&mut self, color: Color) {
         self.colors.primary = color;
+    }
+
+    pub const fn set_secondary(&mut self, color: Color) {
+        self.colors.secondary = color;
     }
 
     pub const fn set_neutral(&mut self, color: Color) {
@@ -202,6 +212,7 @@ impl SyntaxHighlight {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Colors {
     pub primary: Color,
+    pub secondary: Color,
     pub neutral: Color,
 }
 
