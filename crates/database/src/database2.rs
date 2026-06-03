@@ -49,6 +49,69 @@ impl Database {
         })
     }
 
+    pub fn get_cards_by_tags(
+        &self,
+        includes: impl Iterator<Item = TagId>,
+        excludes: impl Iterator<Item = TagId>,
+        buf: &mut Vec<CardId>,
+    ) -> SqliteResult<()> {
+        let includes: Vec<TagId> = includes.collect();
+        let excludes: Vec<TagId> = excludes.collect();
+
+        let mut sql = String::new();
+        let mut b = itoa::Buffer::new();
+
+        // all cards
+        sql.push_str("SELECT c.id FROM cards c");
+
+        // includes
+        if !includes.is_empty() {
+            // sql.push_str(
+            //     "\nJOIN card_tag ct ON ct.card_id = c.id \
+            //             WHERE ct.tag_id IN (?, ?, ...) \
+            //             GROUP BY c.id HAVING COUNT(DISTINCT ct.tag_id) = ?",
+            // );
+            sql.push_str(" JOIN card_tag ct ON ct.card_id = c.id WHERE ct.tag_id IN (");
+            for tid in includes.iter().copied() {
+                sql.extend([b.format(tid.0), ","]);
+            }
+            // sql.extend(includes.iter().map(|_| "?,"));
+            sql.pop();
+            sql.push_str(") GROUP BY c.id HAVING COUNT(DISTINCT ct.tag_id) = ");
+            sql.push_str(b.format(includes.len()));
+        }
+
+        // excludes
+        if !excludes.is_empty() {
+            // sql.push_str(
+            //     "\nAND NOT EXISTS ( \
+            //                 SELECT 1 FROM card_tag ct2 \
+            //                 WHERE ct2.card_id = c.id \
+            //                 AND ct2.tag_id IN (?, ?, ...) \
+            //             )",
+            // );
+            sql.push_str(if includes.is_empty() {
+                " WHERE "
+            } else {
+                " AND "
+            });
+            sql.push_str(
+                "NOT EXISTS (SELECT 1 FROM card_tag ct2 WHERE ct2.card_id = c.id AND ct2.tag_id IN (",
+            );
+            for tid in excludes.iter().copied() {
+                sql.extend([b.format(tid.0), ","]);
+            }
+            sql.pop();
+            sql.push_str("))");
+        }
+
+        self.sqlite.query(sql.as_str(), |row| {
+            let id = row.get(0)?;
+            buf.push(id);
+            Ok(())
+        })
+    }
+
     pub fn get_card_content(&self, id: CardId, f: impl FnOnce(&str)) -> SqliteResult<()> {
         self.sqlite.query_single_with_args(
             "SELECT id, content FROM cards WHERE id = ?",
@@ -177,6 +240,37 @@ impl Database {
         )
     }
 
+    pub fn add_tag(&self, name: &str) -> SqliteResult<TagId> {
+        self.sqlite
+            .execute_with_args("INSERT INTO tags (name) VALUES (?)", [name])?;
+        Ok(TagId(self.sqlite.last_insert_rowid()))
+    }
+
+    pub fn get_tags(&self, buf: &mut Vec<TagId>) -> SqliteResult<()> {
+        self.sqlite.query("SELECT id FROM tags", |row| {
+            let id = row.get(0)?;
+            buf.push(id);
+            Ok(())
+        })
+    }
+
+    pub fn get_tag_name(&self, id: TagId, f: impl FnOnce(&str)) -> SqliteResult<()> {
+        self.sqlite
+            .query_single_with_args("SELECT id, name FROM tags WHERE id = ?", [id], |row| {
+                let name = row.get_ref(1)?.as_str()?;
+                f(name);
+                Ok(())
+            })
+    }
+
+    pub fn add_card_tag(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
+        self.sqlite.execute_with_args(
+            "INSERT INTO card_tag (card_id, tag_id) VALUES (?1, ?2)",
+            (cid, tid),
+        )?;
+        Ok(())
+    }
+
     fn migrate(&self) {
         const VERSION: SqliteId = 1;
 
@@ -198,7 +292,7 @@ impl Database {
 pub struct CardId(SqliteId);
 
 impl CardId {
-    pub const ZERO: Self = Self(0);
+    const ZERO: Self = Self(0);
 }
 
 impl ToSql for CardId {
@@ -228,8 +322,23 @@ impl FromSql for ReviewId {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TagId(SqliteId);
+
+impl ToSql for TagId {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(Value::Integer(self.0)))
+    }
+}
+
+impl FromSql for TagId {
+    fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
+        value.as_i64().map(|n| Self(n))
+    }
+}
+
 fn add_test_data(db: &Database) {
-    db.add_card(
+    let cid1= db.add_card(
             r#"
 # this is a comment
 *left* paragraph with *bold*, _italic_ and maybe `verbatim text` that *should wrap* when line becomes _*tooooooooo*_ long..*.*
@@ -274,7 +383,7 @@ and another one
 "#,
     ).unwrap();
 
-    db.add_card(
+    let cid2= db.add_card(
             r#"
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec fermentum ipsum nec sagittis feugiat. Curabitur pulvinar et orci luctus faucibus. In erat justo, placerat et risus quis, cursus elementum mi. Donec non leo est. Etiam consectetur, lectus nec auctor sodales, velit arcu tincidunt justo, mattis dictum odio libero ac enim. Morbi maximus, tortor id ornare tristique, purus mi pulvinar urna, vel accumsan ante nunc vel urna. Maecenas ligula elit, tempor eget augue ut, auctor blandit ligula. Mauris maximus condimentum aliquam. Nam purus enim, ornare ut suscipit et, bibendum a ex. Donec euismod velit quis nisi convallis, rhoncus lacinia sapien aliquam. Ut dolor magna, imperdiet eu arcu vitae, consectetur feugiat velit. Donec eu dolor eu tortor rutrum egestas quis in orci. Maecenas pulvinar, massa eget fringilla convallis, dolor tellus luctus elit, in tempus nibh dolor at dolor. Nulla viverra et justo sit amet rhoncus. Fusce porttitor odio in lectus ullamcorper vehicula.
 
@@ -288,5 +397,75 @@ In aliquet dui sapien, ut semper elit sodales sed. Proin quis libero luctus libe
 "#,
     ).unwrap();
 
-    db.add_card("👻 oijwqwu qwdiowhq  i hio h qiowhqwheqw👻👻 wwq qiuwhdidwh👻👻👻❤️\n\nauhui ❤️awudhia\n🧑‍🌾❤️👨‍🦰jfpkw huiw wjwioj ijf weoijwioejfiowejfiowjfiowej\n\nthis\tis\ta\tparagraph\twith\ttabs\n\n```rust\nfn main() {\n\tprintln!(\"Hello, world!\");\n}\n```").unwrap();
+    let cid3=db.add_card("👻 oijwqwu qwdiowhq  i hio h qiowhqwheqw👻👻 wwq qiuwhdidwh👻👻👻❤️\n\nauhui ❤️awudhia\n🧑‍🌾❤️👨‍🦰jfpkw huiw wjwioj ijf weoijwioejfiowejfiowjfiowej\n\nthis\tis\ta\tparagraph\twith\ttabs\n\n```rust\nfn main() {\n\tprintln!(\"Hello, world!\");\n}\n```").unwrap();
+
+    let tid1 = db.add_tag("rust").unwrap();
+    let tid2 = db.add_tag("image").unwrap();
+    let tid3 = db.add_tag("lorem").unwrap();
+
+    db.add_card_tag(cid1, tid1).unwrap();
+    db.add_card_tag(cid1, tid2).unwrap();
+    db.add_card_tag(cid2, tid3).unwrap();
+    // panic!("{}", db.sqlite.last_insert_rowid());
 }
+
+//
+//
+//
+// EXISTS/NOT QUERY for tags maybe
+
+// SELECT c.id
+// FROM cards c
+// WHERE
+//     EXISTS (
+//         SELECT 1
+//         FROM card_tag ct
+//         WHERE ct.card_id = c.id
+//           AND ct.tag_id = ?
+//     )
+// AND EXISTS (
+//         SELECT 1
+//         FROM card_tag ct
+//         WHERE ct.card_id = c.id
+//           AND ct.tag_id = ?
+//     )
+// AND NOT EXISTS (
+//         SELECT 1
+//         FROM card_tag ct
+//         WHERE ct.card_id = c.id
+//           AND ct.tag_id = ?
+//     )
+// AND NOT EXISTS (
+//         SELECT 1
+//         FROM card_tag ct
+//         WHERE ct.card_id = c.id
+//           AND ct.tag_id = ?
+//     );
+
+// sample code
+// let includes: Vec<TagId> = includes.collect();
+// let excludes: Vec<TagId> = excludes.collect();
+
+// let mut sql = String::from("SELECT c.id FROM cards c WHERE 1=1");
+
+// for _ in &includes {
+//     sql.push_str(
+//         " AND EXISTS (
+//             SELECT 1
+//             FROM card_tag ct
+//             WHERE ct.card_id = c.id
+//               AND ct.tag_id = ?
+//         )",
+//     );
+// }
+
+// for _ in &excludes {
+//     sql.push_str(
+//         " AND NOT EXISTS (
+//             SELECT 1
+//             FROM card_tag ct
+//             WHERE ct.card_id = c.id
+//               AND ct.tag_id = ?
+//         )",
+//     );
+// }

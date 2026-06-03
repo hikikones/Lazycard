@@ -1354,6 +1354,7 @@ name = "database"
 version = "0.1.0"
 dependencies = [
  "fsrs",
+ "itoa",
  "ron",
  "rusqlite",
  "serde",

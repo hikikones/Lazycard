@@ -4,6 +4,7 @@ mod editor;
 mod logs;
 mod review;
 // mod search;
+mod tags;
 
 pub use cards::*;
 pub use editor::*;
@@ -11,6 +12,7 @@ pub use editor::*;
 pub use logs::*;
 pub use review::*;
 // pub use search::*;
+pub use tags::*;
 
 pub struct Pages {
     pub review: ReviewPage,
