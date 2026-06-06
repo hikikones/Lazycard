@@ -5,23 +5,26 @@ use crate::{scheduler2::*, sqlite::*};
 pub struct Database {
     sqlite: Sqlite,
     scheduler: Scheduler,
+    s: String,
 }
 
 impl Database {
-    pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
-        let db = Self {
-            sqlite: Sqlite::open(path)?,
+    fn new(sqlite: Sqlite) -> Self {
+        Self {
+            sqlite,
             scheduler: Scheduler::new(),
-        };
+            s: String::new(),
+        }
+    }
+
+    pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
+        let db = Self::new(Sqlite::open(path)?);
         db.migrate();
         Ok(db)
     }
 
     pub fn open_in_memory() -> SqliteResult<Self> {
-        let db = Self {
-            sqlite: Sqlite::open_in_memory()?,
-            scheduler: Scheduler::new(),
-        };
+        let db = Self::new(Sqlite::open_in_memory()?);
         db.migrate();
         Ok(db)
     }
@@ -49,67 +52,67 @@ impl Database {
         })
     }
 
-    pub fn get_cards_by_tags(
-        &self,
-        includes: impl Iterator<Item = TagId>,
-        excludes: impl Iterator<Item = TagId>,
+    pub fn get_cards_with_tags(
+        &mut self,
+        includes: impl ExactSizeIterator<Item = TagId>,
+        excludes: impl ExactSizeIterator<Item = TagId>,
         buf: &mut Vec<CardId>,
     ) -> SqliteResult<()> {
-        let includes: Vec<TagId> = includes.collect();
-        let excludes: Vec<TagId> = excludes.collect();
-
-        let mut sql = String::new();
-        let mut b = itoa::Buffer::new();
+        let mut itoa = itoa::Buffer::new();
+        self.s.clear();
 
         // all cards
-        sql.push_str("SELECT c.id FROM cards c");
+        self.s.push_str("SELECT c.id FROM cards c");
 
         // includes
-        if !includes.is_empty() {
-            // sql.push_str(
-            //     "\nJOIN card_tag ct ON ct.card_id = c.id \
-            //             WHERE ct.tag_id IN (?, ?, ...) \
-            //             GROUP BY c.id HAVING COUNT(DISTINCT ct.tag_id) = ?",
-            // );
-            sql.push_str(" JOIN card_tag ct ON ct.card_id = c.id WHERE ct.tag_id IN (");
-            for tid in includes.iter().copied() {
-                sql.extend([b.format(tid.0), ","]);
+        let next_token = if includes.len() > 0 {
+            let len = includes.len();
+            self.s
+                .push_str(" JOIN card_tag ct ON ct.card_id = c.id WHERE ct.tag_id IN (");
+            for tid in includes {
+                self.s.extend([itoa.format(tid.0), ","]);
             }
-            // sql.extend(includes.iter().map(|_| "?,"));
-            sql.pop();
-            sql.push_str(") GROUP BY c.id HAVING COUNT(DISTINCT ct.tag_id) = ");
-            sql.push_str(b.format(includes.len()));
-        }
+            self.s.pop();
+            self.s
+                .push_str(") GROUP BY c.id HAVING COUNT(DISTINCT ct.tag_id) = ");
+            self.s.push_str(itoa.format(len));
+            " AND "
+        } else {
+            " WHERE "
+        };
 
         // excludes
-        if !excludes.is_empty() {
-            // sql.push_str(
-            //     "\nAND NOT EXISTS ( \
-            //                 SELECT 1 FROM card_tag ct2 \
-            //                 WHERE ct2.card_id = c.id \
-            //                 AND ct2.tag_id IN (?, ?, ...) \
-            //             )",
-            // );
-            sql.push_str(if includes.is_empty() {
-                " WHERE "
-            } else {
-                " AND "
-            });
-            sql.push_str(
+        if excludes.len() > 0 {
+            self.s.push_str(next_token);
+            self.s.push_str(
                 "NOT EXISTS (SELECT 1 FROM card_tag ct2 WHERE ct2.card_id = c.id AND ct2.tag_id IN (",
             );
-            for tid in excludes.iter().copied() {
-                sql.extend([b.format(tid.0), ","]);
+            for tid in excludes {
+                self.s.extend([itoa.format(tid.0), ","]);
             }
-            sql.pop();
-            sql.push_str("))");
+            self.s.pop();
+            self.s.push_str("))");
         }
 
-        self.sqlite.query(sql.as_str(), |row| {
+        self.sqlite.query(self.s.as_str(), |row| {
             let id = row.get(0)?;
             buf.push(id);
             Ok(())
         })
+    }
+
+    pub fn get_cards_without_tags(&self, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+        self.sqlite.query(
+            "SELECT c.id FROM cards c WHERE NOT EXISTS (
+                    SELECT 1 FROM card_tag ct \
+                    WHERE ct.card_id = c.id \
+                )",
+            |row| {
+                let id = row.get(0)?;
+                buf.push(id);
+                Ok(())
+            },
+        )
     }
 
     pub fn get_card_content(&self, id: CardId, f: impl FnOnce(&str)) -> SqliteResult<()> {

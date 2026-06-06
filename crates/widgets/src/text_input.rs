@@ -238,7 +238,12 @@ impl TextInput {
     pub fn render(&mut self, line: Rect, buf: &mut Buffer) {
         if self.disabled {
             let Rect { x, y, .. } = line;
-            buf.set_string(x, y, self.input.as_str(), self.colors.disabled);
+            let s = if self.input.is_empty() {
+                self.placeholder
+            } else {
+                self.input.as_str()
+            };
+            buf.set_string(x, y, s, self.colors.disabled);
             return;
         }
 
