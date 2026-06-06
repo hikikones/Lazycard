@@ -255,7 +255,7 @@ pub fn print_char_repeat(
     area: Rect,
     buf: &mut Buffer,
     ch: char,
-    n: u8,
+    n: u16,
     style: impl Into<Style>,
 ) -> Rect {
     let style = style.into();
@@ -296,7 +296,7 @@ pub fn print_text_repeat(
     area: Rect,
     buf: &mut Buffer,
     text: &str,
-    n: u8,
+    n: u16,
     style: impl Into<Style>,
 ) -> Rect {
     let style = style.into();

@@ -131,15 +131,16 @@ impl CardsPage {
                                 TagsState::Search => {
                                     //todo: move up to card search?
                                 }
-                                TagsState::Tagless => {
-                                    self.tags.state = TagsState::Search;
-                                    return Action::Render;
-                                }
                                 TagsState::Browse => {
-                                    if self.tags.list.index() == 0 {
-                                        self.tags.state = TagsState::Tagless;
+                                    let shift = modifiers.contains(KeyModifiers::SHIFT);
+                                    if self.tags.list.index() == 0 && !shift {
+                                        if self.tags.list.selector().is_some() {
+                                            self.tags.list.set_selector(None);
+                                        } else {
+                                            self.tags.state = TagsState::Search;
+                                        }
                                     } else {
-                                        self.tags.list.move_index(ListMove::Up(1), false);
+                                        self.tags.list.move_index(ListMove::Up(1), shift);
                                     }
                                     return Action::Render;
                                 }
@@ -147,15 +148,12 @@ impl CardsPage {
                         }
                         KeyCode::Down => match self.tags.state {
                             TagsState::Search => {
-                                self.tags.state = TagsState::Tagless;
-                                return Action::Render;
-                            }
-                            TagsState::Tagless => {
                                 self.tags.state = TagsState::Browse;
                                 return Action::Render;
                             }
                             TagsState::Browse => {
-                                if self.tags.list.move_index(ListMove::Down(1), false) {
+                                let shift = modifiers.contains(KeyModifiers::SHIFT);
+                                if self.tags.list.move_index(ListMove::Down(1), shift) {
                                     return Action::Render;
                                 }
                             }
@@ -183,31 +181,32 @@ impl CardsPage {
                             return Action::Render;
                         }
                         KeyCode::Char('t') => {
-                            return self.toggle_tags();
+                            return self.toggle_show_tags();
                         }
                         KeyCode::Char(' ') => match self.tags.state {
                             TagsState::Search => {
                                 self.tags.search.push_char(' ');
                                 return Action::Render;
                             }
-                            TagsState::Tagless => {
-                                self.tags.tagless = !self.tags.tagless;
-                                self.update_cards(db);
-                                return Action::Render;
-                            }
                             TagsState::Browse => {
-                                if let Some(id) = self.tags.current_tag() {
-                                    self.tags.toggle(id);
+                                if self.tags.toggle_selection() {
                                     self.update_cards(db);
                                     return Action::Render;
                                 }
                             }
                         },
-                        _ => {
-                            if self.tags.list.input(key, KeyModifiers::empty()) {
-                                return Action::Render;
+                        _ => match self.tags.state {
+                            TagsState::Search => {
+                                if self.tags.search.input(key, modifiers) {
+                                    return Action::Render;
+                                }
                             }
-                        }
+                            TagsState::Browse => {
+                                if self.tags.list.input(key, modifiers) {
+                                    return Action::Render;
+                                }
+                            }
+                        },
                     }
                 } else {
                     match key {
@@ -230,7 +229,7 @@ impl CardsPage {
                             return Action::Render;
                         }
                         KeyCode::Char('t') => {
-                            return self.toggle_tags();
+                            return self.toggle_show_tags();
                         }
                         _ => {
                             if markup.input(key) {
@@ -302,13 +301,13 @@ impl CardsPage {
         }
     }
 
-    fn toggle_tags(&mut self) -> Action {
+    fn toggle_show_tags(&mut self) -> Action {
         self.show_tags = !self.show_tags;
         return Action::Render;
     }
 }
 
-pub struct TagsSidebar {
+struct TagsSidebar {
     state: TagsState,
     tags: Vec<TagId>,
     includes: HashSet<TagId>,
@@ -321,7 +320,6 @@ pub struct TagsSidebar {
 #[derive(Debug, Clone, Copy)]
 enum TagsState {
     Search,
-    Tagless,
     Browse,
 }
 
@@ -369,6 +367,17 @@ impl TagsSidebar {
         self.includes.insert(id);
     }
 
+    fn toggle_selection(&mut self) -> bool {
+        let mut render = false;
+        for i in self.list.selection_inclusive() {
+            let id = self.tags[i];
+            self.toggle(id);
+            render = true;
+        }
+
+        render
+    }
+
     fn iter(&self) -> impl ExactSizeIterator<Item = TagId> {
         self.tags.iter().copied()
     }
@@ -399,8 +408,6 @@ impl TagsSidebar {
         // );
 
         let mut area = block.inner(area);
-        area.y += 1;
-        area.height = area.height.saturating_sub(1);
 
         //search
         self.search
@@ -410,16 +417,22 @@ impl TagsSidebar {
         area.y += 1;
         area.height = area.height.saturating_sub(1);
 
-        //tagless
-        let s = if let TagsState::Tagless = self.state {
-            symbols::concat!(symbols::SELECTED, " tagless")
-        } else {
-            "tagless"
-        };
-        widgets::print_ascii(area, buf, s, Style::new(), None);
+        // line separator
+        widgets::print_char_repeat(area, buf, '─', area.width, colors.neutral);
 
         area.y += 1;
         area.height = area.height.saturating_sub(1);
+
+        if self.tags.is_empty() {
+            widgets::print_ascii(
+                area,
+                buf,
+                "no tags",
+                Style::new(),
+                Some(widgets::Alignment::CenterHorizontal),
+            );
+            return;
+        }
 
         //tags
         self.list.set_colors(colors.neutral, None).render(
@@ -436,14 +449,12 @@ impl TagsSidebar {
                 }
 
                 let symbol = match self.state {
-                    TagsState::Browse => {
-                        if let ListItem::Selected = item {
-                            symbols::concat!(symbols::SELECTED, " ")
-                        } else {
-                            ""
-                        }
-                    }
-                    TagsState::Search | TagsState::Tagless => "",
+                    TagsState::Browse => match item {
+                        ListItem::Selected => symbols::concat!(symbols::SELECTED, " "),
+                        ListItem::Selection => symbols::concat!(symbols::SELECTION, " "),
+                        ListItem::Normal => "",
+                    },
+                    TagsState::Search => "",
                 };
 
                 let color = if self.includes.contains(&id) {
