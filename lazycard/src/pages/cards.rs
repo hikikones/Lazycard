@@ -4,7 +4,7 @@ use database::{CardId, Database, TagId};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
-    layout::{Alignment, Rect},
+    layout::{Alignment, Constraint, Rect},
     style::{Color, Style},
     widgets::{Block, Padding, Widget},
 };
@@ -24,6 +24,8 @@ pub struct CardsPage {
     state: State,
     cards: Vec<CardId>,
     index: usize,
+    search: TextInput,
+    results: Vec<CardId>,
     show_tags: bool,
     tags: TagsSidebar,
 }
@@ -39,6 +41,13 @@ impl CardsPage {
             state: State::Browse,
             cards: Vec::new(),
             index: 0,
+            search: TextInput::new()
+                .with_placeholder("Search...")
+                .with_colors(TextInputColors {
+                    cursor: colors.primary,
+                    ..Default::default()
+                }),
+            results: Vec::new(),
             show_tags: false,
             tags: TagsSidebar::new(colors),
         }
@@ -60,6 +69,15 @@ impl CardsPage {
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
+        let search_line =
+            Rect { height: 1, ..area }.centered_horizontally(Constraint::Percentage(64));
+        self.search
+            .set_enabled(matches!(self.state, State::Search))
+            .render(search_line, buf);
+
+        area.y += 1;
+        area.height = area.height.saturating_sub(1);
+
         let border_color = if self.show_tags {
             let tags_width = ((0.25 * area.width as f32).round() as u16).min(20);
             self.tags.render(
@@ -95,11 +113,6 @@ impl CardsPage {
                     markup.render(card_area, buf, content, kitty);
                 })
                 .unwrap();
-
-                shortcuts.extend([
-                    Shortcut::new("Edit", "e"),
-                    Shortcut::new("Delete", symbols::DELETE),
-                ]);
             }
             None => {
                 widgets::print_ascii(
@@ -112,7 +125,46 @@ impl CardsPage {
             }
         }
 
-        shortcuts.extend([Shortcut::new("Tags", "t"), Shortcut::new("Search", "s")]);
+        // Shortcuts
+        match self.state {
+            State::Search => {
+                shortcuts.push(Shortcut::new("Confirm", symbols::ENTER));
+            }
+            State::Browse => {
+                if self.show_tags {
+                    match self.tags.state {
+                        TagsState::Search => {
+                            shortcuts.push(Shortcut::new("Confirm", symbols::ENTER));
+                        }
+                        TagsState::Browse => {
+                            shortcuts.extend([
+                                Shortcut::new("Toggle", symbols::SPACE),
+                                // Shortcut::new("Edit tag", "e"),
+                                // Shortcut::new("Delete tag", symbols::DELETE),
+                                // Shortcut::new("Search", "s"),
+                            ]);
+
+                            if !self.cards.is_empty() {
+                                shortcuts.extend([
+                                    Shortcut::new("Edit", "e"),
+                                    Shortcut::new("Delete", symbols::DELETE),
+                                ]);
+                            }
+                            shortcuts
+                                .extend([Shortcut::new("Search", "s"), Shortcut::new("Tags", "t")]);
+                        }
+                    }
+                } else {
+                    if !self.cards.is_empty() {
+                        shortcuts.extend([
+                            Shortcut::new("Edit", "e"),
+                            Shortcut::new("Delete", symbols::DELETE),
+                        ]);
+                    }
+                    shortcuts.extend([Shortcut::new("Search", "s"), Shortcut::new("Tags", "t")]);
+                }
+            }
+        }
     }
 
     pub fn on_input(&mut self, input: AppInput, markup: &mut Markup, db: &mut Database) -> Action {
@@ -126,29 +178,31 @@ impl CardsPage {
             State::Browse => {
                 if self.show_tags {
                     match key {
-                        KeyCode::Up => {
-                            match self.tags.state {
-                                TagsState::Search => {
-                                    //todo: move up to card search?
-                                }
-                                TagsState::Browse => {
-                                    let shift = modifiers.contains(KeyModifiers::SHIFT);
-                                    if self.tags.list.index() == 0 && !shift {
-                                        if self.tags.list.selector().is_some() {
-                                            self.tags.list.set_selector(None);
-                                        } else {
-                                            self.tags.state = TagsState::Search;
-                                        }
-                                    } else {
-                                        self.tags.list.move_index(ListMove::Up(1), shift);
-                                    }
-                                    return Action::Render;
-                                }
+                        KeyCode::Up => match self.tags.state {
+                            TagsState::Search => {
+                                self.state = State::Search;
+                                self.tags.search.set_disabled(true);
+                                return Action::Render;
                             }
-                        }
+                            TagsState::Browse => {
+                                let shift = modifiers.contains(KeyModifiers::SHIFT);
+                                if self.tags.list.index() == 0 && !shift {
+                                    if self.tags.list.selector().is_some() {
+                                        self.tags.list.set_selector(None);
+                                    } else {
+                                        self.tags.state = TagsState::Search;
+                                        self.tags.search.set_disabled(false);
+                                    }
+                                } else {
+                                    self.tags.list.move_index(ListMove::Up(1), shift);
+                                }
+                                return Action::Render;
+                            }
+                        },
                         KeyCode::Down => match self.tags.state {
                             TagsState::Search => {
                                 self.tags.state = TagsState::Browse;
+                                self.tags.search.set_disabled(true);
                                 return Action::Render;
                             }
                             TagsState::Browse => {
@@ -177,10 +231,15 @@ impl CardsPage {
                                 self.tags.search.push_char('s');
                             } else {
                                 self.tags.state = TagsState::Search;
+                                self.tags.search.set_disabled(false);
                             }
                             return Action::Render;
                         }
                         KeyCode::Char('t') => {
+                            if let TagsState::Search = self.tags.state {
+                                self.tags.search.push_char('t');
+                                return Action::Render;
+                            }
                             return self.toggle_show_tags();
                         }
                         KeyCode::Char(' ') => match self.tags.state {
@@ -239,7 +298,29 @@ impl CardsPage {
                     }
                 }
             }
-            State::Search => todo!(),
+            State::Search => match key {
+                KeyCode::Up => {}
+                KeyCode::Down => {
+                    self.state = State::Browse;
+                    if self.show_tags {
+                        self.tags.search.set_disabled(false);
+                    }
+                    return Action::Render;
+                }
+                KeyCode::Enter => {
+                    //todo: search cards
+                    self.state = State::Browse;
+                    if self.show_tags {
+                        self.tags.search.set_disabled(false);
+                    }
+                    return Action::Render;
+                }
+                _ => {
+                    if self.search.input(key, modifiers) {
+                        return Action::Render;
+                    }
+                }
+            },
         }
 
         Action::None
@@ -292,6 +373,7 @@ impl CardsPage {
 
     fn update_cards(&mut self, db: &mut Database) {
         self.cards.clear();
+        self.index = 0;
 
         if self.tags.tagless {
             db.get_cards_without_tags(&mut self.cards).unwrap();
@@ -335,7 +417,8 @@ impl TagsSidebar {
                 .with_colors(TextInputColors {
                     cursor: colors.primary,
                     ..Default::default()
-                }),
+                })
+                .with_disabled(),
             list: List::new(),
             tagless: false,
         }
@@ -411,7 +494,7 @@ impl TagsSidebar {
 
         //search
         self.search
-            .set_disabled(!matches!(self.state, TagsState::Search))
+            // .set_enabled(matches!(self.state, TagsState::Search))
             .render(area, buf);
 
         area.y += 1;

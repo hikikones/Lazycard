@@ -96,6 +96,10 @@ impl Markup {
         }
     }
 
+    pub const fn scroll_index(&self) -> u16 {
+        self.scroll
+    }
+
     pub const fn set_desired_scroll(&mut self, sm: ScrollMove) -> &mut Self {
         self.desired_scroll = Some(sm);
         self
