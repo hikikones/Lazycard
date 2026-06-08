@@ -16,7 +16,6 @@ pub struct ReviewPage {
     state: ReviewState,
     markup_items: Vec<MarkupItem>,
     reveal_len: usize,
-    is_fully_revealed: bool,
     rng: fastrand::Rng,
 }
 
@@ -35,7 +34,6 @@ impl ReviewPage {
             state: ReviewState::None,
             markup_items: Vec::new(),
             reveal_len: 0,
-            is_fully_revealed: false,
             rng: fastrand::Rng::new(),
         }
     }
@@ -76,11 +74,13 @@ impl ReviewPage {
                 menu.push_int(self.total, colors.neutral);
 
                 db.get_card_content(id, |content| {
-                    markup.render(area, buf, content, kitty);
+                    markup
+                        .set_max_items(Some(self.reveal_len))
+                        .render(area, buf, content, kitty);
                 })
                 .unwrap();
 
-                if self.is_fully_revealed {
+                if self.is_fully_revealed() {
                     shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
                 } else {
                     shortcuts.extend([Shortcut::new("Show", symbols::SPACE)]);
@@ -119,14 +119,14 @@ impl ReviewPage {
                     return Action::Render;
                 }
                 KeyCode::Char(' ') => {
-                    if !self.is_fully_revealed {
-                        self.reveal_more(markup);
+                    if !self.is_fully_revealed() {
+                        self.reveal_more();
                         markup.set_desired_scroll(ScrollMove::End);
                         return Action::Render;
                     }
                 }
                 KeyCode::Char('y' | 'n') => {
-                    if self.is_fully_revealed {
+                    if self.is_fully_revealed() {
                         let success = key == KeyCode::Char('y');
                         db.review_card(id, success).unwrap();
                         self.progress += 1;
@@ -153,15 +153,13 @@ impl ReviewPage {
         Action::None
     }
 
-    pub fn on_exit(&mut self, markup: &mut Markup) {
+    pub fn on_exit(&mut self) {
         self.due.clear();
         self.total = 0;
         self.progress = 0;
         self.state = ReviewState::None;
         self.markup_items.clear();
         self.reveal_len = 0;
-        self.is_fully_revealed = false;
-        markup.set_max_items(None);
     }
 
     fn next_card(&mut self, db: &Database, markup: &mut Markup) {
@@ -173,19 +171,19 @@ impl ReviewPage {
         let random_index = self.rng.usize(0..self.due.len());
         let id = self.due.swap_remove(random_index);
 
-        self.markup_items.clear();
         db.get_card_content(id, |content| {
+            self.markup_items.clear();
             Markup::parse_items(content, &mut self.markup_items);
         })
         .unwrap();
 
         self.reveal_len = 0;
         self.state = ReviewState::Review(id);
-        self.reveal_more(markup);
+        self.reveal_more();
         markup.scroll(ScrollMove::Start);
     }
 
-    fn reveal_more(&mut self, markup: &mut Markup) {
+    fn reveal_more(&mut self) {
         self.reveal_len = self
             .markup_items
             .iter()
@@ -195,7 +193,9 @@ impl ReviewPage {
             .map(|(i, _)| i)
             .next()
             .unwrap_or(self.markup_items.len());
-        self.is_fully_revealed = self.reveal_len == self.markup_items.len();
-        markup.set_max_items(Some(self.reveal_len));
+    }
+
+    const fn is_fully_revealed(&self) -> bool {
+        self.reveal_len == self.markup_items.len()
     }
 }

@@ -26,6 +26,7 @@ pub struct App {
 
 enum AppState {
     Route,
+    Search,
     Logs,
 }
 
@@ -74,6 +75,7 @@ impl App {
             review: ReviewPage::new(),
             editor: CardEditorPage::new(colors),
             cards: CardsPage::new(colors),
+            search: SearchPage::new(colors),
             logs,
         };
 
@@ -110,18 +112,55 @@ impl App {
                                     };
                                     Action::Route(next_route)
                                 }
+                                AppState::Search => {
+                                    self.state = AppState::Route;
+                                    self.pages.search.on_exit();
+                                    Action::Render
+                                }
                                 AppState::Logs => {
                                     self.state = AppState::Route;
                                     self.pages.logs.on_exit();
                                     Action::Render
                                 }
                             },
+                            KeyCode::Char('f') => {
+                                let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                                if ctrl {
+                                    match self.state {
+                                        AppState::Route => {
+                                            self.state = AppState::Search;
+                                            self.pages
+                                                .search
+                                                .on_enter(&self.database, &mut self.markup);
+                                        }
+                                        AppState::Search => {
+                                            self.state = AppState::Route;
+                                            self.pages.search.on_exit();
+                                        }
+                                        AppState::Logs => {
+                                            self.state = AppState::Search;
+                                            self.pages.logs.on_exit();
+                                            self.pages
+                                                .search
+                                                .on_enter(&self.database, &mut self.markup);
+                                        }
+                                    }
+                                    Action::Render
+                                } else {
+                                    self.on_input(AppInput(key), &mut terminal)
+                                }
+                            }
                             KeyCode::Char('l') => {
                                 let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                                 if ctrl && !self.pages.logs.is_empty() {
                                     match self.state {
                                         AppState::Route => {
                                             self.state = AppState::Logs;
+                                            self.pages.logs.on_enter();
+                                        }
+                                        AppState::Search => {
+                                            self.state = AppState::Logs;
+                                            self.pages.search.on_exit();
                                             self.pages.logs.on_enter();
                                         }
                                         AppState::Logs => {
@@ -151,7 +190,7 @@ impl App {
                 }
                 Action::Route(route) => {
                     match self.route {
-                        Route::Review => self.pages.review.on_exit(&mut self.markup),
+                        Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
                         Route::Cards => self.pages.cards.on_exit(),
                     }
@@ -229,8 +268,9 @@ impl App {
             self.text.render(nav_area, buf);
             self.text.clear();
 
-            // Clear any rendered image from markup
+            // Clear any rendered image from markup and reset max items
             self.markup.delete_images(&self.kitty).unwrap();
+            self.markup.set_max_items(None);
 
             // Body
             const MAX_WIDTH: u16 = 64;
@@ -276,6 +316,18 @@ impl App {
                         );
                     }
                 },
+                AppState::Search => {
+                    self.pages.search.on_render(
+                        body,
+                        buf,
+                        &self.database,
+                        &mut self.text,
+                        &mut self.markup,
+                        &mut self.kitty,
+                        &mut self.shortcuts,
+                        colors,
+                    );
+                }
                 AppState::Logs => {
                     self.pages.logs.on_render(
                         body,
@@ -299,6 +351,7 @@ impl App {
             self.shortcuts.extend([
                 Shortcut::new("Quit", symbols::ESCAPE),
                 Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
+                Shortcut::new("Find", symbols::ctrl!("f")),
             ]);
 
             if !self.pages.logs.is_empty() {
@@ -338,6 +391,26 @@ impl App {
                         .on_input(input, &mut self.markup, &mut self.database)
                 }
             },
+            AppState::Search => {
+                match self
+                    .pages
+                    .search
+                    .on_input(input, &self.database, &mut self.markup)
+                {
+                    SearchAction::None => Action::None,
+                    SearchAction::Render => Action::Render,
+                    SearchAction::Edit(id) => {
+                        self.state = AppState::Route;
+                        self.pages.search.on_exit();
+                        Action::Route(Route::Editor(id))
+                    }
+                    SearchAction::Goto(id) => {
+                        self.state = AppState::Route;
+                        self.pages.search.on_exit();
+                        todo!("goto cards")
+                    }
+                }
+            }
             AppState::Logs => match self.pages.logs.on_input(input) {
                 LogsAction::None => Action::None,
                 LogsAction::Render => Action::Render,

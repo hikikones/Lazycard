@@ -93,6 +93,7 @@ impl CardsPage {
         shortcuts.extend([
             Shortcut::new("Edit", "e"),
             Shortcut::new("Delete", symbols::DELETE),
+            Shortcut::new("Tags", "t"),
         ]);
     }
 

@@ -3,22 +3,20 @@ mod editor;
 // mod editor2;
 mod logs;
 mod review;
-// mod search;
-mod tags;
+mod search;
 
 pub use cards::*;
 pub use editor::*;
 // pub use editor2::*;
 pub use logs::*;
 pub use review::*;
-// pub use search::*;
-pub use tags::*;
+pub use search::*;
 
 pub struct Pages {
     pub review: ReviewPage,
     pub editor: CardEditorPage,
     pub cards: CardsPage,
-    // pub search: SearchPage,
+    pub search: SearchPage,
     pub logs: LogsPage,
 }
 
