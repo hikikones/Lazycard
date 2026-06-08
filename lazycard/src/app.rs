@@ -129,9 +129,7 @@ impl App {
                                     match self.state {
                                         AppState::Route => {
                                             self.state = AppState::Search;
-                                            self.pages
-                                                .search
-                                                .on_enter(&self.database, &mut self.markup);
+                                            self.pages.search.on_enter(&self.database);
                                         }
                                         AppState::Search => {
                                             self.state = AppState::Route;
@@ -140,9 +138,7 @@ impl App {
                                         AppState::Logs => {
                                             self.state = AppState::Search;
                                             self.pages.logs.on_exit();
-                                            self.pages
-                                                .search
-                                                .on_enter(&self.database, &mut self.markup);
+                                            self.pages.search.on_enter(&self.database);
                                         }
                                     }
                                     Action::Render

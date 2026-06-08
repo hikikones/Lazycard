@@ -10,11 +10,15 @@ use widgets::{
 
 use crate::{app::AppInput, settings::Colors, symbols};
 
+// TODO: Render a help text as markup when search comes up empty.
+// Or just add a help shortcut that shows how to search.
+
 pub struct SearchPage {
     state: State,
     search: TextInput,
     results: Vec<CardId>,
     index: usize,
+    query: String,
     is_empty: bool,
 }
 
@@ -45,11 +49,12 @@ impl SearchPage {
                 }),
             results: Vec::new(),
             index: 0,
+            query: String::new(),
             is_empty: false,
         }
     }
 
-    pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
+    pub fn on_enter(&mut self, db: &Database) {
         self.state = State::Search;
         self.is_empty = db.is_empty().unwrap();
         self.refresh(db);
@@ -57,7 +62,7 @@ impl SearchPage {
 
     pub fn on_render(
         &mut self,
-        area: Rect,
+        mut area: Rect,
         buf: &mut Buffer,
         db: &Database,
         menu: &mut TextSegment,
@@ -79,7 +84,7 @@ impl SearchPage {
             return;
         }
 
-        // Determine colors and shortcuts for search input and results
+        // Determine colors and shortcuts for search and results
         let (border_color, border_text_color) = {
             match self.state {
                 State::Search => {
@@ -96,33 +101,34 @@ impl SearchPage {
             }
         };
 
-        // Render input
-        let search_line =
-            Rect { height: 1, ..area }.centered_horizontally(Constraint::Percentage(64));
+        // Render search input
+        let search_line = widgets::align(
+            Rect {
+                width: (0.64 * area.width as f32).round() as u16,
+                height: 1,
+                ..area
+            },
+            area,
+            widgets::Alignment::CenterHorizontal,
+        );
         self.search
             .set_enabled(matches!(self.state, State::Search))
             .render(search_line, buf);
 
-        // Render results
-        let results_area = Rect {
-            y: area.y + search_line.height + 1,
-            height: area.height.saturating_sub(search_line.height + 1),
-            ..area
-        };
-        let results_block = Block::bordered()
+        area.y += 2;
+        area.height = area.height.saturating_sub(2);
+
+        // Results block
+        let card_block = Block::bordered()
             .border_style(border_color)
             .padding(Padding::horizontal(1));
-        let card_area = results_block.inner(results_area);
-        results_block.render(results_area, buf);
+        let card_area = card_block.inner(area);
+        card_block.render(area, buf);
 
-        // Title for bordered search results
+        // Title for block
         utils::format_int2(self.index + 1, self.results.len(), |i, len| {
             widgets::print_asciis(
-                Rect {
-                    y: results_area.y,
-                    height: 1,
-                    ..card_area
-                },
+                area,
                 buf,
                 [" ", i, " / ", len, " "],
                 border_text_color,
@@ -130,6 +136,7 @@ impl SearchPage {
             );
         });
 
+        // Render search results
         match self.current_card() {
             Some(id) => {
                 db.get_card_content(id, |content| {
@@ -138,14 +145,42 @@ impl SearchPage {
                 .unwrap();
             }
             None => {
-                if !self.search.is_empty_trim() {
-                    widgets::print_ascii(
-                        area,
-                        buf,
-                        "No card found",
-                        colors.neutral,
-                        Some(widgets::Alignment::Center),
-                    );
+                if !self.query.is_empty() {
+                    if self.query.chars().count() < 3 {
+                        widgets::print_ascii(
+                            card_area,
+                            buf,
+                            "Search query must be at least 3 characters",
+                            colors.neutral,
+                            Some(widgets::Alignment::Center),
+                        );
+                    } else {
+                        let center = widgets::align(
+                            Rect {
+                                height: 2,
+                                ..card_area
+                            },
+                            card_area,
+                            widgets::Alignment::Center,
+                        );
+                        widgets::print_ascii(
+                            center,
+                            buf,
+                            "No cards found from query",
+                            colors.neutral,
+                            Some(widgets::Alignment::CenterHorizontal),
+                        );
+                        widgets::print_ascii(
+                            Rect {
+                                y: center.y + 1,
+                                ..center
+                            },
+                            buf,
+                            self.query.as_str(),
+                            Style::new().fg(colors.neutral).italic(),
+                            Some(widgets::Alignment::CenterHorizontal),
+                        );
+                    }
                 }
             }
         }
@@ -170,6 +205,8 @@ impl SearchPage {
                     if !input.is_empty() {
                         self.results.clear();
                         self.index = 0;
+                        self.query.clear();
+                        self.query.push_str(input);
                         let _ = db.search(input, &mut self.results);
                         if !self.results.is_empty() {
                             self.state = State::Browse;
@@ -251,16 +288,14 @@ impl SearchPage {
     }
 
     fn refresh(&mut self, db: &Database) {
-        let input = self.search.as_str_trim();
-        if self.is_empty || input.is_empty() {
-            self.search.clear();
+        if self.is_empty || self.query.is_empty() {
             self.results.clear();
             self.index = 0;
             return;
         }
 
         self.results.clear();
-        let _ = db.search(input, &mut self.results);
+        let _ = db.search(self.query.as_str(), &mut self.results);
         self.index = self.index.min(self.results.len().saturating_sub(1));
     }
 }
