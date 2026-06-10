@@ -64,7 +64,13 @@ impl CardsPage {
             );
             area.width = area.width.saturating_sub(tags_width);
             area.x += tags_width;
-            shortcuts.push(Shortcut::new("Toggle", symbols::SPACE));
+
+            if !self.tags.is_empty() {
+                shortcuts.extend([
+                    Shortcut::new("Toggle", symbols::SPACE),
+                    Shortcut::new("Reset", "r"),
+                ]);
+            }
         }
 
         match self.current_card() {
@@ -119,8 +125,16 @@ impl CardsPage {
                 return self.toggle_show_tags();
             }
             KeyCode::Char(' ') => {
-                if self.show_tags {
+                if self.show_tags && !self.tags.is_empty() {
                     if self.tags.toggle_selection() {
+                        self.update_cards(db);
+                        return Action::Render;
+                    }
+                }
+            }
+            KeyCode::Char('r') => {
+                if self.show_tags && !self.tags.is_empty() {
+                    if self.tags.reset() {
                         self.update_cards(db);
                         return Action::Render;
                     }
@@ -227,6 +241,10 @@ impl TagsSidebar {
         self.excludes.retain(|id| self.tags.contains(id));
     }
 
+    const fn is_empty(&self) -> bool {
+        self.tags.is_empty()
+    }
+
     fn current_tag(&self) -> Option<TagId> {
         self.tags.get(self.list.index()).copied()
     }
@@ -267,6 +285,14 @@ impl TagsSidebar {
         self.excludes.iter().copied()
     }
 
+    fn reset(&mut self) -> bool {
+        let has_includes = !self.includes.is_empty();
+        let has_excludes = !self.excludes.is_empty();
+        self.includes.clear();
+        self.excludes.clear();
+        has_includes || has_excludes
+    }
+
     fn render(&mut self, mut area: Rect, buf: &mut Buffer, db: &Database, colors: &Colors) {
         widgets::print_ascii(
             area,
@@ -280,7 +306,7 @@ impl TagsSidebar {
             widgets::print_ascii(
                 area,
                 buf,
-                "no tags",
+                "No tags",
                 Style::new(),
                 Some(widgets::Alignment::CenterHorizontal),
             );
