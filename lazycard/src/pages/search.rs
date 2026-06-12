@@ -207,7 +207,7 @@ impl SearchPage {
                         self.index = 0;
                         self.query.clear();
                         self.query.push_str(input);
-                        let _ = db.search(input, &mut self.results);
+                        let _ = db.search(input, |id| self.results.push(id));
                         if !self.results.is_empty() {
                             self.state = State::Browse;
                         }
@@ -295,7 +295,7 @@ impl SearchPage {
         }
 
         self.results.clear();
-        let _ = db.search(self.query.as_str(), &mut self.results);
+        let _ = db.search(self.query.as_str(), |id| self.results.push(id));
         self.index = self.index.min(self.results.len().saturating_sub(1));
     }
 }

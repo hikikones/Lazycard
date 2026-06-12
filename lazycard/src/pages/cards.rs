@@ -205,8 +205,10 @@ impl CardsPage {
         self.cards.clear();
         self.index = 0;
 
-        db.get_cards_with_tags(self.tags.includes(), self.tags.excludes(), &mut self.cards)
-            .unwrap();
+        db.get_cards_with_tags(self.tags.includes(), self.tags.excludes(), |id| {
+            self.cards.push(id);
+        })
+        .unwrap();
     }
 
     fn toggle_show_tags(&mut self) -> Action {
@@ -235,8 +237,7 @@ impl TagsSidebar {
     fn update(&mut self, db: &Database) {
         self.tags.clear();
 
-        db.get_tags(&mut self.tags).unwrap();
-
+        db.get_tags(|id| self.tags.push(id)).unwrap();
         self.includes.retain(|id| self.tags.contains(id));
         self.excludes.retain(|id| self.tags.contains(id));
     }

@@ -39,7 +39,7 @@ impl ReviewPage {
     }
 
     pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
-        db.get_due_cards(&mut self.due).unwrap();
+        db.get_due_cards(|id| self.due.push(id)).unwrap();
         self.total = self.due.len();
 
         if self.total > 0 {

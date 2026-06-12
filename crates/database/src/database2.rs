@@ -44,10 +44,10 @@ impl Database {
         Ok(CardId(self.sqlite.last_insert_rowid()))
     }
 
-    pub fn get_cards(&self, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+    pub fn get_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
         self.sqlite.query("SELECT id FROM cards", |row| {
             let id = row.get(0)?;
-            buf.push(id);
+            f(id);
             Ok(())
         })
     }
@@ -56,7 +56,7 @@ impl Database {
         &mut self,
         includes: impl ExactSizeIterator<Item = TagId>,
         excludes: impl ExactSizeIterator<Item = TagId>,
-        buf: &mut Vec<CardId>,
+        mut f: impl FnMut(CardId),
     ) -> SqliteResult<()> {
         let mut itoa = itoa::Buffer::new();
         self.s.clear();
@@ -96,12 +96,12 @@ impl Database {
 
         self.sqlite.query(self.s.as_str(), |row| {
             let id = row.get(0)?;
-            buf.push(id);
+            f(id);
             Ok(())
         })
     }
 
-    pub fn get_cards_without_tags(&self, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+    pub fn get_cards_without_tags(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
         self.sqlite.query(
             "SELECT c.id FROM cards c WHERE NOT EXISTS (
                     SELECT 1 FROM card_tag ct \
@@ -109,7 +109,7 @@ impl Database {
                 )",
             |row| {
                 let id = row.get(0)?;
-                buf.push(id);
+                f(id);
                 Ok(())
             },
         )
@@ -134,12 +134,12 @@ impl Database {
         )
     }
 
-    pub fn get_due_cards(&self, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+    pub fn get_due_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
         self.sqlite.query(
             "SELECT id FROM cards WHERE due_time <= (unixepoch('now'))",
             |row| {
                 let id = row.get(0)?;
-                buf.push(id);
+                f(id);
                 Ok(())
             },
         )
@@ -214,7 +214,7 @@ impl Database {
         Ok(ReviewId(self.sqlite.last_insert_rowid()))
     }
 
-    pub fn search(&self, input: &str, buf: &mut Vec<CardId>) -> SqliteResult<()> {
+    pub fn search(&self, input: &str, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
         self.sqlite.query_with_args(
             "
             SELECT rowid FROM cards_fts \
@@ -223,7 +223,7 @@ impl Database {
             [input],
             |row| {
                 let id = row.get(0)?;
-                buf.push(id);
+                f(id);
                 Ok(())
             },
         )
@@ -249,10 +249,10 @@ impl Database {
         Ok(TagId(self.sqlite.last_insert_rowid()))
     }
 
-    pub fn get_tags(&self, buf: &mut Vec<TagId>) -> SqliteResult<()> {
+    pub fn get_tags(&self, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
         self.sqlite.query("SELECT id FROM tags", |row| {
             let id = row.get(0)?;
-            buf.push(id);
+            f(id);
             Ok(())
         })
     }
