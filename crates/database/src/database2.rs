@@ -259,6 +259,15 @@ impl Database {
         })
     }
 
+    pub fn get_tags_and_name(&self, mut f: impl FnMut(TagId, &str)) -> SqliteResult<()> {
+        self.sqlite.query("SELECT id, name FROM tags", (), |row| {
+            let id = row.get(0)?;
+            let name = row.get_ref(1)?.as_str()?;
+            f(id, name);
+            Ok(())
+        })
+    }
+
     pub fn get_tag_name(&self, id: TagId, f: impl FnOnce(&str)) -> SqliteResult<()> {
         self.sqlite
             .query_single("SELECT id, name FROM tags WHERE id = ?", [id], |row| {

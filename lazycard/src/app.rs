@@ -81,7 +81,7 @@ impl App {
         };
 
         Self {
-            route: Route::Review,
+            route: Route::Tags,
             state: AppState::Route,
             pages,
             database,
@@ -95,7 +95,8 @@ impl App {
     }
 
     pub fn run(&mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
-        self.pages.review.on_enter(&self.database, &mut self.markup);
+        // self.pages.review.on_enter(&self.database, &mut self.markup);
+        self.pages.tags.on_enter(&self.database);
         self.render(&mut terminal)?;
 
         loop {
@@ -202,7 +203,7 @@ impl App {
                         }
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
                         Route::Cards => self.pages.cards.on_enter(&mut self.database),
-                        Route::Tags => self.pages.tags.on_enter(),
+                        Route::Tags => self.pages.tags.on_enter(&mut self.database),
                     }
 
                     self.render(&mut terminal)?;
