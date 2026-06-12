@@ -417,6 +417,7 @@ and another one
     let tid2 = db.add_tag("rust").unwrap();
     let tid3 = db.add_tag("image").unwrap();
     let tid4 = db.add_tag("abc").unwrap();
+    let tid5 = db.add_tag("tagwithalongnamethatyoucantreadnoob").unwrap();
 
     db.add_card_tag(cid1, tid1).unwrap();
     db.add_card_tag(cid2, tid2).unwrap();

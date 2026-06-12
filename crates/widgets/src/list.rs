@@ -258,11 +258,11 @@ impl List {
 
         if scrollable {
             let scrollbar = Rect {
-                x: area.x + area.width,
+                x: area.x + area.width.saturating_sub(1),
                 width: 1,
                 ..area
             };
-            area.width = area.width.saturating_sub(1);
+            area.width = area.width.saturating_sub(3);
             utils::render_scrollbar(
                 scrollbar,
                 buf,

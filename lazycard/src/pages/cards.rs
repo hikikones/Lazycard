@@ -63,7 +63,7 @@ impl CardsPage {
                 colors,
             );
             area.width = area.width.saturating_sub(tags_width);
-            area.x += tags_width;
+            area.x += tags_width + 2;
 
             if !self.tags.is_empty() {
                 shortcuts.extend([
