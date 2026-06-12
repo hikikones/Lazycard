@@ -36,11 +36,7 @@ impl Sqlite {
             .unwrap();
     }
 
-    pub fn execute(&self, sql: &str) -> SqliteResult<usize> {
-        self.0.execute(sql, ())
-    }
-
-    pub fn execute_with_args(&self, sql: &str, args: impl Params) -> SqliteResult<usize> {
+    pub fn execute(&self, sql: &str, args: impl Params) -> SqliteResult<usize> {
         self.0.execute(sql, args)
     }
 
@@ -48,11 +44,7 @@ impl Sqlite {
         self.0.execute_batch(sql)
     }
 
-    pub fn query<T>(&self, sql: &str, f: impl FnMut(&Row) -> SqliteResult<T>) -> SqliteResult<()> {
-        self.query_with_args(sql, (), f)
-    }
-
-    pub fn query_with_args<T>(
+    pub fn query<T>(
         &self,
         sql: &str,
         args: impl Params,
@@ -71,14 +63,6 @@ impl Sqlite {
     pub fn query_first<T>(
         &self,
         sql: &str,
-        f: impl FnOnce(&Row) -> SqliteResult<T>,
-    ) -> SqliteResult<Option<T>> {
-        self.0.query_row(sql, (), f).optional()
-    }
-
-    pub fn query_first_with_args<T>(
-        &self,
-        sql: &str,
         args: impl Params,
         f: impl FnOnce(&Row) -> SqliteResult<T>,
     ) -> SqliteResult<Option<T>> {
@@ -86,14 +70,6 @@ impl Sqlite {
     }
 
     pub fn query_single<T>(
-        &self,
-        sql: &str,
-        f: impl FnOnce(&Row) -> SqliteResult<T>,
-    ) -> SqliteResult<T> {
-        self.0.query_one(sql, (), f)
-    }
-
-    pub fn query_single_with_args<T>(
         &self,
         sql: &str,
         args: impl Params,

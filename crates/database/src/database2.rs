@@ -35,17 +35,19 @@ impl Database {
 
     pub fn is_empty(&self) -> SqliteResult<bool> {
         self.sqlite
-            .query_single("SELECT NOT EXISTS (SELECT 1 FROM cards)", |row| row.get(0))
+            .query_single("SELECT NOT EXISTS (SELECT 1 FROM cards)", (), |row| {
+                row.get(0)
+            })
     }
 
     pub fn add_card(&self, content: &str) -> SqliteResult<CardId> {
         self.sqlite
-            .execute_with_args("INSERT INTO cards (content) VALUES (?)", [content])?;
+            .execute("INSERT INTO cards (content) VALUES (?)", [content])?;
         Ok(CardId(self.sqlite.last_insert_rowid()))
     }
 
     pub fn get_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query("SELECT id FROM cards", |row| {
+        self.sqlite.query("SELECT id FROM cards", (), |row| {
             let id = row.get(0)?;
             f(id);
             Ok(())
@@ -61,10 +63,10 @@ impl Database {
         let mut itoa = itoa::Buffer::new();
         self.s.clear();
 
-        // all cards
+        // All cards
         self.s.push_str("SELECT c.id FROM cards c");
 
-        // includes
+        // Filter by include tags
         let next_token = if includes.len() > 0 {
             let len = includes.len();
             self.s
@@ -81,7 +83,7 @@ impl Database {
             " WHERE "
         };
 
-        // excludes
+        // Filter by exclude tags
         if excludes.len() > 0 {
             self.s.push_str(next_token);
             self.s.push_str(
@@ -94,7 +96,7 @@ impl Database {
             self.s.push_str("))");
         }
 
-        self.sqlite.query(self.s.as_str(), |row| {
+        self.sqlite.query(self.s.as_str(), (), |row| {
             let id = row.get(0)?;
             f(id);
             Ok(())
@@ -107,6 +109,7 @@ impl Database {
                     SELECT 1 FROM card_tag ct \
                     WHERE ct.card_id = c.id \
                 )",
+            (),
             |row| {
                 let id = row.get(0)?;
                 f(id);
@@ -116,20 +119,18 @@ impl Database {
     }
 
     pub fn get_card_content(&self, id: CardId, f: impl FnOnce(&str)) -> SqliteResult<()> {
-        self.sqlite.query_single_with_args(
-            "SELECT id, content FROM cards WHERE id = ?",
-            [id],
-            |row| {
+        self.sqlite
+            .query_single("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
                 let content = row.get_ref(1)?.as_str()?;
                 f(content);
                 Ok(())
-            },
-        )
+            })
     }
 
     pub fn get_due_count(&self) -> SqliteResult<u32> {
         self.sqlite.query_single(
             "SELECT COUNT(id) FROM cards WHERE due_time <= (unixepoch('now'))",
+            (),
             |row| row.get(0),
         )
     }
@@ -137,6 +138,7 @@ impl Database {
     pub fn get_due_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
         self.sqlite.query(
             "SELECT id FROM cards WHERE due_time <= (unixepoch('now'))",
+            (),
             |row| {
                 let id = row.get(0)?;
                 f(id);
@@ -150,7 +152,7 @@ impl Database {
     }
 
     pub fn get_due_card_random_except(&self, id: CardId) -> SqliteResult<Option<CardId>> {
-        self.sqlite.query_first_with_args(
+        self.sqlite.query_first(
             "
             SELECT id, due_time FROM cards \
             WHERE due_time <= (unixepoch('now')) AND id != ? \
@@ -164,23 +166,23 @@ impl Database {
 
     pub fn update_card(&self, id: CardId, content: &str) -> SqliteResult<()> {
         self.sqlite
-            .execute_with_args("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))?;
+            .execute("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))?;
         Ok(())
     }
 
     pub fn delete_card(&self, id: CardId) -> SqliteResult<()> {
         self.sqlite
-            .execute_with_args("DELETE FROM cards WHERE id = ?", [id])?;
+            .execute("DELETE FROM cards WHERE id = ?", [id])?;
         Ok(())
     }
 
     pub fn review_card(&self, id: CardId, success: bool) -> SqliteResult<ReviewId> {
-        let (create_time, stability, difficulty) = self.sqlite.query_single_with_args(
+        let (create_time, stability, difficulty) = self.sqlite.query_single(
             "SELECT create_time, stability, difficulty FROM cards WHERE id = ?",
             [id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )?;
-        let last_review_time = self.sqlite.query_first_with_args(
+        let last_review_time = self.sqlite.query_first(
             "SELECT time FROM reviews \
                 WHERE card_id = ? \
                 ORDER BY time DESC \
@@ -195,7 +197,7 @@ impl Database {
             last_review_time: last_review_time.unwrap_or(create_time),
         };
         let next_state = self.scheduler.schedule(current_state, success);
-        self.sqlite.execute_with_args(
+        self.sqlite.execute(
             "UPDATE cards \
             SET stability = ?1, difficulty = ?2, due_time = ?3 \
             WHERE id = ?4",
@@ -206,7 +208,7 @@ impl Database {
                 id,
             ),
         )?;
-        self.sqlite.execute_with_args(
+        self.sqlite.execute(
             "INSERT INTO reviews (success, card_id) VALUES (?1, ?2)",
             (success, id),
         )?;
@@ -215,7 +217,7 @@ impl Database {
     }
 
     pub fn search(&self, input: &str, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query_with_args(
+        self.sqlite.query(
             "
             SELECT rowid FROM cards_fts \
             WHERE cards_fts MATCH ? \
@@ -230,7 +232,7 @@ impl Database {
     }
 
     pub fn search_highlight(&self, id: CardId, input: &str, buf: &mut String) -> SqliteResult<()> {
-        self.sqlite.query_single_with_args(
+        self.sqlite.query_single(
             "
             SELECT rowid, highlight(cards_fts, 0, '<b>', '</b>') FROM cards_fts \
             WHERE rowid = ?1 AND cards_fts MATCH ?2",
@@ -245,12 +247,12 @@ impl Database {
 
     pub fn add_tag(&self, name: &str) -> SqliteResult<TagId> {
         self.sqlite
-            .execute_with_args("INSERT INTO tags (name) VALUES (?)", [name])?;
+            .execute("INSERT INTO tags (name) VALUES (?)", [name])?;
         Ok(TagId(self.sqlite.last_insert_rowid()))
     }
 
     pub fn get_tags(&self, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
-        self.sqlite.query("SELECT id FROM tags", |row| {
+        self.sqlite.query("SELECT id FROM tags", (), |row| {
             let id = row.get(0)?;
             f(id);
             Ok(())
@@ -259,7 +261,7 @@ impl Database {
 
     pub fn get_tag_name(&self, id: TagId, f: impl FnOnce(&str)) -> SqliteResult<()> {
         self.sqlite
-            .query_single_with_args("SELECT id, name FROM tags WHERE id = ?", [id], |row| {
+            .query_single("SELECT id, name FROM tags WHERE id = ?", [id], |row| {
                 let name = row.get_ref(1)?.as_str()?;
                 f(name);
                 Ok(())
@@ -267,7 +269,7 @@ impl Database {
     }
 
     pub fn add_card_tag(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
-        self.sqlite.execute_with_args(
+        self.sqlite.execute(
             "INSERT INTO card_tag (card_id, tag_id) VALUES (?1, ?2)",
             (cid, tid),
         )?;
