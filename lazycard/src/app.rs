@@ -75,6 +75,7 @@ impl App {
             review: ReviewPage::new(),
             editor: CardEditorPage::new(colors),
             cards: CardsPage::new(colors),
+            tags: TagsPage::new(),
             search: SearchPage::new(colors),
             logs,
         };
@@ -189,6 +190,7 @@ impl App {
                         Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
                         Route::Cards => self.pages.cards.on_exit(),
+                        Route::Tags => self.pages.tags.on_exit(),
                     }
 
                     self.route = route;
@@ -200,6 +202,7 @@ impl App {
                         }
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
                         Route::Cards => self.pages.cards.on_enter(&mut self.database),
+                        Route::Tags => self.pages.tags.on_enter(),
                     }
 
                     self.render(&mut terminal)?;
@@ -250,7 +253,8 @@ impl App {
             for (route, name, spacing) in [
                 (Route::Review, "Review", SPACING),
                 (Route::Editor(None), "Editor", SPACING),
-                (Route::Cards, "Cards", ""),
+                (Route::Cards, "Cards", SPACING),
+                (Route::Tags, "Tags", ""),
             ] {
                 let is_current =
                     std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
@@ -308,6 +312,15 @@ impl App {
                             &mut self.text,
                             &mut self.markup,
                             &mut self.kitty,
+                            &mut self.shortcuts,
+                        );
+                    }
+                    Route::Tags => {
+                        self.pages.tags.on_render(
+                            body,
+                            buf,
+                            colors,
+                            &mut self.text,
                             &mut self.shortcuts,
                         );
                     }
@@ -386,6 +399,7 @@ impl App {
                         .cards
                         .on_input(input, &mut self.markup, &mut self.database)
                 }
+                Route::Tags => self.pages.tags.on_input(input),
             },
             AppState::Search => {
                 match self
