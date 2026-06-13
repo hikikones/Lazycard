@@ -418,6 +418,13 @@ and another one
     let tid3 = db.add_tag("image").unwrap();
     let tid4 = db.add_tag("abc").unwrap();
     let tid5 = db.add_tag("tagwithalongnamethatyoucantreadnoob").unwrap();
+    let tid6 = db.add_tag("yoyo").unwrap();
+    let tid7 = db.add_tag("zup").unwrap();
+    let tid8 = db.add_tag("test").unwrap();
+    let tid9 = db.add_tag("cba").unwrap();
+    let tid10 = db
+        .add_tag("anothertagwithalongnamethatyoucantread")
+        .unwrap();
 
     db.add_card_tag(cid1, tid1).unwrap();
     db.add_card_tag(cid2, tid2).unwrap();

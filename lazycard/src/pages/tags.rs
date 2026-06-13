@@ -232,6 +232,7 @@ impl TagsList {
 
     pub fn input<T: TagItem>(&mut self, key: KeyCode, items: impl IntoIterator<Item = T>) -> bool {
         let old_index = self.index;
+        const GAP: u16 = 2;
 
         match key {
             KeyCode::Right => {
@@ -241,10 +242,66 @@ impl TagsList {
                 self.index = self.index.saturating_sub(1);
             }
             KeyCode::Down => {
-                //todo
+                // TODO: find +1 row, pick the one the least distance
+                // let max = self.total_items.saturating_sub(1);
+                self.index = if self.index_row == self.total_lines.saturating_sub(1) {
+                    self.total_items.saturating_sub(1)
+                } else {
+                    let (mut next_index, mut distance) = (0, u16::MAX);
+                    for (i, x, y, _) in Self::iter(self.size.width, GAP, items).skip(self.index + 1)
+                    {
+                        if y == self.index_row + 1 {
+                            let d = self.index_col.abs_diff(x);
+                            if d < distance {
+                                next_index = i;
+                                distance = d;
+                            }
+                        } else if y > self.index_row + 1 {
+                            break;
+                        }
+                    }
+                    next_index
+                };
+                // self.index = Self::iter(self.size.width, GAP, items)
+                //     .skip(self.index + 1)
+                //     .find(|(_, x, y, _)| *x >= self.index_col && *y == self.index_row + 1)
+                //     .map(|(i, _, _, _)| i)
+                //     .unwrap_or(self.total_items.saturating_sub(1));
             }
             KeyCode::Up => {
-                //todo
+                // TODO: find -1 row, pick the one the least distance
+                self.index = if self.index_row == 0 {
+                    0
+                } else {
+                    let (mut next_index, mut distance) = (0, u16::MAX);
+                    for (i, x, y, _) in Self::iter(self.size.width, GAP, items) {
+                        if y == self.index_row.saturating_sub(1) {
+                            let d = self.index_col.abs_diff(x);
+                            if d < distance {
+                                next_index = i;
+                                distance = d;
+                            }
+                        } else if y >= self.index_row {
+                            break;
+                        }
+                    }
+                    next_index
+                    // Self::iter(self.size.width, GAP, items)
+                    //     .find(|(_, x, y, _)| {
+                    //         *x > self.index_col && *y == self.index_row.saturating_sub(1)
+                    //     })
+                    //     .map(|(i, _, _, _)| i.saturating_sub(1))
+                    //     .unwrap_or(0)
+                };
+                // let prev_index = Self::iter(self.size.width, GAP, items)
+                //     .find(|(_, x, y, _)| {
+                //         *x >= self.index_col && *y == self.index_row.saturating_sub(1)
+                //     })
+                //     .map(|(i, _, _, _)| i);
+                // self.index = match prev_index {
+                //     Some(i) => i,
+                //     None => 0,
+                // };
             }
             KeyCode::Home => {
                 self.index = 0;
@@ -465,12 +522,17 @@ impl TagsList {
     ) -> impl Iterator<Item = (usize, u16, u16, T)> {
         let (mut x, mut y) = (0, 0);
         items.into_iter().enumerate().map(move |(i, item)| {
-            let (col, row) = (x, y);
-            x += item.width() + gap;
-            if x >= width {
+            if x + item.width() >= width {
                 x = 0;
-                y += 1;
+                if i > 0 {
+                    y += 1;
+                }
             }
+
+            let (col, row) = (x, y);
+
+            x += item.width() + gap;
+
             (i, col, row, item)
         })
 
