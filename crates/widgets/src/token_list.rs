@@ -38,6 +38,15 @@ impl TokenList {
         self
     }
 
+    pub const fn index(&self) -> usize {
+        self.index
+    }
+
+    pub const fn set_index(&mut self, i: usize) -> &mut Self {
+        self.index = i;
+        self
+    }
+
     pub fn input<T: TokenItem>(
         &mut self,
         key: KeyCode,

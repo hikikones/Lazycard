@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Margin},
     style::{Color, Style},
 };
-use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
+use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextInputColors, TextSegment};
 
 use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
@@ -75,7 +75,7 @@ impl App {
             review: ReviewPage::new(),
             editor: CardEditorPage::new(colors),
             cards: CardsPage::new(colors),
-            tags: TagsPage::new(),
+            tags: TagsPage::new(colors),
             search: SearchPage::new(colors),
             logs,
         };
@@ -89,7 +89,7 @@ impl App {
             kitty: KittyGraphics::new(cell_size),
             // matcher: Matcher::new(),
             text: TextSegment::new().with_alignment(Alignment::Center),
-            shortcuts: Shortcuts::new().with_colors(Color::Reset, settings.primary()),
+            shortcuts: Shortcuts::new().with_colors(Color::Reset, colors.primary),
             settings,
         }
     }
@@ -399,7 +399,7 @@ impl App {
                         .cards
                         .on_input(input, &mut self.markup, &mut self.database)
                 }
-                Route::Tags => self.pages.tags.on_input(input),
+                Route::Tags => self.pages.tags.on_input(input, &self.database),
             },
             AppState::Search => {
                 match self

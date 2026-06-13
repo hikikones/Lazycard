@@ -245,10 +245,20 @@ impl Database {
         )
     }
 
-    pub fn add_tag(&self, name: &str) -> SqliteResult<TagId> {
+    pub fn add_tag(&self, name: &str) -> SqliteResult<Option<TagId>> {
+        if self
+            .sqlite
+            .query_first("SELECT id FROM tags WHERE name = ?", [name], |row| {
+                row.get::<_, TagId>(0)
+            })?
+            .is_some()
+        {
+            return Ok(None);
+        }
+
         self.sqlite
             .execute("INSERT INTO tags (name) VALUES (?)", [name])?;
-        Ok(TagId(self.sqlite.last_insert_rowid()))
+        Ok(Some(TagId(self.sqlite.last_insert_rowid())))
     }
 
     pub fn get_tags(&self, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
@@ -426,9 +436,9 @@ and another one
         .add_tag("anothertagwithalongnamethatyoucantread")
         .unwrap();
 
-    db.add_card_tag(cid1, tid1).unwrap();
-    db.add_card_tag(cid2, tid2).unwrap();
-    db.add_card_tag(cid2, tid3).unwrap();
+    db.add_card_tag(cid1, tid1.unwrap()).unwrap();
+    db.add_card_tag(cid2, tid2.unwrap()).unwrap();
+    db.add_card_tag(cid2, tid3.unwrap()).unwrap();
     // panic!("{}", db.sqlite.last_insert_rowid());
 }
 

@@ -2,11 +2,15 @@ use std::ops::Range;
 
 use database::{Database, TagId};
 use ratatui::{
-    buffer::Buffer, crossterm::event::KeyCode, layout::Rect, style::Style, text::Span,
+    buffer::Buffer,
+    crossterm::event::{KeyCode, KeyModifiers},
+    layout::Rect,
+    style::{Color, Style},
+    text::Span,
     widgets::Widget,
 };
 use utils::Formatter;
-use widgets::{Shortcut, Shortcuts, TextSegment, TokenItem, TokenList};
+use widgets::{Shortcut, Shortcuts, TextInput, TextSegment, TokenItem, TokenList};
 
 use crate::{
     app::{Action, AppInput},
@@ -20,14 +24,29 @@ pub struct TagsPage {
     tags: Vec<TagItem>,
     names: Formatter,
     list: TokenList,
+    state: State,
+    input: TextInput,
+    message: String,
+}
+
+enum State {
+    Browse,
+    New,
+    Edit(TagId),
+    Delete(TagId),
 }
 
 impl TagsPage {
-    pub const fn new() -> Self {
+    pub const fn new(colors: &Colors) -> Self {
         Self {
             tags: Vec::new(),
             names: Formatter::new(),
             list: TokenList::new(),
+            state: State::Browse,
+            input: TextInput::new()
+                .with_placeholder("Tag name...")
+                .with_colors(colors.text_input()),
+            message: String::new(),
         }
     }
 
@@ -52,57 +71,167 @@ impl TagsPage {
     ) {
         menu.push_str("Tags", colors.neutral);
 
-        if self.tags.is_empty() {
-            widgets::print_ascii(
-                area,
-                buf,
-                "No tags",
-                colors.neutral,
-                Some(widgets::Alignment::Center),
-            );
-            shortcuts.push(Shortcut::new("New", "n"));
-            return;
+        match self.state {
+            State::Browse => {
+                if self.tags.is_empty() {
+                    widgets::print_ascii(
+                        area,
+                        buf,
+                        "No tags",
+                        colors.neutral,
+                        Some(widgets::Alignment::Center),
+                    );
+                    shortcuts.push(Shortcut::new("New", "n"));
+                    return;
+                }
+
+                self.list.render(
+                    area,
+                    buf,
+                    self.tags.iter(),
+                    |area, buf, tag, is_selected| {
+                        let style = if is_selected {
+                            Style::new().fg(colors.primary)
+                        } else {
+                            Style::new()
+                        };
+                        let name = self.names.slice(tag.name.clone());
+                        Span::styled(name, style).render(area, buf);
+                    },
+                );
+
+                shortcuts.extend([
+                    Shortcut::new("New", "n"),
+                    Shortcut::new("Edit", "e"),
+                    Shortcut::new("Delete", symbols::DELETE),
+                ]);
+            }
+            State::New => {
+                let mut area = widgets::align(
+                    Rect {
+                        width: area.width / 2,
+                        height: 5,
+                        ..area
+                    },
+                    area,
+                    widgets::Alignment::CenterHorizontal,
+                );
+
+                widgets::print_ascii(
+                    area,
+                    buf,
+                    "Create a new tag",
+                    Style::new(),
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                area.y += 2;
+                area.height -= 2;
+
+                self.input.render(area, buf);
+
+                area.y += 2;
+                area.height -= 2;
+
+                if !self.message.is_empty() {
+                    widgets::print_text(
+                        area,
+                        buf,
+                        self.message.as_str(),
+                        Color::Red,
+                        false,
+                        Some(widgets::Alignment::CenterHorizontal),
+                    );
+                }
+
+                shortcuts.extend([
+                    Shortcut::new("Confirm", symbols::ENTER),
+                    Shortcut::new("Cancel", symbols::ctrl!("c")),
+                ]);
+            }
+            State::Edit(id) => {
+                //todo
+            }
+            State::Delete(id) => {
+                //todo
+            }
         }
-
-        self.list.render(
-            area,
-            buf,
-            self.tags.iter(),
-            |area, buf, tag, is_selected| {
-                let style = if is_selected {
-                    Style::new().fg(colors.primary)
-                } else {
-                    Style::new()
-                };
-                let name = self.names.slice(tag.name.clone());
-                Span::styled(name, style).render(area, buf);
-            },
-        );
-
-        shortcuts.extend([
-            Shortcut::new("New", "n"),
-            Shortcut::new("Edit", "e"),
-            Shortcut::new("Delete", symbols::DELETE),
-        ]);
     }
 
-    pub fn on_input(&mut self, input: AppInput) -> Action {
-        let key = input.key_pressed();
+    pub fn on_input(&mut self, input: AppInput, db: &Database) -> Action {
+        let (key, modifiers) = input.key_pressed_and_modifiers();
 
-        match key {
-            KeyCode::Delete => {
-                //todo: delete
-            }
-            KeyCode::Char('n') => {
-                //todo: new
-            }
-            KeyCode::Char('e') => {
-                //todo: edit
-            }
-            _ => {
-                if self.list.input(key, self.tags.iter()) {
+        match self.state {
+            State::Browse => match key {
+                KeyCode::Delete => {
+                    if let Some(id) = self.current_tag_id() {
+                        self.state = State::Delete(id);
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Char('n') => {
+                    self.state = State::New;
                     return Action::Render;
                 }
+                KeyCode::Char('e') => {
+                    if let Some(id) = self.current_tag_id() {
+                        self.state = State::Edit(id);
+                        return Action::Render;
+                    }
+                }
+                _ => {
+                    if self.list.input(key, self.tags.iter()) {
+                        return Action::Render;
+                    }
+                }
+            },
+            State::New => match key {
+                KeyCode::Enter => {
+                    // Confirm tag creation
+                    let input = self.input.as_str_trim();
+                    if !input.is_empty() {
+                        match db.add_tag(input).unwrap() {
+                            Some(id) => {
+                                self.tags.push(TagItem {
+                                    id,
+                                    name: self.names.push_str(input),
+                                    width: unicode_width::UnicodeWidthStr::width(input) as u16,
+                                });
+                                // TODO: sort tags.
+                                self.select_tag(id);
+                                self.input.clear();
+                                self.message.clear();
+                                self.state = State::Browse;
+                            }
+                            None => {
+                                self.message.clear();
+                                self.message
+                                    .extend(["Tag name '", input, "' already exists"]);
+                            }
+                        }
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Char('c') => {
+                    // Cancel tag creation
+                    let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+                    if ctrl {
+                        self.message.clear();
+                        self.state = State::Browse;
+                        return Action::Render;
+                    }
+                }
+                _ => {
+                    if self.input.input(key, modifiers) {
+                        return Action::Render;
+                    }
+                }
+            },
+            State::Edit(id) => {
+                //todo
+            }
+            State::Delete(id) => {
+                //todo
             }
         }
 
@@ -112,6 +241,23 @@ impl TagsPage {
     pub fn on_exit(&mut self) {
         self.tags.clear();
         self.names.clear();
+        self.message.clear();
+    }
+
+    fn current_tag_id(&self) -> Option<TagId> {
+        self.tags.get(self.list.index()).map(|tag| tag.id)
+    }
+
+    fn select_tag(&mut self, id: TagId) {
+        if let Some(i) = self
+            .tags
+            .iter()
+            .enumerate()
+            .find(|(_, tag)| tag.id == id)
+            .map(|(i, _)| i)
+        {
+            self.list.set_index(i);
+        }
     }
 }
 

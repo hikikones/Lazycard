@@ -4,9 +4,7 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Padding},
 };
-use widgets::{
-    KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment,
-};
+use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextSegment};
 
 use crate::{app::AppInput, settings::Colors, symbols};
 
@@ -40,13 +38,7 @@ impl SearchPage {
             state: State::Search,
             search: TextInput::new()
                 .with_placeholder("Search...")
-                .with_colors(TextInputColors {
-                    normal: Color::Reset,
-                    cursor: colors.primary,
-                    selector: colors.neutral,
-                    placeholder: colors.neutral,
-                    disabled: colors.neutral,
-                }),
+                .with_colors(colors.text_input()),
             results: Vec::new(),
             index: 0,
             query: String::new(),
