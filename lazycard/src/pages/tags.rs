@@ -19,6 +19,7 @@ use crate::{
 };
 
 // TODO: Scrollbar.
+// TODO: Ignore case-sensitivity?
 
 pub struct TagsPage {
     tags: Vec<TagItem>,
@@ -51,6 +52,7 @@ impl TagsPage {
     }
 
     pub fn on_enter(&mut self, db: &Database) {
+        // TODO: only need to populate tags once in new.
         db.get_tags_and_name(|id, name| {
             self.tags.push(TagItem {
                 id,
@@ -150,7 +152,48 @@ impl TagsPage {
                 ]);
             }
             State::Edit(id) => {
-                //todo
+                let mut area = widgets::align(
+                    Rect {
+                        width: area.width / 2,
+                        height: 5,
+                        ..area
+                    },
+                    area,
+                    widgets::Alignment::CenterHorizontal,
+                );
+
+                let tag_name = self.names.slice(self.tags[self.list.index()].name.clone());
+                widgets::print_asciis(
+                    area,
+                    buf,
+                    ["Edit tag '", tag_name, "'"],
+                    Style::new(),
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                area.y += 2;
+                area.height -= 2;
+
+                self.input.render(area, buf);
+
+                area.y += 2;
+                area.height -= 2;
+
+                if !self.message.is_empty() {
+                    widgets::print_text(
+                        area,
+                        buf,
+                        self.message.as_str(),
+                        Color::Red,
+                        false,
+                        Some(widgets::Alignment::CenterHorizontal),
+                    );
+                }
+
+                shortcuts.extend([
+                    Shortcut::new("Confirm", symbols::ENTER),
+                    Shortcut::new("Cancel", symbols::ctrl!("c")),
+                ]);
             }
             State::Delete(id) => {
                 //todo
@@ -188,14 +231,14 @@ impl TagsPage {
             State::New => match key {
                 KeyCode::Enter => {
                     // Confirm tag creation
-                    let input = self.input.as_str_trim();
-                    if !input.is_empty() {
-                        match db.add_tag(input).unwrap() {
+                    let name = self.input.as_str_trim();
+                    if !name.is_empty() {
+                        match db.add_tag(name).unwrap() {
                             Some(id) => {
                                 self.tags.push(TagItem {
                                     id,
-                                    name: self.names.push_str(input),
-                                    width: unicode_width::UnicodeWidthStr::width(input) as u16,
+                                    name: self.names.push_str(name),
+                                    width: unicode_width::UnicodeWidthStr::width(name) as u16,
                                 });
                                 // TODO: sort tags.
                                 self.select_tag(id);
@@ -206,7 +249,7 @@ impl TagsPage {
                             None => {
                                 self.message.clear();
                                 self.message
-                                    .extend(["Tag name '", input, "' already exists"]);
+                                    .extend(["Tag name '", name, "' already exists"]);
                             }
                         }
                         return Action::Render;
@@ -216,10 +259,13 @@ impl TagsPage {
                     // Cancel tag creation
                     let ctrl = modifiers.contains(KeyModifiers::CONTROL);
                     if ctrl {
+                        self.input.clear();
                         self.message.clear();
                         self.state = State::Browse;
-                        return Action::Render;
+                    } else {
+                        self.input.push_char('c');
                     }
+                    return Action::Render;
                 }
                 _ => {
                     if self.input.input(key, modifiers) {
@@ -227,9 +273,47 @@ impl TagsPage {
                     }
                 }
             },
-            State::Edit(id) => {
-                //todo
-            }
+            State::Edit(id) => match key {
+                KeyCode::Enter => {
+                    // Confirm tag edit
+                    let name = self.input.as_str_trim();
+                    if !name.is_empty() {
+                        if db.update_tag(id, name).unwrap() {
+                            // self.update_tag(id, name);
+                            let tag = &mut self.tags[self.list.index()];
+                            tag.name = self.names.push_str(name);
+                            tag.width = unicode_width::UnicodeWidthStr::width(name) as u16;
+                            //todo: sort
+                            //todo: select tag again after sort
+                            self.input.clear();
+                            self.message.clear();
+                            self.state = State::Browse;
+                        } else {
+                            self.message.clear();
+                            self.message
+                                .extend(["Tag name '", name, "' already exists"]);
+                        }
+                        return Action::Render;
+                    }
+                }
+                KeyCode::Char('c') => {
+                    // Cancel tag edit
+                    let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+                    if ctrl {
+                        self.input.clear();
+                        self.message.clear();
+                        self.state = State::Browse;
+                    } else {
+                        self.input.push_char('c');
+                    }
+                    return Action::Render;
+                }
+                _ => {
+                    if self.input.input(key, modifiers) {
+                        return Action::Render;
+                    }
+                }
+            },
             State::Delete(id) => {
                 //todo
             }
@@ -258,6 +342,14 @@ impl TagsPage {
         {
             self.list.set_index(i);
         }
+    }
+
+    fn update_tag(&mut self, id: TagId, name: &str) {
+        let tag = &mut self.tags[self.list.index()];
+        tag.name = self.names.push_str(name);
+        tag.width = unicode_width::UnicodeWidthStr::width(name) as u16;
+        //todo: sort
+        //todo: select tag
     }
 }
 

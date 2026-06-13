@@ -287,6 +287,22 @@ impl Database {
             })
     }
 
+    pub fn update_tag(&self, id: TagId, name: &str) -> SqliteResult<bool> {
+        if self
+            .sqlite
+            .query_first("SELECT id FROM tags WHERE name = ?", [name], |row| {
+                row.get::<_, TagId>(0)
+            })?
+            .is_some()
+        {
+            return Ok(false);
+        }
+
+        self.sqlite
+            .execute("UPDATE tags SET name = ?1 WHERE id = ?2", (name, id))?;
+        Ok(true)
+    }
+
     pub fn add_card_tag(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
         self.sqlite.execute(
             "INSERT INTO card_tag (card_id, tag_id) VALUES (?1, ?2)",
