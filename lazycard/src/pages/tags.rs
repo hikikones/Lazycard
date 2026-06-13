@@ -32,11 +32,6 @@ impl TagsPage {
     }
 
     pub fn on_enter(&mut self, db: &Database) {
-        //todo: test remove
-        for i in 0..150 {
-            db.add_tag(&format!("tag_{i}")).unwrap();
-        }
-
         db.get_tags_and_name(|id, name| {
             self.tags.push(TagItem {
                 id,

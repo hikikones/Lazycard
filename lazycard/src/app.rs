@@ -81,7 +81,7 @@ impl App {
         };
 
         Self {
-            route: Route::Tags,
+            route: Route::Review,
             state: AppState::Route,
             pages,
             database,
@@ -95,8 +95,7 @@ impl App {
     }
 
     pub fn run(&mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
-        // self.pages.review.on_enter(&self.database, &mut self.markup);
-        self.pages.tags.on_enter(&self.database);
+        self.pages.review.on_enter(&self.database, &mut self.markup);
         self.render(&mut terminal)?;
 
         loop {
