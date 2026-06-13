@@ -143,7 +143,7 @@ impl TagsPage {
     pub fn on_input(&mut self, input: AppInput) -> Action {
         let key = input.key_pressed();
 
-        if self.list.input(key) {
+        if self.list.input(key, self.tags.iter()) {
             return Action::Render;
         }
 
@@ -230,19 +230,15 @@ impl TagsList {
         }
     }
 
-    pub fn input(&mut self, key: KeyCode) -> bool {
+    pub fn input<T: TagItem>(&mut self, key: KeyCode, items: impl IntoIterator<Item = T>) -> bool {
+        let old_index = self.index;
+
         match key {
             KeyCode::Right => {
-                if self.index < self.total_items.saturating_sub(1) {
-                    self.index += 1;
-                    return true;
-                }
+                self.index = (self.index + 1).min(self.total_items.saturating_sub(1));
             }
             KeyCode::Left => {
-                if self.index > 0 {
-                    self.index -= 1;
-                    return true;
-                }
+                self.index = self.index.saturating_sub(1);
             }
             KeyCode::Down => {
                 //todo
@@ -250,11 +246,16 @@ impl TagsList {
             KeyCode::Up => {
                 //todo
             }
-
+            KeyCode::Home => {
+                self.index = 0;
+            }
+            KeyCode::End => {
+                self.index = self.total_items.saturating_sub(1);
+            }
             _ => {}
         }
 
-        false
+        self.index != old_index
     }
 
     pub fn render<T: TagItem>(
@@ -271,24 +272,34 @@ impl TagsList {
         // if self.size.width != area.width {
         self.total_items = 0;
 
-        let (w, mut x, mut y) = (area.width, 0, 0);
-        for (i, item) in items.clone().enumerate() {
+        for (i, x, y, _) in Self::iter(area.width, GAP, items.clone()) {
             if self.index == i {
                 self.index_col = x;
                 self.index_row = y;
             }
-
-            x += item.width() + GAP;
-
-            if x >= w {
-                x = 0;
-                y += 1;
-            }
-
             self.total_items += 1;
+            self.total_lines = y + 1;
         }
 
-        self.total_lines = y + 1;
+        // self.total_lines += 1;
+        // let (w, mut x, mut y) = (area.width, 0, 0);
+        // for (i, item) in items.clone().enumerate() {
+        //     if self.index == i {
+        //         self.index_col = x;
+        //         self.index_row = y;
+        //     }
+
+        //     x += item.width() + GAP;
+
+        //     if x >= w {
+        //         x = 0;
+        //         y += 1;
+        //     }
+
+        //     self.total_items += 1;
+        // }
+
+        // self.total_lines = y + 1;
         // }
 
         // if self.index == 14 {
@@ -316,28 +327,44 @@ impl TagsList {
         ) as u16;
 
         // Render
-        let (mut col, mut row) = (0, 0);
-        for (i, item) in items.enumerate() {
-            let item_width = item.width();
+        for (i, x, y, item) in Self::iter(area.width, GAP, items) {
+            if y >= area.height + self.scroll {
+                break;
+            }
 
-            if row >= self.scroll && row < area.height + self.scroll {
+            if y >= self.scroll {
                 let area = Rect {
-                    x: area.x + col,
-                    y: area.y + row.saturating_sub(self.scroll),
-                    width: item_width.min(area.width.saturating_sub(col + 1)),
+                    x: area.x + x,
+                    y: area.y + y.saturating_sub(self.scroll),
+                    width: item.width().min(area.width.saturating_sub(x + 1)),
                     height: 1,
                 };
                 render_item(area, buf, item, self.index == i);
             }
-
-            col += item_width + GAP;
-            if col >= area.width {
-                col = 0;
-                row += 1;
-            }
-
-            // TODO: break early?
         }
+
+        // let (mut col, mut row) = (0, 0);
+        // for (i, item) in items.enumerate() {
+        //     let item_width = item.width();
+
+        //     if row >= self.scroll && row < area.height + self.scroll {
+        //         let area = Rect {
+        //             x: area.x + col,
+        //             y: area.y + row.saturating_sub(self.scroll),
+        //             width: item_width.min(area.width.saturating_sub(col + 1)),
+        //             height: 1,
+        //         };
+        //         render_item(area, buf, item, self.index == i);
+        //     }
+
+        //     col += item_width + GAP;
+        //     if col >= area.width {
+        //         col = 0;
+        //         row += 1;
+        //     }
+
+        //     // TODO: break early?
+        // }
 
         // if row >= self.scroll && row < area.height + self.scroll {
         //     buf.set_stringn(
@@ -429,5 +456,44 @@ impl TagsList {
 
         //         line.y += 1;
         //     });
+    }
+
+    fn iter<T: TagItem>(
+        width: u16,
+        gap: u16,
+        items: impl IntoIterator<Item = T>,
+    ) -> impl Iterator<Item = (usize, u16, u16, T)> {
+        let (mut x, mut y) = (0, 0);
+        items.into_iter().enumerate().map(move |(i, item)| {
+            let (col, row) = (x, y);
+            x += item.width() + gap;
+            if x >= width {
+                x = 0;
+                y += 1;
+            }
+            (i, col, row, item)
+        })
+
+        // if self.size.width != area.width {
+        // self.total_items = 0;
+
+        // let (w, mut x, mut y) = (area.width, 0, 0);
+        // for (i, item) in items.clone().enumerate() {
+        //     if self.index == i {
+        //         self.index_col = x;
+        //         self.index_row = y;
+        //     }
+
+        //     x += item.width() + GAP;
+
+        //     if x >= w {
+        //         x = 0;
+        //         y += 1;
+        //     }
+
+        //     self.total_items += 1;
+        // }
+
+        // self.total_lines = y + 1;
     }
 }
