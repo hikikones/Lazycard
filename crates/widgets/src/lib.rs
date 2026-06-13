@@ -7,6 +7,7 @@ mod text_editor;
 // mod text_editor2;
 mod text_input;
 mod text_segment;
+mod token_list;
 mod utils;
 
 pub use ansi::*;
@@ -18,4 +19,5 @@ pub use text_editor::*;
 // pub use text_editor2::*;
 pub use text_input::*;
 pub use text_segment::*;
+pub use token_list::*;
 pub use utils::*;
