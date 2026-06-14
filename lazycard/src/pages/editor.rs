@@ -94,7 +94,12 @@ impl CardEditorPage {
         match key {
             KeyCode::Char('e') => {
                 if ctrl {
-                    match terminal.temp_leave(|| edit::edit(self.editor.as_str())) {
+                    match terminal.temp_leave(|| {
+                        edit::edit_with_builder(
+                            self.editor.as_str(),
+                            edit::Builder::new().suffix(".md"),
+                        )
+                    }) {
                         Ok(content) => {
                             self.editor.clear();
                             self.editor.push_str(&content);

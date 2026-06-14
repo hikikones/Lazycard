@@ -4,19 +4,13 @@ use ratatui::crossterm::{
 };
 use ratatui::{CompletedFrame, DefaultTerminal, Frame};
 
-pub struct Terminal {
-    terminal: DefaultTerminal,
-    clear: bool,
-}
+pub struct Terminal(DefaultTerminal);
 
 impl Terminal {
     pub fn init() -> std::io::Result<Self> {
         let terminal = ratatui::try_init()?;
 
-        Ok(Self {
-            terminal,
-            clear: false,
-        })
+        Ok(Self(terminal))
     }
 
     pub fn restore() -> std::io::Result<()> {
@@ -27,15 +21,7 @@ impl Terminal {
     where
         F: FnOnce(&mut Frame),
     {
-        if self.clear {
-            self.terminal.clear()?;
-            self.clear = false;
-        }
-
-        self.terminal.try_draw(|frame| {
-            render_callback(frame);
-            std::io::Result::Ok(())
-        })
+        self.0.draw(render_callback)
     }
 
     pub fn temp_leave<T>(&mut self, f: impl FnOnce() -> std::io::Result<T>) -> std::io::Result<T> {
@@ -49,7 +35,7 @@ impl Terminal {
         execute!(stdout, EnterAlternateScreen)?;
         enable_raw_mode()?;
 
-        self.clear = true;
+        self.0.clear()?;
 
         t
     }
