@@ -311,6 +311,18 @@ impl Database {
         Ok(())
     }
 
+    pub fn get_tags_for_card(&self, id: CardId, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
+        self.sqlite.query(
+            "SELECT tag_id FROM card_tag WHERE card_id = ?",
+            [id],
+            |row| {
+                let id = row.get(0)?;
+                f(id);
+                Ok(())
+            },
+        )
+    }
+
     fn migrate(&self) {
         const VERSION: SqliteId = 1;
 

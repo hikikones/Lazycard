@@ -125,7 +125,7 @@ impl CardsPage {
                 return self.toggle_show_tags();
             }
             KeyCode::Char(' ') => {
-                if self.show_tags && !self.tags.is_empty() {
+                if self.show_tags {
                     if self.tags.toggle_selection() {
                         self.update_cards(db);
                         return Action::Render;
@@ -264,14 +264,16 @@ impl TagsSidebar {
     }
 
     fn toggle_selection(&mut self) -> bool {
-        let mut render = false;
+        if self.tags.is_empty() {
+            return false;
+        }
+
         for i in self.list.selection_inclusive() {
             let id = self.tags[i];
             self.toggle(id);
-            render = true;
         }
 
-        render
+        true
     }
 
     fn iter(&self) -> impl ExactSizeIterator<Item = TagId> {

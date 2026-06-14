@@ -1,10 +1,15 @@
-use database::{CardId, Database};
+use std::collections::HashMap;
+
+use database::{CardId, Database, TagId};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
+    style::{Color, Style},
 };
-use widgets::{CursorMove, KittyGraphics, Markup, Shortcut, Shortcuts, TextEditor, TextSegment};
+use widgets::{
+    CursorMove, KittyGraphics, List, ListItem, Markup, Shortcut, Shortcuts, TextEditor, TextSegment,
+};
 
 use crate::{
     app::{Action, AppInput},
@@ -16,14 +21,24 @@ use crate::{
 
 pub struct CardEditorPage {
     editor: TextEditor,
-    state: CardEditorState,
+    // state: CardEditorState,
+    // editor_state: EditorState,
     preview: bool,
+    show_tags: bool,
+    tags: TagsSidebar,
+    card: Option<CardId>,
 }
 
-enum CardEditorState {
-    New,
-    Edit(CardId),
-}
+// enum CardEditorState {
+//     New,
+//     Edit(CardId),
+// }
+
+// enum EditorState {
+//     Edit,
+//     Preview,
+//     Tags,
+// }
 
 impl CardEditorPage {
     pub fn new(colors: &Colors) -> Self {
@@ -31,43 +46,69 @@ impl CardEditorPage {
             editor: TextEditor::new()
                 .with_placeholder("Content...")
                 .with_colors(colors.primary, colors.neutral),
-            state: CardEditorState::New,
+            // state: CardEditorState::New,
+            // editor_state: EditorState::Edit,
             preview: false,
+            show_tags: false,
+            tags: TagsSidebar::new(colors),
+            card: None,
         }
     }
 
     pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
-        match id {
-            Some(id) => {
-                self.editor.clear();
-                db.get_card_content(id, |content| {
-                    self.editor.push_str(content);
-                })
-                .unwrap();
-                self.editor.move_cursor(CursorMove::Start, false);
-                self.state = CardEditorState::Edit(id);
-            }
-            None => {
-                self.state = CardEditorState::New;
-            }
+        self.preview = false;
+        self.card = id;
+        self.tags.update(db, id);
+
+        if let Some(id) = id {
+            self.editor.clear();
+            db.get_card_content(id, |content| {
+                self.editor.push_str(content);
+            })
+            .unwrap();
+            self.editor.move_cursor(CursorMove::Start, false);
         }
     }
 
     pub fn on_render(
         &mut self,
-        area: Rect,
+        mut area: Rect,
         buf: &mut Buffer,
-        colors: &Colors,
+        db: &Database,
         menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
+        colors: &Colors,
     ) {
-        let title = match self.state {
-            CardEditorState::New => "New Card",
-            CardEditorState::Edit(_) => "Edit Card",
+        let title = if self.card.is_some() {
+            "Edit Card"
+        } else {
+            "New Card"
         };
         menu.push_str(title, colors.neutral);
+
+        if self.show_tags {
+            let tags_width = ((0.25 * area.width as f32).round() as u16).min(20);
+            self.tags.render(
+                Rect {
+                    width: tags_width,
+                    ..area
+                },
+                buf,
+                db,
+                colors,
+            );
+            area.width = area.width.saturating_sub(tags_width);
+            area.x += tags_width + 2;
+
+            if !self.tags.is_empty() {
+                shortcuts.extend([
+                    Shortcut::new("Toggle", symbols::SPACE),
+                    Shortcut::new("Reset", "r"),
+                ]);
+            }
+        }
 
         if self.preview {
             markup.render(area, buf, self.editor.as_str(), kitty);
@@ -77,7 +118,8 @@ impl CardEditorPage {
 
         shortcuts.extend([
             Shortcut::new("Save", symbols::ctrl!("s")),
-            Shortcut::new("Preview (toggle)", symbols::ctrl!("p")),
+            Shortcut::new("Preview", symbols::ctrl!("p")),
+            Shortcut::new("Tags", symbols::ctrl!("t")),
             Shortcut::new("Edit", symbols::ctrl!("e")),
         ]);
     }
@@ -91,6 +133,7 @@ impl CardEditorPage {
     ) -> Action {
         let (key, modifiers) = input.key_pressed_and_modifiers();
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+
         match key {
             KeyCode::Char('e') => {
                 if ctrl {
@@ -116,7 +159,7 @@ impl CardEditorPage {
                 if ctrl {
                     self.preview = !self.preview;
                     return Action::Render;
-                } else if !self.preview {
+                } else if !self.show_tags && !self.preview {
                     self.editor.push_char('p');
                     return Action::Render;
                 }
@@ -128,13 +171,45 @@ impl CardEditorPage {
                         markup.clear();
                         return Action::Render;
                     }
-                } else if !self.preview {
+                } else if !self.show_tags && !self.preview {
                     self.editor.push_char('s');
                     return Action::Render;
                 }
             }
+            KeyCode::Char('t') => {
+                if ctrl {
+                    self.show_tags = !self.show_tags;
+                } else if !self.show_tags && !self.preview {
+                    self.editor.push_char('t');
+                }
+                return Action::Render;
+            }
+            KeyCode::Char(' ') => {
+                if self.show_tags {
+                    if self.tags.toggle_selection() {
+                        return Action::Render;
+                    }
+                } else if !self.preview {
+                    self.editor.push_char(' ');
+                    return Action::Render;
+                }
+            }
+            KeyCode::Char('r') => {
+                if self.show_tags {
+                    if self.tags.reset_toggles(db, self.card) {
+                        return Action::Render;
+                    }
+                } else if !self.preview {
+                    self.editor.push_char('r');
+                    return Action::Render;
+                }
+            }
             _ => {
-                if self.preview {
+                if self.show_tags {
+                    if self.tags.list.input(key, modifiers) {
+                        return Action::Render;
+                    }
+                } else if self.preview {
                     if markup.input(key) {
                         return Action::Render;
                     }
@@ -148,22 +223,167 @@ impl CardEditorPage {
     }
 
     pub fn on_exit(&mut self) {
-        if let CardEditorState::Edit(_) = self.state {
+        if self.card.is_some() {
             self.editor.clear();
+            self.show_tags = false;
         }
     }
 
     fn save(&mut self, db: &mut Database) {
-        match self.state {
-            CardEditorState::New => {
-                db.add_card(self.editor.as_str()).unwrap();
-            }
-            CardEditorState::Edit(id) => {
+        match self.card.take() {
+            Some(id) => {
                 db.update_card(id, self.editor.as_str()).unwrap();
             }
+            None => {
+                db.add_card(self.editor.as_str()).unwrap();
+            }
         }
-        self.state = CardEditorState::New;
+
+        // TODO: Add/remove tags.
+
         self.preview = false;
         self.editor.clear();
+        self.tags.clear_toggles();
+    }
+}
+
+struct TagsSidebar {
+    tags: Vec<TagId>,
+    toggles: HashMap<TagId, TagState>,
+    list: List,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum TagState {
+    Add,
+    Keep,
+    Remove,
+}
+
+impl TagsSidebar {
+    fn new(colors: &Colors) -> Self {
+        Self {
+            tags: Vec::new(),
+            toggles: HashMap::new(),
+            list: List::new(),
+        }
+    }
+
+    fn update(&mut self, db: &Database, cid: Option<CardId>) {
+        self.tags.clear();
+        db.get_tags(|tid| self.tags.push(tid)).unwrap();
+        self.reset_toggles(db, cid);
+    }
+
+    const fn is_empty(&self) -> bool {
+        self.tags.is_empty()
+    }
+
+    fn current_tag(&self) -> Option<TagId> {
+        self.tags.get(self.list.index()).copied()
+    }
+
+    fn toggles(&self) -> impl Iterator<Item = (TagId, TagState)> {
+        self.toggles.iter().map(|(id, state)| (*id, *state))
+    }
+
+    fn toggle(&mut self, id: TagId) {
+        match self.toggles.get_mut(&id) {
+            Some(state) => match state {
+                TagState::Add => {
+                    self.toggles.remove(&id);
+                }
+                TagState::Keep => {
+                    *state = TagState::Remove;
+                }
+                TagState::Remove => {
+                    *state = TagState::Keep;
+                }
+            },
+            None => {
+                self.toggles.insert(id, TagState::Add);
+            }
+        }
+    }
+
+    fn toggle_selection(&mut self) -> bool {
+        if self.tags.is_empty() {
+            return false;
+        }
+
+        for i in self.list.selection_inclusive() {
+            let id = self.tags[i];
+            self.toggle(id);
+        }
+
+        true
+    }
+
+    fn reset_toggles(&mut self, db: &Database, cid: Option<CardId>) -> bool {
+        let is_empty = self.toggles.is_empty();
+        self.toggles.clear();
+
+        if let Some(cid) = cid {
+            db.get_tags_for_card(cid, |tid| {
+                self.toggles.insert(tid, TagState::Keep);
+            })
+            .unwrap();
+        }
+
+        !is_empty
+    }
+
+    fn clear_toggles(&mut self) {
+        self.toggles.clear();
+    }
+
+    fn render(&mut self, mut area: Rect, buf: &mut Buffer, db: &Database, colors: &Colors) {
+        widgets::print_ascii(
+            area,
+            buf,
+            "Tags",
+            Style::new(),
+            Some(widgets::Alignment::CenterHorizontal),
+        );
+
+        if self.tags.is_empty() {
+            widgets::print_ascii(
+                area,
+                buf,
+                "No tags",
+                Style::new(),
+                Some(widgets::Alignment::CenterHorizontal),
+            );
+            return;
+        }
+
+        area.y += 1;
+        area.height = area.height.saturating_sub(1);
+
+        self.list.set_colors(colors.neutral, None).render(
+            area,
+            buf,
+            self.tags.iter().copied(),
+            |line, buf, id, item| {
+                let symbol = match item {
+                    ListItem::Selected => symbols::concat!(symbols::SELECTED, " "),
+                    ListItem::Selection => symbols::concat!(symbols::SELECTION, " "),
+                    ListItem::Normal => "",
+                };
+                let color = self
+                    .toggles
+                    .get(&id)
+                    .map(|state| match state {
+                        TagState::Add | TagState::Keep => Color::Green,
+                        TagState::Remove => Color::Red,
+                    })
+                    .unwrap_or(Color::Reset);
+
+                db.get_tag_name(id, |name| {
+                    widgets::print_texts(line, buf, [symbol, name], color, false, None);
+                })
+                .unwrap();
+            },
+        );
     }
 }

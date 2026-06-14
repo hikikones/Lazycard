@@ -296,11 +296,12 @@ impl App {
                         self.pages.editor.on_render(
                             body,
                             buf,
-                            colors,
+                            &self.database,
                             &mut self.text,
                             &mut self.markup,
                             &mut self.kitty,
                             &mut self.shortcuts,
+                            colors,
                         );
                     }
                     Route::Cards => {
