@@ -351,6 +351,17 @@ impl Database {
             .unwrap();
     }
 
+    pub fn delete_cards_with_tag(&self, tid: TagId) {
+        self.sqlite
+            .execute(
+                "DELETE FROM cards WHERE id IN ( \
+                        SELECT card_id FROM card_tags WHERE tag_id = ? \
+                    )",
+                [tid],
+            )
+            .unwrap();
+    }
+
     fn migrate(&self) {
         const VERSION: SqliteId = 1;
 

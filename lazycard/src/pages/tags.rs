@@ -363,7 +363,7 @@ impl TagsPage {
                     KeyCode::Char('y') => {
                         // Delete tag
                         if delete_cards {
-                            // TODO: Delete cards with selected tag.
+                            db.delete_cards_with_tag(id);
                         }
 
                         db.delete_tag(id);
