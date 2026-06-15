@@ -47,11 +47,15 @@ impl Database {
     }
 
     pub fn get_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query("SELECT id FROM cards", (), |row| {
-            let id = row.get(0)?;
-            f(id);
-            Ok(())
-        })
+        self.sqlite.query(
+            "SELECT id FROM cards ORDER BY create_time DESC",
+            (),
+            |row| {
+                let id = row.get(0)?;
+                f(id);
+                Ok(())
+            },
+        )
     }
 
     pub fn get_cards_with_tags(
@@ -96,6 +100,9 @@ impl Database {
             self.s.push_str("))");
         }
 
+        // Sort by newest
+        self.s.push_str(" ORDER BY c.create_time DESC");
+
         self.sqlite.query(self.s.as_str(), (), |row| {
             let id = row.get(0)?;
             f(id);
@@ -108,7 +115,7 @@ impl Database {
             "SELECT c.id FROM cards c WHERE NOT EXISTS (
                     SELECT 1 FROM card_tags ct \
                     WHERE ct.card_id = c.id \
-                )",
+                ) ORDER BY c.create_time DESC",
             (),
             |row| {
                 let id = row.get(0)?;
@@ -147,6 +154,7 @@ impl Database {
         )
     }
 
+    // TODO: Use this in review
     pub fn get_due_card_random(&self) -> SqliteResult<Option<CardId>> {
         self.get_due_card_random_except(CardId::ZERO)
     }
@@ -262,11 +270,12 @@ impl Database {
     }
 
     pub fn get_tags(&self, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
-        self.sqlite.query("SELECT id FROM tags", (), |row| {
-            let id = row.get(0)?;
-            f(id);
-            Ok(())
-        })
+        self.sqlite
+            .query("SELECT id FROM tags ORDER BY name", (), |row| {
+                let id = row.get(0)?;
+                f(id);
+                Ok(())
+            })
     }
 
     pub fn get_tags_and_name(&self, mut f: impl FnMut(TagId, &str)) -> SqliteResult<()> {
@@ -311,6 +320,7 @@ impl Database {
         Ok(())
     }
 
+    // TODO: Add query for cards count (amount of tags for a card)
     pub fn get_tags_for_card(&self, id: CardId, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
         self.sqlite.query(
             "SELECT tag_id FROM card_tags WHERE card_id = ?",
