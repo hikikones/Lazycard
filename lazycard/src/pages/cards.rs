@@ -65,7 +65,7 @@ impl CardsPage {
         shortcuts: &mut Shortcuts,
     ) {
         if self.show_tags {
-            let tags_width = ((0.25 * area.width as f32).round() as u16).min(20);
+            let tags_width = (0.30 * area.width as f32).round() as u16;
             self.tags.render(
                 Rect {
                     width: tags_width,
@@ -360,8 +360,17 @@ impl TagsSidebar {
                     Color::Reset
                 };
 
-                db.get_tag_name(id, |name| {
-                    widgets::print_texts(line, buf, [symbol, name], color, false, None);
+                db.get_name_and_cards_count_for_tag(id, |name, cards_count| {
+                    utils::format_int(cards_count, |cards_count| {
+                        widgets::print_texts(
+                            line,
+                            buf,
+                            [symbol, name, " (", cards_count, ")"],
+                            color,
+                            false,
+                            None,
+                        );
+                    });
                 });
             },
         );

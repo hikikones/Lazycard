@@ -290,6 +290,19 @@ impl Database {
             .unwrap();
     }
 
+    pub fn get_tags_and_cards_count(&self, mut f: impl FnMut(TagId, &str, u32)) {
+        self.sqlite
+            .query(
+                "SELECT t.id, t.name, COUNT(ct.card_id) FROM tags t \
+                    LEFT JOIN card_tags ct ON ct.tag_id = t.id \
+                    GROUP BY t.id, t.name \
+                    ORDER BY t.name",
+                (),
+                |row| Ok(f(row.get(0)?, row.get_ref(1)?.as_str()?, row.get(2)?)),
+            )
+            .unwrap();
+    }
+
     pub fn get_tag_name(&self, id: TagId, f: impl FnOnce(&str)) {
         self.sqlite
             .query_single("SELECT id, name FROM tags WHERE id = ?", [id], |row| {
@@ -340,6 +353,29 @@ impl Database {
                 |row| Ok(f(row.get(0)?)),
             )
             .unwrap();
+    }
+
+    pub fn get_cards_count_for_tag(&self, id: TagId) -> u32 {
+        self.sqlite
+            .query_single(
+                "SELECT COUNT(*) FROM card_tags WHERE tag_id = ?",
+                [id],
+                |row| row.get(0),
+            )
+            .unwrap()
+    }
+
+    pub fn get_name_and_cards_count_for_tag(&self, id: TagId, f: impl FnOnce(&str, u32)) {
+        self.sqlite
+            .query_single(
+                "SELECT t.name, COUNT(ct.card_id) FROM tags t \
+                    LEFT JOIN card_tags ct ON ct.tag_id = t.id \
+                    WHERE t.id = ? \
+                    GROUP BY t.id, t.name",
+                [id],
+                |row| Ok(f(row.get_ref(0)?.as_str()?, row.get(1)?)),
+            )
+            .unwrap()
     }
 
     pub fn delete_tag_for_card(&self, cid: CardId, tid: TagId) {
