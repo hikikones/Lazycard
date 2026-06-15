@@ -21,24 +21,11 @@ use crate::{
 
 pub struct CardEditorPage {
     editor: TextEditor,
-    // state: CardEditorState,
-    // editor_state: EditorState,
     preview: bool,
     show_tags: bool,
     tags: TagsSidebar,
     card: Option<CardId>,
 }
-
-// enum CardEditorState {
-//     New,
-//     Edit(CardId),
-// }
-
-// enum EditorState {
-//     Edit,
-//     Preview,
-//     Tags,
-// }
 
 impl CardEditorPage {
     pub fn new(colors: &Colors) -> Self {
@@ -46,19 +33,17 @@ impl CardEditorPage {
             editor: TextEditor::new()
                 .with_placeholder("Content...")
                 .with_colors(colors.primary, colors.neutral),
-            // state: CardEditorState::New,
-            // editor_state: EditorState::Edit,
             preview: false,
             show_tags: false,
-            tags: TagsSidebar::new(colors),
+            tags: TagsSidebar::new(),
             card: None,
         }
     }
 
     pub fn on_enter(&mut self, id: Option<CardId>, db: &Database) {
         self.preview = false;
+        self.tags.update(db);
         self.card = id;
-        self.tags.update(db, id);
 
         if let Some(id) = id {
             self.editor.clear();
@@ -67,6 +52,7 @@ impl CardEditorPage {
             })
             .unwrap();
             self.editor.move_cursor(CursorMove::Start, false);
+            self.tags.reset_toggles(db, Some(id));
         }
     }
 
@@ -226,20 +212,29 @@ impl CardEditorPage {
         if self.card.is_some() {
             self.editor.clear();
             self.show_tags = false;
+            self.tags.clear_toggles();
         }
     }
 
-    fn save(&mut self, db: &mut Database) {
-        match self.card.take() {
-            Some(id) => {
-                db.update_card(id, self.editor.as_str()).unwrap();
-            }
-            None => {
-                db.add_card(self.editor.as_str()).unwrap();
-            }
-        }
+    fn save(&mut self, db: &Database) {
+        let cid = match self.card.take() {
+            Some(cid) => {
+                db.update_card(cid, self.editor.as_str()).unwrap();
 
-        // TODO: Add/remove tags.
+                // Remove tags
+                for tid in self.tags.to_remove() {
+                    db.delete_tag_for_card(cid, tid).unwrap();
+                }
+
+                cid
+            }
+            None => db.add_card(self.editor.as_str()).unwrap(),
+        };
+
+        // Add tags
+        for tid in self.tags.to_add() {
+            db.add_tag_for_card(cid, tid).unwrap();
+        }
 
         self.preview = false;
         self.editor.clear();
@@ -261,7 +256,7 @@ enum TagState {
 }
 
 impl TagsSidebar {
-    fn new(colors: &Colors) -> Self {
+    fn new() -> Self {
         Self {
             tags: Vec::new(),
             toggles: HashMap::new(),
@@ -269,22 +264,13 @@ impl TagsSidebar {
         }
     }
 
-    fn update(&mut self, db: &Database, cid: Option<CardId>) {
+    fn update(&mut self, db: &Database) {
         self.tags.clear();
         db.get_tags(|tid| self.tags.push(tid)).unwrap();
-        self.reset_toggles(db, cid);
     }
 
     const fn is_empty(&self) -> bool {
         self.tags.is_empty()
-    }
-
-    fn current_tag(&self) -> Option<TagId> {
-        self.tags.get(self.list.index()).copied()
-    }
-
-    fn toggles(&self) -> impl Iterator<Item = (TagId, TagState)> {
-        self.toggles.iter().map(|(id, state)| (*id, *state))
     }
 
     fn to_add(&self) -> impl Iterator<Item = TagId> {

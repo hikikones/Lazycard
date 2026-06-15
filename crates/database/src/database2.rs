@@ -60,8 +60,8 @@ impl Database {
         excludes: impl ExactSizeIterator<Item = TagId>,
         mut f: impl FnMut(CardId),
     ) -> SqliteResult<()> {
-        let mut itoa = itoa::Buffer::new();
         self.s.clear();
+        let mut itoa = itoa::Buffer::new();
 
         // All cards
         self.s.push_str("SELECT c.id FROM cards c");
@@ -321,6 +321,14 @@ impl Database {
                 Ok(())
             },
         )
+    }
+
+    pub fn delete_tag_for_card(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
+        self.sqlite.execute(
+            "DELETE FROM card_tags WHERE card_id = ?1 AND tag_id = ?2",
+            (cid, tid),
+        )?;
+        Ok(())
     }
 
     fn migrate(&self) {
