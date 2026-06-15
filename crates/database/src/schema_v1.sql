@@ -24,7 +24,7 @@ CREATE TABLE tags (
     name TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE card_tag (
+CREATE TABLE card_tags (
     card_id INTEGER NOT NULL,
     tag_id INTEGER NOT NULL,
     PRIMARY KEY (card_id, tag_id)
@@ -77,7 +77,7 @@ END;
 --             ('first' || char(10) || char(10) || '---' || char(10) || char(10) || 'second' || char(10) || char(10) || '---' || char(10) || char(10) || 'third'),
 --             ('tagless card');
 
--- INSERT INTO card_tag (card_id, tag_id)
+-- INSERT INTO card_tags (card_id, tag_id)
 --     VALUES  (1, 1),
 --             (2, 2),
 --             (2, 3),

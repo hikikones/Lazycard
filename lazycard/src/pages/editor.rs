@@ -287,6 +287,20 @@ impl TagsSidebar {
         self.toggles.iter().map(|(id, state)| (*id, *state))
     }
 
+    fn to_add(&self) -> impl Iterator<Item = TagId> {
+        self.toggles
+            .iter()
+            .filter(|(_, state)| matches!(state, TagState::Add))
+            .map(|(id, _)| *id)
+    }
+
+    fn to_remove(&self) -> impl Iterator<Item = TagId> {
+        self.toggles
+            .iter()
+            .filter(|(_, state)| matches!(state, TagState::Remove))
+            .map(|(id, _)| *id)
+    }
+
     fn toggle(&mut self, id: TagId) {
         match self.toggles.get_mut(&id) {
             Some(state) => match state {

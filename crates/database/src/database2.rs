@@ -70,7 +70,7 @@ impl Database {
         let next_token = if includes.len() > 0 {
             let len = includes.len();
             self.s
-                .push_str(" JOIN card_tag ct ON ct.card_id = c.id WHERE ct.tag_id IN (");
+                .push_str(" JOIN card_tags ct ON ct.card_id = c.id WHERE ct.tag_id IN (");
             for tid in includes {
                 self.s.extend([itoa.format(tid.0), ","]);
             }
@@ -87,7 +87,7 @@ impl Database {
         if excludes.len() > 0 {
             self.s.push_str(next_token);
             self.s.push_str(
-                "NOT EXISTS (SELECT 1 FROM card_tag ct2 WHERE ct2.card_id = c.id AND ct2.tag_id IN (",
+                "NOT EXISTS (SELECT 1 FROM card_tags ct2 WHERE ct2.card_id = c.id AND ct2.tag_id IN (",
             );
             for tid in excludes {
                 self.s.extend([itoa.format(tid.0), ","]);
@@ -106,7 +106,7 @@ impl Database {
     pub fn get_cards_without_tags(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
         self.sqlite.query(
             "SELECT c.id FROM cards c WHERE NOT EXISTS (
-                    SELECT 1 FROM card_tag ct \
+                    SELECT 1 FROM card_tags ct \
                     WHERE ct.card_id = c.id \
                 )",
             (),
@@ -303,9 +303,9 @@ impl Database {
         Ok(true)
     }
 
-    pub fn add_card_tag(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
+    pub fn add_tag_for_card(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
         self.sqlite.execute(
-            "INSERT INTO card_tag (card_id, tag_id) VALUES (?1, ?2)",
+            "INSERT INTO card_tags (card_id, tag_id) VALUES (?1, ?2)",
             (cid, tid),
         )?;
         Ok(())
@@ -313,7 +313,7 @@ impl Database {
 
     pub fn get_tags_for_card(&self, id: CardId, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
         self.sqlite.query(
-            "SELECT tag_id FROM card_tag WHERE card_id = ?",
+            "SELECT tag_id FROM card_tags WHERE card_id = ?",
             [id],
             |row| {
                 let id = row.get(0)?;
@@ -464,9 +464,9 @@ and another one
         .add_tag("anothertagwithalongnamethatyoucantread")
         .unwrap();
 
-    db.add_card_tag(cid1, tid1.unwrap()).unwrap();
-    db.add_card_tag(cid2, tid2.unwrap()).unwrap();
-    db.add_card_tag(cid2, tid3.unwrap()).unwrap();
+    db.add_tag_for_card(cid1, tid1.unwrap()).unwrap();
+    db.add_tag_for_card(cid2, tid2.unwrap()).unwrap();
+    db.add_tag_for_card(cid2, tid3.unwrap()).unwrap();
     // panic!("{}", db.sqlite.last_insert_rowid());
 }
 
@@ -480,25 +480,25 @@ and another one
 // WHERE
 //     EXISTS (
 //         SELECT 1
-//         FROM card_tag ct
+//         FROM card_tags ct
 //         WHERE ct.card_id = c.id
 //           AND ct.tag_id = ?
 //     )
 // AND EXISTS (
 //         SELECT 1
-//         FROM card_tag ct
+//         FROM card_tags ct
 //         WHERE ct.card_id = c.id
 //           AND ct.tag_id = ?
 //     )
 // AND NOT EXISTS (
 //         SELECT 1
-//         FROM card_tag ct
+//         FROM card_tags ct
 //         WHERE ct.card_id = c.id
 //           AND ct.tag_id = ?
 //     )
 // AND NOT EXISTS (
 //         SELECT 1
-//         FROM card_tag ct
+//         FROM card_tags ct
 //         WHERE ct.card_id = c.id
 //           AND ct.tag_id = ?
 //     );
@@ -513,7 +513,7 @@ and another one
 //     sql.push_str(
 //         " AND EXISTS (
 //             SELECT 1
-//             FROM card_tag ct
+//             FROM card_tags ct
 //             WHERE ct.card_id = c.id
 //               AND ct.tag_id = ?
 //         )",
@@ -524,7 +524,7 @@ and another one
 //     sql.push_str(
 //         " AND NOT EXISTS (
 //             SELECT 1
-//             FROM card_tag ct
+//             FROM card_tags ct
 //             WHERE ct.card_id = c.id
 //               AND ct.tag_id = ?
 //         )",
