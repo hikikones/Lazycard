@@ -71,7 +71,7 @@ impl TokenList {
                     {
                         if y == self.index_row + 1 {
                             let d = self.index_col.abs_diff(x);
-                            if d < distance {
+                            if d <= distance {
                                 next_index = i;
                                 distance = d;
                             }
@@ -90,7 +90,7 @@ impl TokenList {
                     for (i, x, y, _) in iter_items(self.size.width, self.gap, items) {
                         if y == self.index_row.saturating_sub(1) {
                             let d = self.index_col.abs_diff(x);
-                            if d < distance {
+                            if d <= distance {
                                 next_index = i;
                                 distance = d;
                             }
