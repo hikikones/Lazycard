@@ -74,7 +74,7 @@ impl App {
         let pages = Pages {
             review: ReviewPage::new(),
             editor: CardEditorPage::new(colors),
-            cards: CardsPage::new(colors),
+            cards: CardsPage::new(),
             tags: TagsPage::new(&database, colors),
             search: SearchPage::new(colors),
             logs,
@@ -189,7 +189,7 @@ impl App {
                     match self.route {
                         Route::Review => self.pages.review.on_exit(),
                         Route::Editor(_) => self.pages.editor.on_exit(),
-                        Route::Cards => self.pages.cards.on_exit(),
+                        Route::Cards(_) => self.pages.cards.on_exit(),
                         Route::Tags => self.pages.tags.on_exit(),
                     }
 
@@ -201,7 +201,7 @@ impl App {
                             self.pages.review.on_enter(&self.database, &mut self.markup)
                         }
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
-                        Route::Cards => self.pages.cards.on_enter(&mut self.database),
+                        Route::Cards(id) => self.pages.cards.on_enter(&mut self.database, id),
                         Route::Tags => self.pages.tags.on_enter(),
                     }
 
@@ -253,7 +253,7 @@ impl App {
             for (route, name, spacing) in [
                 (Route::Review, "Review", SPACING),
                 (Route::Editor(None), "Editor", SPACING),
-                (Route::Cards, "Cards", SPACING),
+                (Route::Cards(None), "Cards", SPACING),
                 (Route::Tags, "Tags", ""),
             ] {
                 let is_current =
@@ -304,7 +304,7 @@ impl App {
                             colors,
                         );
                     }
-                    Route::Cards => {
+                    Route::Cards(_) => {
                         self.pages.cards.on_render(
                             body,
                             buf,
@@ -395,7 +395,7 @@ impl App {
                     &mut self.database,
                     terminal,
                 ),
-                Route::Cards => {
+                Route::Cards(_) => {
                     self.pages
                         .cards
                         .on_input(input, &mut self.markup, &mut self.database)
@@ -418,7 +418,7 @@ impl App {
                     SearchAction::Goto(id) => {
                         self.state = AppState::Route;
                         self.pages.search.on_exit();
-                        todo!("goto cards")
+                        Action::Route(Route::Cards(id))
                     }
                 }
             }

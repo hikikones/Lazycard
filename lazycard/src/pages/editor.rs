@@ -239,6 +239,7 @@ impl CardEditorPage {
         }
 
         self.preview = false;
+        self.show_tags = false;
         self.editor.clear();
         self.tags.clear_toggles();
     }

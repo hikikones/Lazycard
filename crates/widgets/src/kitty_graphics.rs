@@ -1,6 +1,7 @@
 use ratatui::{buffer::Buffer, layout::Rect};
 
 // TODO: Handle division by zero?
+// Use Size struct from ratatui insted of custom Area.
 
 pub struct KittyGraphics {
     frames: Vec<image::Frame>,

@@ -26,18 +26,31 @@ pub struct CardsPage {
 }
 
 impl CardsPage {
-    pub fn new(colors: &Colors) -> Self {
+    pub fn new() -> Self {
         Self {
             cards: Vec::new(),
             index: 0,
             show_tags: false,
-            tags: TagsSidebar::new(colors),
+            tags: TagsSidebar::new(),
         }
     }
 
-    pub fn on_enter(&mut self, db: &mut Database) {
-        self.tags.update(db);
-        self.update_cards(db);
+    pub fn on_enter(&mut self, db: &mut Database, id: Option<CardId>) {
+        match id {
+            Some(id) => {
+                self.tags.clear();
+                db.get_tags(|tid| self.tags.tags.push(tid));
+                db.get_tags_for_card(id, |tid| {
+                    self.tags.includes.insert(tid);
+                });
+                self.update_cards(db);
+                self.select_card(id);
+            }
+            None => {
+                self.tags.update(db);
+                self.update_cards(db);
+            }
+        }
     }
 
     pub fn on_render(
@@ -185,6 +198,19 @@ impl CardsPage {
         Action::None
     }
 
+    fn select_card(&mut self, id: CardId) {
+        if let Some(i) = self
+            .cards
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, cid)| id == *cid)
+            .map(|(i, _)| i)
+        {
+            self.index = i;
+        }
+    }
+
     fn delete_card(&mut self, db: &Database, markup: &mut Markup) -> Action {
         if self.index < self.cards.len() {
             let id = self.cards.remove(self.index);
@@ -223,7 +249,7 @@ struct TagsSidebar {
 }
 
 impl TagsSidebar {
-    fn new(colors: &Colors) -> Self {
+    fn new() -> Self {
         Self {
             tags: Vec::new(),
             includes: HashSet::new(),
@@ -242,10 +268,6 @@ impl TagsSidebar {
 
     const fn is_empty(&self) -> bool {
         self.tags.is_empty()
-    }
-
-    fn current_tag(&self) -> Option<TagId> {
-        self.tags.get(self.list.index()).copied()
     }
 
     fn toggle(&mut self, id: TagId) {
@@ -274,10 +296,6 @@ impl TagsSidebar {
         true
     }
 
-    fn iter(&self) -> impl ExactSizeIterator<Item = TagId> {
-        self.tags.iter().copied()
-    }
-
     fn includes(&self) -> impl ExactSizeIterator<Item = TagId> {
         self.includes.iter().copied()
     }
@@ -292,6 +310,13 @@ impl TagsSidebar {
         self.includes.clear();
         self.excludes.clear();
         has_includes || has_excludes
+    }
+
+    fn clear(&mut self) {
+        self.tags.clear();
+        self.includes.clear();
+        self.excludes.clear();
+        self.list.reset();
     }
 
     fn render(&mut self, mut area: Rect, buf: &mut Buffer, db: &Database, colors: &Colors) {

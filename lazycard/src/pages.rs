@@ -1,6 +1,5 @@
 mod cards;
 mod editor;
-// mod editor2;
 mod logs;
 mod review;
 mod search;
@@ -8,7 +7,6 @@ mod tags;
 
 pub use cards::*;
 pub use editor::*;
-// pub use editor2::*;
 pub use logs::*;
 pub use review::*;
 pub use search::*;
@@ -27,7 +25,7 @@ pub struct Pages {
 pub enum Route {
     Review,
     Editor(Option<database::CardId>),
-    Cards,
+    Cards(Option<database::CardId>),
     Tags,
 }
 
@@ -35,8 +33,8 @@ impl Route {
     pub const fn next(self) -> Self {
         match self {
             Self::Review => Self::Editor(None),
-            Self::Editor(_) => Self::Cards,
-            Self::Cards => Self::Tags,
+            Self::Editor(_) => Self::Cards(None),
+            Self::Cards(_) => Self::Tags,
             Self::Tags => Self::Review,
         }
     }
@@ -45,8 +43,8 @@ impl Route {
         match self {
             Self::Review => Self::Tags,
             Self::Editor(_) => Self::Review,
-            Self::Cards => Self::Editor(None),
-            Self::Tags => Self::Cards,
+            Self::Cards(_) => Self::Editor(None),
+            Self::Tags => Self::Cards(None),
         }
     }
 }
