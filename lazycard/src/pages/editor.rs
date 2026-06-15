@@ -49,10 +49,9 @@ impl CardEditorPage {
             self.editor.clear();
             db.get_card_content(id, |content| {
                 self.editor.push_str(content);
-            })
-            .unwrap();
-            self.editor.move_cursor(CursorMove::Start, false);
-            self.tags.reset_toggles(db, Some(id));
+                self.editor.move_cursor(CursorMove::Start, false);
+                self.tags.reset_toggles(db, Some(id));
+            });
         }
     }
 
@@ -222,21 +221,21 @@ impl CardEditorPage {
     fn save(&mut self, db: &Database) {
         let cid = match self.card.take() {
             Some(cid) => {
-                db.update_card(cid, self.editor.as_str()).unwrap();
+                db.update_card(cid, self.editor.as_str());
 
                 // Remove tags
                 for tid in self.tags.to_remove() {
-                    db.delete_tag_for_card(cid, tid).unwrap();
+                    db.delete_tag_for_card(cid, tid);
                 }
 
                 cid
             }
-            None => db.add_card(self.editor.as_str()).unwrap(),
+            None => db.add_card(self.editor.as_str()),
         };
 
         // Add tags
         for tid in self.tags.to_add() {
-            db.add_tag_for_card(cid, tid).unwrap();
+            db.add_tag_for_card(cid, tid);
         }
 
         self.preview = false;
@@ -269,7 +268,7 @@ impl TagsSidebar {
 
     fn update(&mut self, db: &Database) {
         self.tags.clear();
-        db.get_tags(|tid| self.tags.push(tid)).unwrap();
+        db.get_tags(|tid| self.tags.push(tid));
     }
 
     const fn is_empty(&self) -> bool {
@@ -329,8 +328,7 @@ impl TagsSidebar {
         if let Some(cid) = cid {
             db.get_tags_for_card(cid, |tid| {
                 self.toggles.insert(tid, TagState::Keep);
-            })
-            .unwrap();
+            });
         }
 
         !is_empty
@@ -384,8 +382,7 @@ impl TagsSidebar {
 
                 db.get_tag_name(id, |name| {
                     widgets::print_texts(line, buf, [symbol, name], color, false, None);
-                })
-                .unwrap();
+                });
             },
         );
     }

@@ -82,8 +82,7 @@ impl CardsPage {
 
                 db.get_card_content(id, |content| {
                     markup.render(area, buf, content, kitty);
-                })
-                .unwrap();
+                });
             }
             None => {
                 widgets::print_ascii(
@@ -189,7 +188,7 @@ impl CardsPage {
     fn delete_card(&mut self, db: &Database, markup: &mut Markup) -> Action {
         if self.index < self.cards.len() {
             let id = self.cards.remove(self.index);
-            db.delete_card(id).unwrap();
+            db.delete_card(id);
 
             if !self.cards.is_empty() {
                 self.index = self.index.min(self.cards.len() - 1);
@@ -207,8 +206,7 @@ impl CardsPage {
 
         db.get_cards_with_tags(self.tags.includes(), self.tags.excludes(), |id| {
             self.cards.push(id);
-        })
-        .unwrap();
+        });
     }
 
     fn toggle_show_tags(&mut self) -> Action {
@@ -237,7 +235,7 @@ impl TagsSidebar {
     fn update(&mut self, db: &Database) {
         self.tags.clear();
 
-        db.get_tags(|id| self.tags.push(id)).unwrap();
+        db.get_tags(|id| self.tags.push(id));
         self.includes.retain(|id| self.tags.contains(id));
         self.excludes.retain(|id| self.tags.contains(id));
     }
@@ -339,8 +337,7 @@ impl TagsSidebar {
 
                 db.get_tag_name(id, |name| {
                     widgets::print_texts(line, buf, [symbol, name], color, false, None);
-                })
-                .unwrap();
+                });
             },
         );
     }

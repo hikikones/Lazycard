@@ -33,29 +33,29 @@ impl Database {
         self.sqlite.path().map(Path::new)
     }
 
-    pub fn is_empty(&self) -> SqliteResult<bool> {
+    pub fn is_cards_empty(&self) -> bool {
         self.sqlite
             .query_single("SELECT NOT EXISTS (SELECT 1 FROM cards)", (), |row| {
                 row.get(0)
             })
+            .unwrap()
     }
 
-    pub fn add_card(&self, content: &str) -> SqliteResult<CardId> {
+    pub fn add_card(&self, content: &str) -> CardId {
         self.sqlite
-            .execute("INSERT INTO cards (content) VALUES (?)", [content])?;
-        Ok(CardId(self.sqlite.last_insert_rowid()))
+            .execute("INSERT INTO cards (content) VALUES (?)", [content])
+            .unwrap();
+        CardId(self.sqlite.last_insert_rowid())
     }
 
-    pub fn get_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query(
-            "SELECT id FROM cards ORDER BY create_time DESC",
-            (),
-            |row| {
-                let id = row.get(0)?;
-                f(id);
-                Ok(())
-            },
-        )
+    pub fn get_cards(&self, mut f: impl FnMut(CardId)) {
+        self.sqlite
+            .query(
+                "SELECT id FROM cards ORDER BY create_time DESC",
+                (),
+                |row| Ok(f(row.get(0)?)),
+            )
+            .unwrap()
     }
 
     pub fn get_cards_with_tags(
@@ -63,7 +63,7 @@ impl Database {
         includes: impl ExactSizeIterator<Item = TagId>,
         excludes: impl ExactSizeIterator<Item = TagId>,
         mut f: impl FnMut(CardId),
-    ) -> SqliteResult<()> {
+    ) {
         self.s.clear();
         let mut itoa = itoa::Buffer::new();
 
@@ -103,101 +103,104 @@ impl Database {
         // Sort by newest
         self.s.push_str(" ORDER BY c.create_time DESC");
 
-        self.sqlite.query(self.s.as_str(), (), |row| {
-            let id = row.get(0)?;
-            f(id);
-            Ok(())
-        })
+        self.sqlite
+            .query(self.s.as_str(), (), |row| Ok(f(row.get(0)?)))
+            .unwrap();
     }
 
-    pub fn get_cards_without_tags(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query(
-            "SELECT c.id FROM cards c WHERE NOT EXISTS (
+    pub fn get_cards_without_tags(&self, mut f: impl FnMut(CardId)) {
+        self.sqlite
+            .query(
+                "SELECT c.id FROM cards c WHERE NOT EXISTS (
                     SELECT 1 FROM card_tags ct \
                     WHERE ct.card_id = c.id \
                 ) ORDER BY c.create_time DESC",
-            (),
-            |row| {
-                let id = row.get(0)?;
-                f(id);
-                Ok(())
-            },
-        )
+                (),
+                |row| Ok(f(row.get(0)?)),
+            )
+            .unwrap();
     }
 
-    pub fn get_card_content(&self, id: CardId, f: impl FnOnce(&str)) -> SqliteResult<()> {
+    pub fn get_card_content(&self, id: CardId, f: impl FnOnce(&str)) {
         self.sqlite
             .query_single("SELECT id, content FROM cards WHERE id = ?", [id], |row| {
-                let content = row.get_ref(1)?.as_str()?;
-                f(content);
-                Ok(())
+                Ok(f(row.get_ref(1)?.as_str()?))
             })
+            .unwrap();
     }
 
-    pub fn get_due_count(&self) -> SqliteResult<u32> {
-        self.sqlite.query_single(
-            "SELECT COUNT(id) FROM cards WHERE due_time <= (unixepoch('now'))",
-            (),
-            |row| row.get(0),
-        )
+    pub fn get_due_count(&self) -> u32 {
+        self.sqlite
+            .query_single(
+                "SELECT COUNT(id) FROM cards WHERE due_time <= (unixepoch('now'))",
+                (),
+                |row| row.get(0),
+            )
+            .unwrap()
     }
 
-    pub fn get_due_cards(&self, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query(
-            "SELECT id FROM cards WHERE due_time <= (unixepoch('now'))",
-            (),
-            |row| {
-                let id = row.get(0)?;
-                f(id);
-                Ok(())
-            },
-        )
+    pub fn get_due_cards(&self, mut f: impl FnMut(CardId)) {
+        self.sqlite
+            .query(
+                "SELECT id FROM cards WHERE due_time <= (unixepoch('now'))",
+                (),
+                |row| Ok(f(row.get(0)?)),
+            )
+            .unwrap();
     }
 
     // TODO: Use this in review
-    pub fn get_due_card_random(&self) -> SqliteResult<Option<CardId>> {
+    pub fn get_due_card_random(&self) -> Option<CardId> {
         self.get_due_card_random_except(CardId::ZERO)
     }
 
-    pub fn get_due_card_random_except(&self, id: CardId) -> SqliteResult<Option<CardId>> {
-        self.sqlite.query_first(
-            "
+    pub fn get_due_card_random_except(&self, id: CardId) -> Option<CardId> {
+        self.sqlite
+            .query_first(
+                "
             SELECT id, due_time FROM cards \
             WHERE due_time <= (unixepoch('now')) AND id != ? \
             ORDER BY RANDOM() \
             LIMIT 1
             ",
-            [id],
-            |row| row.get(0),
-        )
+                [id],
+                |row| row.get(0),
+            )
+            .unwrap()
     }
 
-    pub fn update_card(&self, id: CardId, content: &str) -> SqliteResult<()> {
+    pub fn update_card(&self, id: CardId, content: &str) {
         self.sqlite
-            .execute("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))?;
-        Ok(())
+            .execute("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))
+            .unwrap();
     }
 
-    pub fn delete_card(&self, id: CardId) -> SqliteResult<()> {
+    pub fn delete_card(&self, id: CardId) {
         self.sqlite
-            .execute("DELETE FROM cards WHERE id = ?", [id])?;
-        Ok(())
+            .execute("DELETE FROM cards WHERE id = ?", [id])
+            .unwrap();
     }
 
-    pub fn review_card(&self, id: CardId, success: bool) -> SqliteResult<ReviewId> {
-        let (create_time, stability, difficulty) = self.sqlite.query_single(
-            "SELECT create_time, stability, difficulty FROM cards WHERE id = ?",
-            [id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )?;
-        let last_review_time = self.sqlite.query_first(
-            "SELECT time FROM reviews \
+    pub fn review_card(&self, id: CardId, success: bool) -> ReviewId {
+        let (create_time, stability, difficulty) = self
+            .sqlite
+            .query_single(
+                "SELECT create_time, stability, difficulty FROM cards WHERE id = ?",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        let last_review_time = self
+            .sqlite
+            .query_first(
+                "SELECT time FROM reviews \
                 WHERE card_id = ? \
                 ORDER BY time DESC \
                 LIMIT 1",
-            [id],
-            |row| row.get(0),
-        )?;
+                [id],
+                |row| row.get(0),
+            )
+            .unwrap();
 
         let current_state = CurrentReviewState {
             stability,
@@ -205,140 +208,141 @@ impl Database {
             last_review_time: last_review_time.unwrap_or(create_time),
         };
         let next_state = self.scheduler.schedule(current_state, success);
-        self.sqlite.execute(
-            "UPDATE cards \
+        self.sqlite
+            .execute(
+                "UPDATE cards \
             SET stability = ?1, difficulty = ?2, due_time = ?3 \
             WHERE id = ?4",
-            (
-                next_state.stability,
-                next_state.difficulty,
-                next_state.due_time,
-                id,
-            ),
-        )?;
-        self.sqlite.execute(
-            "INSERT INTO reviews (success, card_id) VALUES (?1, ?2)",
-            (success, id),
-        )?;
+                (
+                    next_state.stability,
+                    next_state.difficulty,
+                    next_state.due_time,
+                    id,
+                ),
+            )
+            .unwrap();
+        self.sqlite
+            .execute(
+                "INSERT INTO reviews (success, card_id) VALUES (?1, ?2)",
+                (success, id),
+            )
+            .unwrap();
 
-        Ok(ReviewId(self.sqlite.last_insert_rowid()))
+        ReviewId(self.sqlite.last_insert_rowid())
     }
 
-    pub fn search(&self, input: &str, mut f: impl FnMut(CardId)) -> SqliteResult<()> {
-        self.sqlite.query(
-            "
+    pub fn search(&self, input: &str, mut f: impl FnMut(CardId)) {
+        self.sqlite
+            .query(
+                "
             SELECT rowid FROM cards_fts \
             WHERE cards_fts MATCH ? \
             ORDER BY rank",
-            [input],
-            |row| {
-                let id = row.get(0)?;
-                f(id);
-                Ok(())
-            },
-        )
+                [input],
+                |row| Ok(f(row.get(0)?)),
+            )
+            .unwrap();
     }
 
-    pub fn search_highlight(&self, id: CardId, input: &str, buf: &mut String) -> SqliteResult<()> {
-        self.sqlite.query_single(
-            "
+    pub fn search_highlight(&self, id: CardId, input: &str, f: impl FnOnce(&str)) {
+        self.sqlite
+            .query_single(
+                "
             SELECT rowid, highlight(cards_fts, 0, '<b>', '</b>') FROM cards_fts \
             WHERE rowid = ?1 AND cards_fts MATCH ?2",
-            (id, input),
-            |row| {
-                let highlighted_content = row.get_ref(1)?.as_str()?;
-                buf.push_str(highlighted_content);
-                Ok(())
-            },
-        )
+                (id, input),
+                |row| Ok(f(row.get_ref(1)?.as_str()?)),
+            )
+            .unwrap();
     }
 
-    pub fn add_tag(&self, name: &str) -> SqliteResult<Option<TagId>> {
+    pub fn add_tag(&self, name: &str) -> Option<TagId> {
         if self
             .sqlite
             .query_first("SELECT id FROM tags WHERE name = ?", [name], |row| {
                 row.get::<_, TagId>(0)
-            })?
+            })
+            .unwrap()
             .is_some()
         {
-            return Ok(None);
+            return None;
         }
 
         self.sqlite
-            .execute("INSERT INTO tags (name) VALUES (?)", [name])?;
-        Ok(Some(TagId(self.sqlite.last_insert_rowid())))
+            .execute("INSERT INTO tags (name) VALUES (?)", [name])
+            .unwrap();
+        Some(TagId(self.sqlite.last_insert_rowid()))
     }
 
-    pub fn get_tags(&self, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
+    pub fn get_tags(&self, mut f: impl FnMut(TagId)) {
         self.sqlite
             .query("SELECT id FROM tags ORDER BY name", (), |row| {
-                let id = row.get(0)?;
-                f(id);
-                Ok(())
+                Ok(f(row.get(0)?))
             })
+            .unwrap();
     }
 
-    pub fn get_tags_and_name(&self, mut f: impl FnMut(TagId, &str)) -> SqliteResult<()> {
-        self.sqlite.query("SELECT id, name FROM tags", (), |row| {
-            let id = row.get(0)?;
-            let name = row.get_ref(1)?.as_str()?;
-            f(id, name);
-            Ok(())
-        })
+    pub fn get_tags_and_name(&self, mut f: impl FnMut(TagId, &str)) {
+        self.sqlite
+            .query("SELECT id, name FROM tags", (), |row| {
+                Ok(f(row.get(0)?, row.get_ref(1)?.as_str()?))
+            })
+            .unwrap();
     }
 
-    pub fn get_tag_name(&self, id: TagId, f: impl FnOnce(&str)) -> SqliteResult<()> {
+    pub fn get_tag_name(&self, id: TagId, f: impl FnOnce(&str)) {
         self.sqlite
             .query_single("SELECT id, name FROM tags WHERE id = ?", [id], |row| {
-                let name = row.get_ref(1)?.as_str()?;
-                f(name);
-                Ok(())
+                Ok(f(row.get_ref(1)?.as_str()?))
             })
+            .unwrap();
     }
 
-    pub fn update_tag(&self, id: TagId, name: &str) -> SqliteResult<bool> {
+    pub fn update_tag(&self, id: TagId, name: &str) -> bool {
         if self
             .sqlite
             .query_first("SELECT id FROM tags WHERE name = ?", [name], |row| {
                 row.get::<_, TagId>(0)
-            })?
+            })
+            .unwrap()
             .is_some()
         {
-            return Ok(false);
+            return false;
         }
 
         self.sqlite
-            .execute("UPDATE tags SET name = ?1 WHERE id = ?2", (name, id))?;
-        Ok(true)
+            .execute("UPDATE tags SET name = ?1 WHERE id = ?2", (name, id))
+            .unwrap();
+        true
     }
 
-    pub fn add_tag_for_card(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
-        self.sqlite.execute(
-            "INSERT INTO card_tags (card_id, tag_id) VALUES (?1, ?2)",
-            (cid, tid),
-        )?;
-        Ok(())
+    pub fn add_tag_for_card(&self, cid: CardId, tid: TagId) {
+        self.sqlite
+            .execute(
+                "INSERT INTO card_tags (card_id, tag_id) VALUES (?1, ?2)",
+                (cid, tid),
+            )
+            .unwrap();
     }
 
     // TODO: Add query for cards count (amount of tags for a card)
-    pub fn get_tags_for_card(&self, id: CardId, mut f: impl FnMut(TagId)) -> SqliteResult<()> {
-        self.sqlite.query(
-            "SELECT tag_id FROM card_tags WHERE card_id = ?",
-            [id],
-            |row| {
-                let id = row.get(0)?;
-                f(id);
-                Ok(())
-            },
-        )
+    pub fn get_tags_for_card(&self, id: CardId, mut f: impl FnMut(TagId)) {
+        self.sqlite
+            .query(
+                "SELECT tag_id FROM card_tags WHERE card_id = ?",
+                [id],
+                |row| Ok(f(row.get(0)?)),
+            )
+            .unwrap();
     }
 
-    pub fn delete_tag_for_card(&self, cid: CardId, tid: TagId) -> SqliteResult<()> {
-        self.sqlite.execute(
-            "DELETE FROM card_tags WHERE card_id = ?1 AND tag_id = ?2",
-            (cid, tid),
-        )?;
-        Ok(())
+    pub fn delete_tag_for_card(&self, cid: CardId, tid: TagId) {
+        self.sqlite
+            .execute(
+                "DELETE FROM card_tags WHERE card_id = ?1 AND tag_id = ?2",
+                (cid, tid),
+            )
+            .unwrap();
     }
 
     fn migrate(&self) {
@@ -420,7 +424,7 @@ Mauris suscipit imperdiet mi et semper. Nam nec lorem sagittis, lobortis ligula 
 
 In aliquet dui sapien, ut semper elit sodales sed. Proin quis libero luctus libero scelerisque ornare eget id mi. Cras accumsan arcu ut ante pharetra fringilla. Sed feugiat placerat dolor, et feugiat lorem iaculis id. Cras interdum est nec elit molestie, sed aliquam quam hendrerit. Proin sit amet pellentesque enim. Nam bibendum, mauris vel eleifend ultricies, orci sapien hendrerit sem, a tristique lectus nulla a ligula.
 "#,
-    ).unwrap();
+    );
 
     let cid2= db.add_card(
             r#"
@@ -465,9 +469,9 @@ and another one
 
 ![ image description text ]( assets/tall.gif )
 "#,
-    ).unwrap();
+    );
 
-    let cid3=db.add_card("👻 oijwqwu qwdiowhq  i hio h qiowhqwheqw👻👻 wwq qiuwhdidwh👻👻👻❤️\n\nauhui ❤️awudhia\n🧑‍🌾❤️👨‍🦰jfpkw huiw wjwioj ijf weoijwioejfiowejfiowjfiowej\n\nthis\tis\ta\tparagraph\twith\ttabs\n\n```rust\nfn main() {\n\tprintln!(\"Hello, world!\");\n}\n```").unwrap();
+    let cid3=db.add_card("👻 oijwqwu qwdiowhq  i hio h qiowhqwheqw👻👻 wwq qiuwhdidwh👻👻👻❤️\n\nauhui ❤️awudhia\n🧑‍🌾❤️👨‍🦰jfpkw huiw wjwioj ijf weoijwioejfiowejfiowjfiowej\n\nthis\tis\ta\tparagraph\twith\ttabs\n\n```rust\nfn main() {\n\tprintln!(\"Hello, world!\");\n}\n```");
 
     let tid1 = db.add_tag("lorem").unwrap();
     let tid2 = db.add_tag("rust").unwrap();
@@ -482,9 +486,9 @@ and another one
         .add_tag("anothertagwithalongnamethatyoucantread")
         .unwrap();
 
-    db.add_tag_for_card(cid1, tid1.unwrap()).unwrap();
-    db.add_tag_for_card(cid2, tid2.unwrap()).unwrap();
-    db.add_tag_for_card(cid2, tid3.unwrap()).unwrap();
+    db.add_tag_for_card(cid1, tid1);
+    db.add_tag_for_card(cid2, tid2);
+    db.add_tag_for_card(cid2, tid3);
     // panic!("{}", db.sqlite.last_insert_rowid());
 }
 

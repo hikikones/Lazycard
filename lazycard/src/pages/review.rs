@@ -39,7 +39,7 @@ impl ReviewPage {
     }
 
     pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
-        db.get_due_cards(|id| self.due.push(id)).unwrap();
+        db.get_due_cards(|id| self.due.push(id));
         self.total = self.due.len();
 
         if self.total > 0 {
@@ -77,8 +77,7 @@ impl ReviewPage {
                     markup
                         .set_max_items(Some(self.reveal_len))
                         .render(area, buf, content, kitty);
-                })
-                .unwrap();
+                });
 
                 if self.is_fully_revealed() {
                     shortcuts.extend([Shortcut::new("Yes", "y"), Shortcut::new("No", "n")]);
@@ -113,7 +112,7 @@ impl ReviewPage {
             ReviewState::Review(id) => match key {
                 KeyCode::Char('e') => return Action::Route(Route::Editor(Some(id))),
                 KeyCode::Delete => {
-                    db.delete_card(id).unwrap();
+                    db.delete_card(id);
                     self.total = self.total.saturating_sub(1);
                     self.next_card(db, markup);
                     return Action::Render;
@@ -128,7 +127,7 @@ impl ReviewPage {
                 KeyCode::Char('y' | 'n') => {
                     if self.is_fully_revealed() {
                         let success = key == KeyCode::Char('y');
-                        db.review_card(id, success).unwrap();
+                        db.review_card(id, success);
                         self.progress += 1;
                         self.next_card(db, markup);
                         return Action::Render;
@@ -174,8 +173,7 @@ impl ReviewPage {
         db.get_card_content(id, |content| {
             self.markup_items.clear();
             Markup::parse_items(content, &mut self.markup_items);
-        })
-        .unwrap();
+        });
 
         self.reveal_len = 0;
         self.state = ReviewState::Review(id);

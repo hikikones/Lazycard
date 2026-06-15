@@ -48,7 +48,7 @@ impl SearchPage {
 
     pub fn on_enter(&mut self, db: &Database) {
         self.state = State::Search;
-        self.is_empty = db.is_empty().unwrap();
+        self.is_empty = db.is_cards_empty();
         self.refresh(db);
     }
 
@@ -133,8 +133,7 @@ impl SearchPage {
             Some(id) => {
                 db.get_card_content(id, |content| {
                     markup.render(card_area, buf, content, kitty);
-                })
-                .unwrap();
+                });
             }
             None => {
                 if !self.query.is_empty() {

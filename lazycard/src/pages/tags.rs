@@ -48,8 +48,7 @@ impl TagsPage {
                 name: names.push_str(name),
                 width: unicode_width::UnicodeWidthStr::width(name) as u16,
             });
-        })
-        .unwrap();
+        });
 
         let mut tags_page = Self {
             tags,
@@ -237,7 +236,7 @@ impl TagsPage {
                     // Confirm tag creation
                     let name = self.input.as_str_trim();
                     if !name.is_empty() {
-                        match db.add_tag(name).unwrap() {
+                        match db.add_tag(name) {
                             Some(id) => {
                                 self.tags.push(TagItem {
                                     id,
@@ -282,7 +281,7 @@ impl TagsPage {
                     // Confirm tag edit
                     let name = self.input.as_str_trim();
                     if !name.is_empty() {
-                        if db.update_tag(id, name).unwrap() {
+                        if db.update_tag(id, name) {
                             let tag = &mut self.tags[self.list.index()];
                             tag.name = self.names.push_str(name);
                             tag.width = unicode_width::UnicodeWidthStr::width(name) as u16;
