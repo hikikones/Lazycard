@@ -38,30 +38,34 @@ enum State {
 }
 
 impl TagsPage {
-    pub const fn new(colors: &Colors) -> Self {
-        Self {
-            tags: Vec::new(),
-            names: Formatter::new(),
+    pub fn new(db: &Database, colors: &Colors) -> Self {
+        let mut tags = Vec::new();
+        let mut names = Formatter::new();
+
+        db.get_tags_and_name(|id, name| {
+            tags.push(TagItem {
+                id,
+                name: names.push_str(name),
+                width: unicode_width::UnicodeWidthStr::width(name) as u16,
+            });
+        })
+        .unwrap();
+
+        let mut tags_page = Self {
+            tags,
+            names,
             list: TokenList::new(),
             state: State::Browse,
             input: TextInput::new()
                 .with_placeholder("Tag name...")
                 .with_colors(colors.text_input()),
             message: String::new(),
-        }
+        };
+        tags_page.sort();
+        tags_page
     }
 
-    pub fn on_enter(&mut self, db: &Database) {
-        // TODO: only need to populate tags once in new.
-        db.get_tags_and_name(|id, name| {
-            self.tags.push(TagItem {
-                id,
-                name: self.names.push_str(name),
-                width: unicode_width::UnicodeWidthStr::width(name) as u16,
-            });
-        })
-        .unwrap();
-    }
+    pub fn on_enter(&self) {}
 
     pub fn on_render(
         &mut self,
@@ -240,7 +244,7 @@ impl TagsPage {
                                     name: self.names.push_str(name),
                                     width: unicode_width::UnicodeWidthStr::width(name) as u16,
                                 });
-                                // TODO: sort tags.
+                                self.sort();
                                 self.select_tag(id);
                                 self.input.clear();
                                 self.message.clear();
@@ -279,12 +283,11 @@ impl TagsPage {
                     let name = self.input.as_str_trim();
                     if !name.is_empty() {
                         if db.update_tag(id, name).unwrap() {
-                            // self.update_tag(id, name);
                             let tag = &mut self.tags[self.list.index()];
                             tag.name = self.names.push_str(name);
                             tag.width = unicode_width::UnicodeWidthStr::width(name) as u16;
-                            //todo: sort
-                            //todo: select tag again after sort
+                            self.sort();
+                            self.select_tag(id);
                             self.input.clear();
                             self.message.clear();
                             self.state = State::Browse;
@@ -344,12 +347,12 @@ impl TagsPage {
         }
     }
 
-    fn update_tag(&mut self, id: TagId, name: &str) {
-        let tag = &mut self.tags[self.list.index()];
-        tag.name = self.names.push_str(name);
-        tag.width = unicode_width::UnicodeWidthStr::width(name) as u16;
-        //todo: sort
-        //todo: select tag
+    fn sort(&mut self) {
+        self.tags.sort_unstable_by(|t1, t2| {
+            let n1 = self.names.slice(t1.name.clone());
+            let n2 = self.names.slice(t2.name.clone());
+            n1.cmp(n2)
+        });
     }
 }
 

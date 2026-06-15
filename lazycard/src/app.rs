@@ -75,7 +75,7 @@ impl App {
             review: ReviewPage::new(),
             editor: CardEditorPage::new(colors),
             cards: CardsPage::new(colors),
-            tags: TagsPage::new(colors),
+            tags: TagsPage::new(&database, colors),
             search: SearchPage::new(colors),
             logs,
         };
@@ -202,7 +202,7 @@ impl App {
                         }
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
                         Route::Cards => self.pages.cards.on_enter(&mut self.database),
-                        Route::Tags => self.pages.tags.on_enter(&mut self.database),
+                        Route::Tags => self.pages.tags.on_enter(),
                     }
 
                     self.render(&mut terminal)?;
