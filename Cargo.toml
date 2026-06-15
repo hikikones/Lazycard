@@ -30,8 +30,8 @@ constcat = { version = "0.6", default-features = false }
 database = { path = "crates/database", default-features = false }
 directories = { version = "6.0", default-features = false }
 edit = { version = "0.1", default-features = false, features = ["better-path"] }
-fastrand = { version = "2.3", default-features = false }
-fsrs = { version = "6.1", default-features = false }
+fastrand = { version = "2.4", default-features = false }
+fsrs = { version = "6.6", default-features = false }
 image = {
   version = "0.25",
   default-features = false,
@@ -82,11 +82,11 @@ textwrap = {
   features = ["smawk", "unicode-linebreak", "unicode-width"]
 }
 toml = {
-  version = "1.0",
+  version = "1.1",
   default-features = false,
   features = ["display", "parse", "serde", "std"]
 }
-unicode-segmentation = { version = "1.12", default-features = false }
+unicode-segmentation = { version = "1.13", default-features = false }
 unicode-width = { version = "0.2", default-features = false }
 utils = { path = "crates/utils", default-features = false }
 widgets = { path = "crates/widgets", default-features = false }
