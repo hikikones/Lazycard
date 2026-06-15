@@ -124,7 +124,6 @@ impl TokenList {
 
         // Process all items every render for index and scroll data
         self.total_items = 0;
-
         for (i, x, y, _) in iter_items(area.width, self.gap, items.clone()) {
             if self.index == i {
                 self.index_col = x;

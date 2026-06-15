@@ -169,15 +169,34 @@ impl Database {
             .unwrap()
     }
 
-    pub fn update_card(&self, id: CardId, content: &str) {
+    pub fn search(&self, input: &str, mut f: impl FnMut(CardId)) {
         self.sqlite
-            .execute("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))
+            .query(
+                "
+            SELECT rowid FROM cards_fts \
+            WHERE cards_fts MATCH ? \
+            ORDER BY rank",
+                [input],
+                |row| Ok(f(row.get(0)?)),
+            )
             .unwrap();
     }
 
-    pub fn delete_card(&self, id: CardId) {
+    pub fn search_highlight(&self, id: CardId, input: &str, f: impl FnOnce(&str)) {
         self.sqlite
-            .execute("DELETE FROM cards WHERE id = ?", [id])
+            .query_single(
+                "
+            SELECT rowid, highlight(cards_fts, 0, '<b>', '</b>') FROM cards_fts \
+            WHERE rowid = ?1 AND cards_fts MATCH ?2",
+                (id, input),
+                |row| Ok(f(row.get_ref(1)?.as_str()?)),
+            )
+            .unwrap();
+    }
+
+    pub fn update_card(&self, id: CardId, content: &str) {
+        self.sqlite
+            .execute("UPDATE cards SET content = ?1 WHERE id = ?2", (content, id))
             .unwrap();
     }
 
@@ -231,28 +250,9 @@ impl Database {
         ReviewId(self.sqlite.last_insert_rowid())
     }
 
-    pub fn search(&self, input: &str, mut f: impl FnMut(CardId)) {
+    pub fn delete_card(&self, id: CardId) {
         self.sqlite
-            .query(
-                "
-            SELECT rowid FROM cards_fts \
-            WHERE cards_fts MATCH ? \
-            ORDER BY rank",
-                [input],
-                |row| Ok(f(row.get(0)?)),
-            )
-            .unwrap();
-    }
-
-    pub fn search_highlight(&self, id: CardId, input: &str, f: impl FnOnce(&str)) {
-        self.sqlite
-            .query_single(
-                "
-            SELECT rowid, highlight(cards_fts, 0, '<b>', '</b>') FROM cards_fts \
-            WHERE rowid = ?1 AND cards_fts MATCH ?2",
-                (id, input),
-                |row| Ok(f(row.get_ref(1)?.as_str()?)),
-            )
+            .execute("DELETE FROM cards WHERE id = ?", [id])
             .unwrap();
     }
 
@@ -314,6 +314,12 @@ impl Database {
             .execute("UPDATE tags SET name = ?1 WHERE id = ?2", (name, id))
             .unwrap();
         true
+    }
+
+    pub fn delete_tag(&self, id: TagId) {
+        self.sqlite
+            .execute("DELETE FROM tags WHERE id = ?", [id])
+            .unwrap();
     }
 
     pub fn add_tag_for_card(&self, cid: CardId, tid: TagId) {

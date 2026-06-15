@@ -34,7 +34,7 @@ enum State {
     Browse,
     New,
     Edit(TagId),
-    Delete(TagId),
+    Delete(TagId, bool),
 }
 
 impl TagsPage {
@@ -68,7 +68,7 @@ impl TagsPage {
 
     pub fn on_render(
         &mut self,
-        area: Rect,
+        mut area: Rect,
         buf: &mut Buffer,
         colors: &Colors,
         menu: &mut TextSegment,
@@ -112,75 +112,28 @@ impl TagsPage {
                 ]);
             }
             State::New => {
-                let mut area = widgets::align(
-                    Rect {
-                        width: area.width / 2,
-                        height: 5,
-                        ..area
-                    },
-                    area,
-                    widgets::Alignment::CenterHorizontal,
-                );
-
                 widgets::print_ascii(
                     area,
                     buf,
-                    "Create a new tag",
+                    "New tag",
                     Style::new(),
                     Some(widgets::Alignment::CenterHorizontal),
                 );
 
                 area.y += 2;
-                area.height -= 2;
 
-                self.input.render(area, buf);
-
-                area.y += 2;
-                area.height -= 2;
-
-                if !self.message.is_empty() {
-                    widgets::print_text(
-                        area,
-                        buf,
-                        self.message.as_str(),
-                        Color::Red,
-                        false,
-                        Some(widgets::Alignment::CenterHorizontal),
-                    );
-                }
-
-                shortcuts.extend([
-                    Shortcut::new("Confirm", symbols::ENTER),
-                    Shortcut::new("Cancel", symbols::ctrl!("c")),
-                ]);
-            }
-            State::Edit(id) => {
-                let mut area = widgets::align(
+                let input_area = widgets::align(
                     Rect {
-                        width: area.width / 2,
-                        height: 5,
+                        width: (0.64 * area.width as f32).round() as u16,
+                        height: 1,
                         ..area
                     },
                     area,
                     widgets::Alignment::CenterHorizontal,
                 );
-
-                let tag_name = self.names.slice(self.tags[self.list.index()].name.clone());
-                widgets::print_asciis(
-                    area,
-                    buf,
-                    ["Edit tag '", tag_name, "'"],
-                    Style::new(),
-                    Some(widgets::Alignment::CenterHorizontal),
-                );
+                self.input.render(input_area, buf);
 
                 area.y += 2;
-                area.height -= 2;
-
-                self.input.render(area, buf);
-
-                area.y += 2;
-                area.height -= 2;
 
                 if !self.message.is_empty() {
                     widgets::print_text(
@@ -198,8 +151,97 @@ impl TagsPage {
                     Shortcut::new("Cancel", symbols::ctrl!("c")),
                 ]);
             }
-            State::Delete(id) => {
-                //todo
+            State::Edit(_id) => {
+                widgets::print_ascii(
+                    area,
+                    buf,
+                    "Edit tag",
+                    Style::new(),
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                area.y += 1;
+
+                widgets::print_text(
+                    area,
+                    buf,
+                    self.current_tag_name(),
+                    Style::new(),
+                    false,
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                area.y += 2;
+
+                let input_area = widgets::align(
+                    Rect {
+                        width: (0.64 * area.width as f32).round() as u16,
+                        height: 1,
+                        ..area
+                    },
+                    area,
+                    widgets::Alignment::CenterHorizontal,
+                );
+                self.input.render(input_area, buf);
+
+                area.y += 2;
+
+                if !self.message.is_empty() {
+                    widgets::print_text(
+                        area,
+                        buf,
+                        self.message.as_str(),
+                        Color::Red,
+                        false,
+                        Some(widgets::Alignment::CenterHorizontal),
+                    );
+                }
+
+                shortcuts.extend([
+                    Shortcut::new("Confirm", symbols::ENTER),
+                    Shortcut::new("Cancel", symbols::ctrl!("c")),
+                ]);
+            }
+            State::Delete(_id, delete_cards) => {
+                widgets::print_ascii(
+                    area,
+                    buf,
+                    "Delete tag",
+                    Style::new(),
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                area.y += 1;
+
+                widgets::print_text(
+                    area,
+                    buf,
+                    self.current_tag_name(),
+                    Style::new(),
+                    false,
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                area.y += 2;
+
+                let checkmark = if delete_cards {
+                    (symbols::CHECKMARK_YES, Style::new().fg(Color::Green))
+                } else {
+                    (symbols::CHECKMARK_NO, Style::new().fg(Color::Red))
+                };
+                widgets::print_texts_with_styles(
+                    area,
+                    buf,
+                    [("Also delete cards: ", Style::new()), checkmark],
+                    None,
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+
+                shortcuts.extend([
+                    Shortcut::new("Yes", "y"),
+                    Shortcut::new("No", "n"),
+                    Shortcut::new("Toggle", symbols::SPACE),
+                ]);
             }
         }
     }
@@ -211,7 +253,7 @@ impl TagsPage {
             State::Browse => match key {
                 KeyCode::Delete => {
                     if let Some(id) = self.current_tag_id() {
-                        self.state = State::Delete(id);
+                        self.state = State::Delete(id, false);
                         return Action::Render;
                     }
                 }
@@ -316,22 +358,48 @@ impl TagsPage {
                     }
                 }
             },
-            State::Delete(id) => {
-                //todo
+            State::Delete(id, delete_cards) => {
+                match key {
+                    KeyCode::Char('y') => {
+                        // Delete tag
+                        if delete_cards {
+                            // TODO: Delete cards with selected tag.
+                        }
+
+                        db.delete_tag(id);
+                        self.tags.remove(self.list.index());
+                        self.list
+                            .set_index(self.list.index().min(self.tags.len().saturating_sub(1)));
+
+                        self.state = State::Browse;
+                        return Action::Render;
+                    }
+                    KeyCode::Char('n') => {
+                        // Cancel delete tag
+                        self.state = State::Browse;
+                        return Action::Render;
+                    }
+                    KeyCode::Char(' ') => {
+                        // Toggle card deletion
+                        self.state = State::Delete(id, !delete_cards);
+                        return Action::Render;
+                    }
+                    _ => {}
+                }
             }
         }
 
         Action::None
     }
 
-    pub fn on_exit(&mut self) {
-        self.tags.clear();
-        self.names.clear();
-        self.message.clear();
-    }
+    pub fn on_exit(&self) {}
 
     fn current_tag_id(&self) -> Option<TagId> {
         self.tags.get(self.list.index()).map(|tag| tag.id)
+    }
+
+    fn current_tag_name(&self) -> &str {
+        self.names.slice(self.tags[self.list.index()].name.clone())
     }
 
     fn select_tag(&mut self, id: TagId) {
