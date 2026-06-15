@@ -3,13 +3,13 @@ use std::{iter::Peekable, str::CharIndices};
 use unicode_segmentation::{GraphemeIndices, UnicodeSegmentation};
 
 #[derive(Debug)]
-pub struct CustomGraphemeIter<'a> {
+pub struct PeekableGraphemesPrevious<'a> {
     graphemes: Peekable<GraphemeIndices<'a>>,
     current: Option<(usize, &'a str)>,
     previous: Option<&'a str>,
 }
 
-impl<'a> CustomGraphemeIter<'a> {
+impl<'a> PeekableGraphemesPrevious<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             graphemes: input.grapheme_indices(true).peekable(),
@@ -158,7 +158,7 @@ impl<'a> CustomGraphemeIter<'a> {
     }
 }
 
-impl<'a> Iterator for CustomGraphemeIter<'a> {
+impl<'a> Iterator for PeekableGraphemesPrevious<'a> {
     type Item = (usize, &'a str);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -175,13 +175,13 @@ impl<'a> Iterator for CustomGraphemeIter<'a> {
 }
 
 #[derive(Debug)]
-pub struct CustomCharsIter<'a> {
+pub struct PeekableCharsPrevious<'a> {
     chars: Peekable<CharIndices<'a>>,
     current: Option<(usize, char)>,
     previous: Option<char>,
 }
 
-impl<'a> CustomCharsIter<'a> {
+impl<'a> PeekableCharsPrevious<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             chars: input.char_indices().peekable(),
@@ -301,7 +301,7 @@ impl<'a> CustomCharsIter<'a> {
     }
 }
 
-impl<'a> Iterator for CustomCharsIter<'a> {
+impl<'a> Iterator for PeekableCharsPrevious<'a> {
     type Item = (usize, char);
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -139,6 +139,9 @@ impl CardEditorPage {
                             return Action::Log(Log::new(err));
                         }
                     }
+                } else if !self.show_tags && !self.preview {
+                    self.editor.push_char('e');
+                    return Action::Render;
                 }
             }
             KeyCode::Char('p') => {

@@ -558,14 +558,14 @@ enum BlockElement<'a> {
 
 struct BlockParser<'a> {
     input: &'a str,
-    graphemes: utils::CustomGraphemeIter<'a>,
+    graphemes: utils::PeekableGraphemesPrevious<'a>,
 }
 
 impl<'a> BlockParser<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             input,
-            graphemes: utils::CustomGraphemeIter::new(input),
+            graphemes: utils::PeekableGraphemesPrevious::new(input),
         }
     }
 
@@ -783,7 +783,7 @@ impl<'a> Iterator for BlockParser<'a> {
 #[derive(Debug)]
 struct ListItems<'a> {
     text: &'a str,
-    graphemes: utils::CustomGraphemeIter<'a>,
+    graphemes: utils::PeekableGraphemesPrevious<'a>,
     start: usize,
 }
 
@@ -791,7 +791,7 @@ impl<'a> ListItems<'a> {
     fn new(text: &'a str) -> Self {
         Self {
             text,
-            graphemes: utils::CustomGraphemeIter::new(text),
+            graphemes: utils::PeekableGraphemesPrevious::new(text),
             start: 0,
         }
     }
@@ -876,7 +876,7 @@ enum InlineTag {
 
 struct InlineParser<'a> {
     input: &'a str,
-    chars: utils::CustomCharsIter<'a>,
+    chars: utils::PeekableCharsPrevious<'a>,
     start: usize,
     tag: Option<InlineTag>,
     bold: bool,
@@ -887,7 +887,7 @@ impl<'a> InlineParser<'a> {
     fn new(input: &'a str) -> Self {
         Self {
             input,
-            chars: utils::CustomCharsIter::new(input),
+            chars: utils::PeekableCharsPrevious::new(input),
             start: 0,
             tag: None,
             bold: false,
