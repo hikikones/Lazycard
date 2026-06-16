@@ -42,13 +42,7 @@ impl TagsPage {
         let mut tags = Vec::new();
         let mut names = Formatter::new();
 
-        db.get_tags_and_name(|id, name| {
-            tags.push(TagItem {
-                id,
-                name: names.push_str(name),
-                width: unicode_width::UnicodeWidthStr::width(name) as u16,
-            });
-        });
+        db.get_tags_and_name(|id, name| tags.push(TagItem::new(id, name, &mut names)));
 
         let mut tags_page = Self {
             tags,
@@ -280,11 +274,7 @@ impl TagsPage {
                     if !name.is_empty() {
                         match db.add_tag(name) {
                             Some(id) => {
-                                self.tags.push(TagItem {
-                                    id,
-                                    name: self.names.push_str(name),
-                                    width: unicode_width::UnicodeWidthStr::width(name) as u16,
-                                });
+                                self.tags.push(TagItem::new(id, name, &mut self.names));
                                 self.sort();
                                 self.select_tag(id);
                                 self.input.clear();
@@ -324,9 +314,8 @@ impl TagsPage {
                     let name = self.input.as_str_trim();
                     if !name.is_empty() {
                         if db.update_tag(id, name) {
-                            let tag = &mut self.tags[self.list.index()];
-                            tag.name = self.names.push_str(name);
-                            tag.width = unicode_width::UnicodeWidthStr::width(name) as u16;
+                            let current_tag = &mut self.tags[self.list.index()];
+                            current_tag.update(name, &mut self.names);
                             self.sort();
                             self.select_tag(id);
                             self.input.clear();
@@ -427,6 +416,21 @@ struct TagItem {
     id: TagId,
     name: Range<usize>,
     width: u16,
+}
+
+impl TagItem {
+    fn new(id: TagId, name: &str, formatter: &mut Formatter) -> Self {
+        Self {
+            id,
+            name: formatter.push_str(name),
+            width: unicode_width::UnicodeWidthStr::width(name) as u16,
+        }
+    }
+
+    fn update(&mut self, name: &str, formatter: &mut Formatter) {
+        self.name = formatter.push_str(name);
+        self.width = unicode_width::UnicodeWidthStr::width(name) as u16;
+    }
 }
 
 impl TokenItem for &TagItem {
