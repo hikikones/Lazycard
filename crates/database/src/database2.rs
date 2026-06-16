@@ -200,7 +200,7 @@ impl Database {
             .unwrap();
     }
 
-    pub fn review_card(&self, id: CardId, success: bool) -> ReviewId {
+    pub fn review_card(&self, id: CardId, success: bool, desired_retention: f32) -> ReviewId {
         let (create_time, stability, difficulty) = self
             .sqlite
             .query_single(
@@ -226,7 +226,9 @@ impl Database {
             difficulty,
             last_review_time: last_review_time.unwrap_or(create_time),
         };
-        let next_state = self.scheduler.schedule(current_state, success);
+        let next_state = self
+            .scheduler
+            .schedule(current_state, success, desired_retention);
         self.sqlite
             .execute(
                 "UPDATE cards \

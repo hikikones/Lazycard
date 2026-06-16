@@ -91,7 +91,7 @@ impl TagsPage {
                     self.tags.iter(),
                     |area, buf, tag, is_selected| {
                         let style = if is_selected {
-                            Style::new().fg(colors.primary)
+                            Style::new().fg(colors.secondary)
                         } else {
                             Style::new()
                         };

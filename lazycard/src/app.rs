@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Margin},
     style::{Color, Style},
 };
-use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextInputColors, TextSegment};
+use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
 
 use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
 
@@ -35,6 +35,7 @@ pub enum Action {
     Render,
     Route(Route),
     Log(Log),
+    ApplySettings,
     Quit,
 }
 
@@ -76,6 +77,7 @@ impl App {
             editor: CardEditorPage::new(colors),
             cards: CardsPage::new(),
             tags: TagsPage::new(&database, colors),
+            settings: SettingsPage::new(&settings),
             search: SearchPage::new(colors),
             logs,
         };
@@ -89,7 +91,7 @@ impl App {
             kitty: KittyGraphics::new(cell_size),
             // matcher: Matcher::new(),
             text: TextSegment::new().with_alignment(Alignment::Center),
-            shortcuts: Shortcuts::new().with_colors(Color::Reset, colors.primary),
+            shortcuts: Shortcuts::new(),
             settings,
         }
     }
@@ -191,6 +193,7 @@ impl App {
                         Route::Editor(_) => self.pages.editor.on_exit(),
                         Route::Cards(_) => self.pages.cards.on_exit(),
                         Route::Tags => self.pages.tags.on_exit(),
+                        Route::Settings => self.pages.settings.on_exit(),
                     }
 
                     self.route = route;
@@ -203,12 +206,17 @@ impl App {
                         Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
                         Route::Cards(id) => self.pages.cards.on_enter(&mut self.database, id),
                         Route::Tags => self.pages.tags.on_enter(),
+                        Route::Settings => self.pages.settings.on_enter(),
                     }
 
                     self.render(&mut terminal)?;
                 }
                 Action::Log(log) => {
                     self.pages.logs.enqueue(log);
+                    self.render(&mut terminal)?;
+                }
+                Action::ApplySettings => {
+                    self.apply_settings();
                     self.render(&mut terminal)?;
                 }
                 Action::Quit => {
@@ -225,12 +233,18 @@ impl App {
         Ok(())
     }
 
+    const fn apply_settings(&mut self) {
+        self.pages
+            .review
+            .set_desired_retention(self.settings.desired_retention_as_fraction());
+    }
+
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
         terminal.draw(|frame| {
             let area = frame.area();
             let buf = frame.buffer_mut();
 
-            let colors = self.settings.colors();
+            let colors = &self.settings.colors().clone();
 
             // Layout
             let [
@@ -254,7 +268,8 @@ impl App {
                 (Route::Review, "Review", SPACING),
                 (Route::Editor(None), "Editor", SPACING),
                 (Route::Cards(None), "Cards", SPACING),
-                (Route::Tags, "Tags", ""),
+                (Route::Tags, "Tags", SPACING),
+                (Route::Settings, "Settings", ""),
             ] {
                 let is_current =
                     std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
@@ -278,6 +293,9 @@ impl App {
             let body = body_area
                 .centered_horizontally(Constraint::Length(MAX_WIDTH + MARGIN))
                 .inner(Margin::new(MARGIN, MARGIN));
+
+            self.shortcuts.set_colors(Color::Reset, colors.secondary);
+
             match self.state {
                 AppState::Route => match self.route {
                     Route::Review => {
@@ -325,6 +343,14 @@ impl App {
                             &mut self.shortcuts,
                         );
                     }
+                    Route::Settings => {
+                        self.pages.settings.on_render(
+                            body,
+                            buf,
+                            &mut self.settings,
+                            &mut self.shortcuts,
+                        );
+                    }
                 },
                 AppState::Search => {
                     self.pages.search.on_render(
@@ -358,6 +384,7 @@ impl App {
             self.shortcuts.clear();
 
             // App shortcuts
+            self.shortcuts.set_colors(Color::Reset, colors.primary);
             self.shortcuts.extend([
                 Shortcut::new("Quit", symbols::ESCAPE),
                 Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
@@ -401,6 +428,7 @@ impl App {
                         .on_input(input, &mut self.markup, &mut self.database)
                 }
                 Route::Tags => self.pages.tags.on_input(input, &self.database),
+                Route::Settings => self.pages.settings.on_input(input, &mut self.settings),
             },
             AppState::Search => {
                 match self

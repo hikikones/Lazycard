@@ -54,7 +54,11 @@ impl Default for Settings {
 }
 
 impl Settings {
-    pub const fn desired_retention(&self) -> f32 {
+    pub const fn desired_retention(&self) -> u8 {
+        self.general.desired_retention
+    }
+
+    pub const fn desired_retention_as_fraction(&self) -> f32 {
         self.general.desired_retention as f32 / 100.0
     }
 
@@ -221,7 +225,7 @@ impl Colors {
     pub const fn text_input(&self) -> TextInputColors {
         TextInputColors {
             normal: Color::Reset,
-            cursor: self.primary,
+            cursor: self.secondary,
             selector: self.neutral,
             placeholder: self.neutral,
             disabled: self.neutral,

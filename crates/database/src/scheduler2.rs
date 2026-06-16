@@ -1,9 +1,6 @@
 use crate::sqlite::{FromSql, FromSqlResult, ToSql, ToSqlOutput, Value, ValueRef};
 
-pub(crate) struct Scheduler {
-    fsrs: fsrs::FSRS,
-    desired_retention: f32,
-}
+pub(crate) struct Scheduler(fsrs::FSRS);
 
 pub(crate) struct CurrentReviewState {
     pub(crate) stability: f32,
@@ -19,13 +16,15 @@ pub(crate) struct NextReviewState {
 
 impl Scheduler {
     pub(crate) fn new() -> Self {
-        Self {
-            fsrs: fsrs::FSRS::default(),
-            desired_retention: 0.9,
-        }
+        Self(fsrs::FSRS::default())
     }
 
-    pub(crate) fn schedule(&self, state: CurrentReviewState, success: bool) -> NextReviewState {
+    pub(crate) fn schedule(
+        &self,
+        state: CurrentReviewState,
+        success: bool,
+        desired_retention: f32,
+    ) -> NextReviewState {
         let memory_state = if state.stability == 0.0 || state.difficulty == 0.0 {
             None
         } else {
@@ -37,8 +36,8 @@ impl Scheduler {
         let now = UnixTime::now();
         let days_since_last_review = state.last_review_time.days_since(now);
         let next_states = self
-            .fsrs
-            .next_states(memory_state, self.desired_retention, days_since_last_review)
+            .0
+            .next_states(memory_state, desired_retention, days_since_last_review)
             .unwrap();
         let new_state = if success {
             next_states.good

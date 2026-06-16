@@ -32,7 +32,7 @@ impl CardEditorPage {
         Self {
             editor: TextEditor::new()
                 .with_placeholder("Content...")
-                .with_colors(colors.primary, colors.neutral),
+                .with_colors(colors.secondary, colors.neutral),
             preview: false,
             show_tags: false,
             tags: TagsSidebar::new(),

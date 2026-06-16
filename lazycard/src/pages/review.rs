@@ -17,6 +17,7 @@ pub struct ReviewPage {
     markup_items: Vec<MarkupItem>,
     reveal_len: usize,
     rng: fastrand::Rng,
+    desired_retention: f32,
 }
 
 enum ReviewState {
@@ -35,7 +36,12 @@ impl ReviewPage {
             markup_items: Vec::new(),
             reveal_len: 0,
             rng: fastrand::Rng::new(),
+            desired_retention: 0.0,
         }
+    }
+
+    pub const fn set_desired_retention(&mut self, retention: f32) {
+        self.desired_retention = retention;
     }
 
     pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
@@ -127,7 +133,7 @@ impl ReviewPage {
                 KeyCode::Char('y' | 'n') => {
                     if self.is_fully_revealed() {
                         let success = key == KeyCode::Char('y');
-                        db.review_card(id, success);
+                        db.review_card(id, success, self.desired_retention);
                         self.progress += 1;
                         self.next_card(db, markup);
                         return Action::Render;

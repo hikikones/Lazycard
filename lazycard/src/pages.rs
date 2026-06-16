@@ -3,6 +3,7 @@ mod editor;
 mod logs;
 mod review;
 mod search;
+mod settings;
 mod tags;
 
 pub use cards::*;
@@ -10,6 +11,7 @@ pub use editor::*;
 pub use logs::*;
 pub use review::*;
 pub use search::*;
+pub use settings::*;
 pub use tags::*;
 
 pub struct Pages {
@@ -17,6 +19,7 @@ pub struct Pages {
     pub editor: CardEditorPage,
     pub cards: CardsPage,
     pub tags: TagsPage,
+    pub settings: SettingsPage,
     pub search: SearchPage,
     pub logs: LogsPage,
 }
@@ -27,6 +30,7 @@ pub enum Route {
     Editor(Option<database::CardId>),
     Cards(Option<CardsRoute>),
     Tags,
+    Settings,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,16 +45,18 @@ impl Route {
             Self::Review => Self::Editor(None),
             Self::Editor(_) => Self::Cards(None),
             Self::Cards(_) => Self::Tags,
-            Self::Tags => Self::Review,
+            Self::Tags => Self::Settings,
+            Self::Settings => Self::Review,
         }
     }
 
     pub const fn prev(self) -> Self {
         match self {
-            Self::Review => Self::Tags,
+            Self::Review => Self::Settings,
             Self::Editor(_) => Self::Review,
             Self::Cards(_) => Self::Editor(None),
             Self::Tags => Self::Cards(None),
+            Self::Settings => Self::Tags,
         }
     }
 }
