@@ -3,13 +3,19 @@ use std::path::PathBuf;
 use database::Database;
 use ratatui::{
     CompletedFrame,
+    buffer::Buffer,
     crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{Alignment, Constraint, Layout, Margin},
+    layout::{Alignment, Constraint, Layout, Margin, Rect},
     style::{Color, Style},
 };
 use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
 
-use crate::{pages::*, settings::Settings, symbols, terminal::Terminal};
+use crate::{
+    pages::*,
+    settings::{Colors, Settings},
+    symbols,
+    terminal::Terminal,
+};
 
 pub struct App {
     route: Route,
@@ -83,7 +89,7 @@ impl App {
         };
 
         Self {
-            route: Route::Review,
+            route: Route::default(),
             state: AppState::Route,
             pages,
             database,
@@ -97,9 +103,14 @@ impl App {
     }
 
     pub fn run(&mut self, mut terminal: Terminal) -> Result<(), Box<dyn std::error::Error>> {
-        self.pages.review.on_enter(&self.database, &mut self.markup);
+        // Apply settings
+        self.apply_settings();
+
+        // Render default page
+        self.on_enter();
         self.render(&mut terminal)?;
 
+        // Run event loop
         loop {
             let action = match ratatui::crossterm::event::read()? {
                 Event::Key(key) => {
@@ -188,27 +199,10 @@ impl App {
                     self.render(&mut terminal)?;
                 }
                 Action::Route(route) => {
-                    match self.route {
-                        Route::Review => self.pages.review.on_exit(),
-                        Route::Editor(_) => self.pages.editor.on_exit(),
-                        Route::Cards(_) => self.pages.cards.on_exit(),
-                        Route::Tags => self.pages.tags.on_exit(),
-                        Route::Settings => self.pages.settings.on_exit(),
-                    }
-
+                    self.on_exit();
                     self.route = route;
                     self.markup.clear();
-
-                    match route {
-                        Route::Review => {
-                            self.pages.review.on_enter(&self.database, &mut self.markup)
-                        }
-                        Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
-                        Route::Cards(id) => self.pages.cards.on_enter(&mut self.database, id),
-                        Route::Tags => self.pages.tags.on_enter(),
-                        Route::Settings => self.pages.settings.on_enter(),
-                    }
-
+                    self.on_enter();
                     self.render(&mut terminal)?;
                 }
                 Action::Log(log) => {
@@ -293,87 +287,9 @@ impl App {
             let body = body_area
                 .centered_horizontally(Constraint::Length(MAX_WIDTH + MARGIN))
                 .inner(Margin::new(MARGIN, MARGIN));
-
             self.shortcuts.set_colors(Color::Reset, colors.secondary);
 
-            match self.state {
-                AppState::Route => match self.route {
-                    Route::Review => {
-                        self.pages.review.on_render(
-                            body,
-                            buf,
-                            colors,
-                            &self.database,
-                            &mut self.text,
-                            &mut self.markup,
-                            &mut self.kitty,
-                            &mut self.shortcuts,
-                        );
-                    }
-                    Route::Editor(_) => {
-                        self.pages.editor.on_render(
-                            body,
-                            buf,
-                            &self.database,
-                            &mut self.text,
-                            &mut self.markup,
-                            &mut self.kitty,
-                            &mut self.shortcuts,
-                            colors,
-                        );
-                    }
-                    Route::Cards(_) => {
-                        self.pages.cards.on_render(
-                            body,
-                            buf,
-                            &self.database,
-                            colors,
-                            &mut self.text,
-                            &mut self.markup,
-                            &mut self.kitty,
-                            &mut self.shortcuts,
-                        );
-                    }
-                    Route::Tags => {
-                        self.pages.tags.on_render(
-                            body,
-                            buf,
-                            colors,
-                            &mut self.text,
-                            &mut self.shortcuts,
-                        );
-                    }
-                    Route::Settings => {
-                        self.pages.settings.on_render(
-                            body,
-                            buf,
-                            &mut self.settings,
-                            &mut self.shortcuts,
-                        );
-                    }
-                },
-                AppState::Search => {
-                    self.pages.search.on_render(
-                        body,
-                        buf,
-                        &self.database,
-                        &mut self.text,
-                        &mut self.markup,
-                        &mut self.kitty,
-                        &mut self.shortcuts,
-                        colors,
-                    );
-                }
-                AppState::Logs => {
-                    self.pages.logs.on_render(
-                        body,
-                        buf,
-                        colors,
-                        &mut self.text,
-                        &mut self.shortcuts,
-                    );
-                }
-            }
+            self.on_render(body, buf, colors);
 
             // Menu
             self.text.render(menu_area, buf);
@@ -406,6 +322,103 @@ impl App {
             self.shortcuts.render(shortcuts_app_area, buf);
             self.shortcuts.clear();
         })
+    }
+
+    fn on_render(&mut self, body: Rect, buf: &mut Buffer, colors: &Colors) {
+        match self.state {
+            AppState::Route => match self.route {
+                Route::Review => {
+                    self.pages.review.on_render(
+                        body,
+                        buf,
+                        colors,
+                        &self.database,
+                        &mut self.text,
+                        &mut self.markup,
+                        &mut self.kitty,
+                        &mut self.shortcuts,
+                    );
+                }
+                Route::Editor(_) => {
+                    self.pages.editor.on_render(
+                        body,
+                        buf,
+                        &self.database,
+                        &mut self.text,
+                        &mut self.markup,
+                        &mut self.kitty,
+                        &mut self.shortcuts,
+                        colors,
+                    );
+                }
+                Route::Cards(_) => {
+                    self.pages.cards.on_render(
+                        body,
+                        buf,
+                        &self.database,
+                        colors,
+                        &mut self.text,
+                        &mut self.markup,
+                        &mut self.kitty,
+                        &mut self.shortcuts,
+                    );
+                }
+                Route::Tags => {
+                    self.pages.tags.on_render(
+                        body,
+                        buf,
+                        colors,
+                        &mut self.text,
+                        &mut self.shortcuts,
+                    );
+                }
+                Route::Settings => {
+                    self.pages.settings.on_render(
+                        body,
+                        buf,
+                        &mut self.settings,
+                        &mut self.shortcuts,
+                    );
+                }
+            },
+            AppState::Search => {
+                self.pages.search.on_render(
+                    body,
+                    buf,
+                    &self.database,
+                    &mut self.text,
+                    &mut self.markup,
+                    &mut self.kitty,
+                    &mut self.shortcuts,
+                    colors,
+                );
+            }
+            AppState::Logs => {
+                self.pages
+                    .logs
+                    .on_render(body, buf, colors, &mut self.text, &mut self.shortcuts);
+            }
+        }
+    }
+
+    fn on_enter(&mut self) {
+        match self.route {
+            Route::Review => self.pages.review.on_enter(&self.database, &mut self.markup),
+            Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
+            Route::Cards(id) => self.pages.cards.on_enter(&mut self.database, id),
+            Route::Tags => self.pages.tags.on_enter(),
+            Route::Settings => self.pages.settings.on_enter(),
+        }
+    }
+
+    fn on_exit(&mut self) {
+        match self.route {
+            Route::Review => self.pages.review.on_exit(),
+            Route::Editor(_) => self.pages.editor.on_exit(),
+            Route::Cards(_) => self.pages.cards.on_exit(),
+            Route::Tags => self.pages.tags.on_exit(),
+            Route::Settings => self.pages.settings.on_exit(),
+        }
     }
 
     fn on_input(&mut self, input: AppInput, terminal: &mut Terminal) -> Action {
