@@ -413,12 +413,12 @@ impl App {
                     SearchAction::Edit(id) => {
                         self.state = AppState::Route;
                         self.pages.search.on_exit();
-                        Action::Route(Route::Editor(id))
+                        Action::Route(Route::Editor(Some(id)))
                     }
                     SearchAction::Goto(id) => {
                         self.state = AppState::Route;
                         self.pages.search.on_exit();
-                        Action::Route(Route::Cards(id))
+                        Action::Route(Route::Cards(Some(CardsRoute::Card(id))))
                     }
                 }
             }

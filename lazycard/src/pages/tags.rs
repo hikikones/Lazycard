@@ -14,6 +14,7 @@ use widgets::{Shortcut, Shortcuts, TextInput, TextSegment, TokenItem, TokenList}
 
 use crate::{
     app::{Action, AppInput},
+    pages::{CardsRoute, Route},
     settings::Colors,
     symbols,
 };
@@ -102,6 +103,7 @@ impl TagsPage {
                 shortcuts.extend([
                     Shortcut::new("New", "n"),
                     Shortcut::new("Edit", "e"),
+                    Shortcut::new("Goto", "g"),
                     Shortcut::new("Delete", symbols::DELETE),
                 ]);
             }
@@ -259,6 +261,11 @@ impl TagsPage {
                     if let Some(id) = self.current_tag_id() {
                         self.state = State::Edit(id);
                         return Action::Render;
+                    }
+                }
+                KeyCode::Char('g') => {
+                    if let Some(id) = self.current_tag_id() {
+                        return Action::Route(Route::Cards(Some(CardsRoute::Tag(id))));
                     }
                 }
                 _ => {

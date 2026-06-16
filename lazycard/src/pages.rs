@@ -25,8 +25,14 @@ pub struct Pages {
 pub enum Route {
     Review,
     Editor(Option<database::CardId>),
-    Cards(Option<database::CardId>),
+    Cards(Option<CardsRoute>),
     Tags,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CardsRoute {
+    Card(database::CardId),
+    Tag(database::TagId),
 }
 
 impl Route {

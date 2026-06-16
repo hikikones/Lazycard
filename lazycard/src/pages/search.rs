@@ -28,8 +28,8 @@ enum State {
 pub enum SearchAction {
     None,
     Render,
-    Edit(Option<CardId>),
-    Goto(Option<CardId>),
+    Edit(CardId),
+    Goto(CardId),
 }
 
 impl SearchPage {
@@ -246,10 +246,14 @@ impl SearchPage {
                     }
                 }
                 KeyCode::Char('e') => {
-                    return SearchAction::Edit(self.current_card());
+                    if let Some(id) = self.current_card() {
+                        return SearchAction::Edit(id);
+                    }
                 }
                 KeyCode::Char('g') => {
-                    return SearchAction::Goto(self.current_card());
+                    if let Some(id) = self.current_card() {
+                        return SearchAction::Goto(id);
+                    }
                 }
                 KeyCode::Char('s') => {
                     self.state = State::Search;

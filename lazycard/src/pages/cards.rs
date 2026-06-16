@@ -13,7 +13,7 @@ use widgets::{
 
 use crate::{
     app::{Action, AppInput},
-    pages::Route,
+    pages::{CardsRoute, Route},
     settings::Colors,
     symbols,
 };
@@ -35,16 +35,28 @@ impl CardsPage {
         }
     }
 
-    pub fn on_enter(&mut self, db: &mut Database, id: Option<CardId>) {
-        match id {
-            Some(id) => {
-                self.tags.clear();
-                db.get_tags(|tid| self.tags.tags.push(tid));
-                db.get_tags_for_card(id, |tid| {
-                    self.tags.includes.insert(tid);
-                });
-                self.update_cards(db);
-                self.select_card(id);
+    pub fn on_enter(&mut self, db: &mut Database, param: Option<CardsRoute>) {
+        match param {
+            Some(param) => {
+                match param {
+                    CardsRoute::Card(cid) => {
+                        self.tags.clear();
+                        db.get_tags(|tid| self.tags.tags.push(tid));
+                        db.get_tags_for_card(cid, |tid| {
+                            self.tags.includes.insert(tid);
+                        });
+                        self.update_cards(db);
+                        self.select_card(cid);
+                    }
+                    CardsRoute::Tag(tid) => {
+                        self.tags.clear();
+                        db.get_tags(|tid| self.tags.tags.push(tid));
+                        self.tags.includes.insert(tid);
+                        self.tags.select(tid);
+                        self.update_cards(db);
+                    }
+                }
+                self.show_tags = true;
             }
             None => {
                 self.tags.update(db);
@@ -302,6 +314,20 @@ impl TagsSidebar {
 
     fn excludes(&self) -> impl ExactSizeIterator<Item = TagId> {
         self.excludes.iter().copied()
+    }
+
+    fn select(&mut self, id: TagId) {
+        if let Some(i) = self
+            .tags
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, tid)| id == *tid)
+            .map(|(i, _)| i)
+        {
+            self.list.reset();
+            self.list.set_index(i);
+        }
     }
 
     fn reset(&mut self) -> bool {
