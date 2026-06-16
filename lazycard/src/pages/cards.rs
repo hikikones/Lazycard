@@ -7,6 +7,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
 };
+use utils::Formatter;
 use widgets::{
     KittyGraphics, List, ListItem, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment,
 };
@@ -41,7 +42,7 @@ impl CardsPage {
                 match param {
                     CardsRoute::Card(cid) => {
                         self.tags.clear();
-                        db.get_tags(|tid| self.tags.tags.push(tid));
+                        self.tags.refresh(db);
                         db.get_tags_for_card(cid, |tid| {
                             self.tags.includes.insert(tid);
                         });
@@ -50,7 +51,7 @@ impl CardsPage {
                     }
                     CardsRoute::Tag(tid) => {
                         self.tags.clear();
-                        db.get_tags(|tid| self.tags.tags.push(tid));
+                        self.tags.refresh(db);
                         self.tags.includes.insert(tid);
                         self.tags.select(tid);
                         self.update_cards(db);
@@ -59,7 +60,7 @@ impl CardsPage {
                 self.show_tags = true;
             }
             None => {
-                self.tags.update(db);
+                self.tags.refresh(db);
                 self.update_cards(db);
             }
         }
@@ -84,7 +85,6 @@ impl CardsPage {
                     ..area
                 },
                 buf,
-                db,
                 colors,
             );
             area.width = area.width.saturating_sub(tags_width);
@@ -254,7 +254,8 @@ impl CardsPage {
 }
 
 struct TagsSidebar {
-    tags: Vec<TagId>,
+    tags: Vec<TagItem>,
+    names: Formatter,
     includes: HashSet<TagId>,
     excludes: HashSet<TagId>,
     list: List,
@@ -264,18 +265,26 @@ impl TagsSidebar {
     fn new() -> Self {
         Self {
             tags: Vec::new(),
+            names: Formatter::new(),
             includes: HashSet::new(),
             excludes: HashSet::new(),
             list: List::new(),
         }
     }
 
-    fn update(&mut self, db: &Database) {
+    fn refresh(&mut self, db: &Database) {
         self.tags.clear();
+        self.names.clear();
 
-        db.get_tags(|id| self.tags.push(id));
-        self.includes.retain(|id| self.tags.contains(id));
-        self.excludes.retain(|id| self.tags.contains(id));
+        db.get_tags_and_cards_count(|id, name, cards_count| {
+            self.tags
+                .push(TagItem::new(id, name, cards_count, &mut self.names))
+        });
+
+        self.includes
+            .retain(|id| self.tags.iter().any(|tag| tag.id == *id));
+        self.excludes
+            .retain(|id| self.tags.iter().any(|tag| tag.id == *id));
     }
 
     const fn is_empty(&self) -> bool {
@@ -301,8 +310,8 @@ impl TagsSidebar {
         }
 
         for i in self.list.selection_inclusive() {
-            let id = self.tags[i];
-            self.toggle(id);
+            let tag = &self.tags[i];
+            self.toggle(tag.id);
         }
 
         true
@@ -320,9 +329,8 @@ impl TagsSidebar {
         if let Some(i) = self
             .tags
             .iter()
-            .copied()
             .enumerate()
-            .find(|(_, tid)| id == *tid)
+            .find(|(_, tag)| tag.id == id)
             .map(|(i, _)| i)
         {
             self.list.reset();
@@ -340,12 +348,13 @@ impl TagsSidebar {
 
     fn clear(&mut self) {
         self.tags.clear();
+        self.names.clear();
         self.includes.clear();
         self.excludes.clear();
         self.list.reset();
     }
 
-    fn render(&mut self, mut area: Rect, buf: &mut Buffer, db: &Database, colors: &Colors) {
+    fn render(&mut self, mut area: Rect, buf: &mut Buffer, colors: &Colors) {
         widgets::print_ascii(
             area,
             buf,
@@ -371,8 +380,10 @@ impl TagsSidebar {
         self.list.set_colors(colors.neutral, None).render(
             area,
             buf,
-            self.tags.iter().copied(),
-            |line, buf, id, item| {
+            self.tags.iter(),
+            |line, buf, tag, item| {
+                let id = tag.id;
+                let name = self.names.slice(tag.name.clone());
                 let symbol = match item {
                     ListItem::Selected => symbols::concat!(symbols::SELECTED, " "),
                     ListItem::Selection => symbols::concat!(symbols::SELECTION, " "),
@@ -386,19 +397,22 @@ impl TagsSidebar {
                     Color::Reset
                 };
 
-                db.get_name_and_cards_count_for_tag(id, |name, cards_count| {
-                    utils::format_int(cards_count, |cards_count| {
-                        widgets::print_texts(
-                            line,
-                            buf,
-                            [symbol, name, " (", cards_count, ")"],
-                            color,
-                            false,
-                            None,
-                        );
-                    });
-                });
+                widgets::print_texts(line, buf, [symbol, name], color, false, None);
             },
         );
+    }
+}
+
+struct TagItem {
+    id: TagId,
+    name: std::ops::Range<usize>,
+}
+
+impl TagItem {
+    fn new(id: TagId, name: &str, cards_count: u32, formatter: &mut Formatter) -> Self {
+        Self {
+            id,
+            name: formatter.push_fmt(format_args!("{name} ({cards_count})")),
+        }
     }
 }
