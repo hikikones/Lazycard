@@ -13,7 +13,7 @@ use widgets::{
 };
 
 use crate::{
-    app::{Action, AppInput},
+    app::{Action, AppInput, AppRender},
     pages::{CardsRoute, Route},
     settings::Colors,
     symbols,
@@ -68,8 +68,7 @@ impl CardsPage {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
-        buf: &mut Buffer,
+        render: AppRender,
         db: &Database,
         colors: &Colors,
         menu: &mut TextSegment,
@@ -77,6 +76,8 @@ impl CardsPage {
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
+        let (mut area, buf) = render.area_and_buffer();
+
         if self.show_tags {
             let tags_width = (0.30 * area.width as f32).round() as u16;
             self.tags.render(

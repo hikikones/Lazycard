@@ -52,12 +52,27 @@ impl AppInput {
         self.0.code
     }
 
-    pub const fn _key_modifiers(&self) -> KeyModifiers {
-        self.0.modifiers
+    pub const fn key_pressed_and_modifiers(self) -> (KeyCode, KeyModifiers) {
+        (self.0.code, self.0.modifiers)
+    }
+}
+
+pub struct AppRender<'a> {
+    area: Rect,
+    buffer: &'a mut Buffer,
+}
+
+impl<'a> AppRender<'a> {
+    pub const fn area(&self) -> Rect {
+        self.area
     }
 
-    pub const fn key_pressed_and_modifiers(&self) -> (KeyCode, KeyModifiers) {
-        (self.0.code, self.0.modifiers)
+    pub const fn buffer(self) -> &'a mut Buffer {
+        self.buffer
+    }
+
+    pub const fn area_and_buffer(self) -> (Rect, &'a mut Buffer) {
+        (self.area, self.buffer)
     }
 }
 
@@ -113,13 +128,13 @@ impl App {
         // Run event loop
         loop {
             let action = match ratatui::crossterm::event::read()? {
-                Event::Key(key) => {
-                    if key.kind == KeyEventKind::Press {
-                        match key.code {
+                Event::Key(key_ev) => {
+                    if key_ev.kind == KeyEventKind::Press {
+                        match key_ev.code {
                             KeyCode::Esc => Action::Quit,
                             KeyCode::Tab | KeyCode::BackTab => match self.state {
                                 AppState::Route => {
-                                    let next_route = if key.code == KeyCode::Tab {
+                                    let next_route = if key_ev.code == KeyCode::Tab {
                                         self.route.next()
                                     } else {
                                         self.route.prev()
@@ -138,7 +153,7 @@ impl App {
                                 }
                             },
                             KeyCode::Char('f') => {
-                                let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                                let ctrl = key_ev.modifiers.contains(KeyModifiers::CONTROL);
                                 if ctrl {
                                     match self.state {
                                         AppState::Route => {
@@ -157,11 +172,11 @@ impl App {
                                     }
                                     Action::Render
                                 } else {
-                                    self.on_input(AppInput(key), &mut terminal)
+                                    self.on_input(key_ev, &mut terminal)
                                 }
                             }
                             KeyCode::Char('l') => {
-                                let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                                let ctrl = key_ev.modifiers.contains(KeyModifiers::CONTROL);
                                 if ctrl && !self.pages.logs.is_empty() {
                                     match self.state {
                                         AppState::Route => {
@@ -180,10 +195,10 @@ impl App {
                                     }
                                     Action::Render
                                 } else {
-                                    self.on_input(AppInput(key), &mut terminal)
+                                    self.on_input(key_ev, &mut terminal)
                                 }
                             }
-                            _ => self.on_input(AppInput(key), &mut terminal),
+                            _ => self.on_input(key_ev, &mut terminal),
                         }
                     } else {
                         Action::None
@@ -325,14 +340,18 @@ impl App {
     }
 
     fn on_render(&mut self, body: Rect, buf: &mut Buffer, colors: &Colors) {
+        let render = AppRender {
+            area: body,
+            buffer: buf,
+        };
+
         match self.state {
             AppState::Route => match self.route {
                 Route::Review => {
                     self.pages.review.on_render(
-                        body,
-                        buf,
-                        colors,
+                        render,
                         &self.database,
+                        colors,
                         &mut self.text,
                         &mut self.markup,
                         &mut self.kitty,
@@ -341,20 +360,18 @@ impl App {
                 }
                 Route::Editor(_) => {
                     self.pages.editor.on_render(
-                        body,
-                        buf,
+                        render,
                         &self.database,
+                        colors,
                         &mut self.text,
                         &mut self.markup,
                         &mut self.kitty,
                         &mut self.shortcuts,
-                        colors,
                     );
                 }
                 Route::Cards(_) => {
                     self.pages.cards.on_render(
-                        body,
-                        buf,
+                        render,
                         &self.database,
                         colors,
                         &mut self.text,
@@ -364,39 +381,31 @@ impl App {
                     );
                 }
                 Route::Tags => {
-                    self.pages.tags.on_render(
-                        body,
-                        buf,
-                        colors,
-                        &mut self.text,
-                        &mut self.shortcuts,
-                    );
+                    self.pages
+                        .tags
+                        .on_render(render, colors, &mut self.text, &mut self.shortcuts);
                 }
                 Route::Settings => {
-                    self.pages.settings.on_render(
-                        body,
-                        buf,
-                        &mut self.settings,
-                        &mut self.shortcuts,
-                    );
+                    self.pages
+                        .settings
+                        .on_render(render, &mut self.settings, &mut self.shortcuts);
                 }
             },
             AppState::Search => {
                 self.pages.search.on_render(
-                    body,
-                    buf,
+                    render,
                     &self.database,
+                    colors,
                     &mut self.text,
                     &mut self.markup,
                     &mut self.kitty,
                     &mut self.shortcuts,
-                    colors,
                 );
             }
             AppState::Logs => {
                 self.pages
                     .logs
-                    .on_render(body, buf, colors, &mut self.text, &mut self.shortcuts);
+                    .on_render(render, colors, &mut self.text, &mut self.shortcuts);
             }
         }
     }
@@ -421,7 +430,8 @@ impl App {
         }
     }
 
-    fn on_input(&mut self, input: AppInput, terminal: &mut Terminal) -> Action {
+    fn on_input(&mut self, key_event: KeyEvent, terminal: &mut Terminal) -> Action {
+        let input = AppInput(key_event);
         match self.state {
             AppState::Route => match self.route {
                 Route::Review => {

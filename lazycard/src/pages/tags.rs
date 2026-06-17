@@ -2,7 +2,6 @@ use std::ops::Range;
 
 use database::{Database, TagId};
 use ratatui::{
-    buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
     style::{Color, Style},
@@ -13,7 +12,7 @@ use utils::Formatter;
 use widgets::{Shortcut, Shortcuts, TextInput, TextSegment, TokenItem, TokenList};
 
 use crate::{
-    app::{Action, AppInput},
+    app::{Action, AppInput, AppRender},
     pages::{CardsRoute, Route},
     settings::Colors,
     symbols,
@@ -63,12 +62,13 @@ impl TagsPage {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
-        buf: &mut Buffer,
+        render: AppRender,
         colors: &Colors,
         menu: &mut TextSegment,
         shortcuts: &mut Shortcuts,
     ) {
+        let (mut area, buf) = render.area_and_buffer();
+
         menu.push_str("Tags", colors.neutral);
 
         match self.state {

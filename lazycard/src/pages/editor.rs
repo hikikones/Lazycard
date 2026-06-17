@@ -12,7 +12,7 @@ use widgets::{
 };
 
 use crate::{
-    app::{Action, AppInput},
+    app::{Action, AppInput, AppRender},
     pages::Log,
     settings::Colors,
     symbols,
@@ -57,15 +57,16 @@ impl CardEditorPage {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
-        buf: &mut Buffer,
+        render: AppRender,
         db: &Database,
+        colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
-        colors: &Colors,
     ) {
+        let (mut area, buf) = render.area_and_buffer();
+
         let title = if self.card.is_some() {
             "Edit Card"
         } else {

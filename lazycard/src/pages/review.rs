@@ -1,9 +1,9 @@
 use database::{CardId, Database};
-use ratatui::{buffer::Buffer, crossterm::event::KeyCode, layout::Rect, style::Style};
+use ratatui::{crossterm::event::KeyCode, style::Style};
 use widgets::{KittyGraphics, Markup, MarkupItem, ScrollMove, Shortcut, Shortcuts, TextSegment};
 
 use crate::{
-    app::{Action, AppInput},
+    app::{Action, AppInput, AppRender},
     pages::Route,
     settings::Colors,
     symbols,
@@ -55,15 +55,16 @@ impl ReviewPage {
 
     pub fn on_render(
         &mut self,
-        area: Rect,
-        buf: &mut Buffer,
-        colors: &Colors,
+        render: AppRender,
         db: &Database,
+        colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
+        let (area, buf) = render.area_and_buffer();
+
         match self.state {
             ReviewState::None => {
                 widgets::print_ascii(

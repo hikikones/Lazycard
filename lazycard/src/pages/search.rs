@@ -6,7 +6,11 @@ use ratatui::{
 };
 use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextSegment};
 
-use crate::{app::AppInput, settings::Colors, symbols};
+use crate::{
+    app::{AppInput, AppRender},
+    settings::Colors,
+    symbols,
+};
 
 // TODO: Render a help text as markup when search comes up empty.
 // Or just add a help shortcut that shows how to search.
@@ -54,15 +58,16 @@ impl SearchPage {
 
     pub fn on_render(
         &mut self,
-        mut area: Rect,
-        buf: &mut Buffer,
+        render: AppRender,
         db: &Database,
+        colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
-        colors: &Colors,
     ) {
+        let (mut area, buf) = render.area_and_buffer();
+
         menu.push_str("Search", colors.neutral);
 
         if self.is_empty {

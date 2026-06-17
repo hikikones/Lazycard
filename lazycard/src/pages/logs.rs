@@ -4,7 +4,10 @@ use ratatui::{
 };
 use widgets::{List, ListItem, Shortcut, Shortcuts, TextSegment};
 
-use crate::{app::AppInput, settings::Colors};
+use crate::{
+    app::{AppInput, AppRender},
+    settings::Colors,
+};
 
 pub struct LogsPage {
     logs: Vec<Log>,
@@ -48,12 +51,13 @@ impl LogsPage {
 
     pub fn on_render(
         &mut self,
-        area: Rect,
-        buf: &mut Buffer,
+        render: AppRender,
         colors: &Colors,
         menu: &mut TextSegment,
         shortcuts: &mut Shortcuts,
     ) {
+        let (area, buf) = render.area_and_buffer();
+
         if self.logs.is_empty() {
             widgets::print_ascii(
                 area,

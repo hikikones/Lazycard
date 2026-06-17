@@ -10,7 +10,7 @@ use widgets::{
 };
 
 use crate::{
-    app::{Action, AppInput},
+    app::{Action, AppInput, AppRender},
     pages::Log,
     settings::{Colors, Settings},
     symbols,
@@ -92,12 +92,12 @@ impl SettingsPage {
 
     pub fn on_render(
         &mut self,
-        area: Rect,
-        buf: &mut Buffer,
+        render: AppRender,
         settings: &mut Settings,
         shortcuts: &mut Shortcuts,
     ) {
-        let area = area.centered_horizontally(Constraint::Max(80));
+        let area = render.area().centered_horizontally(Constraint::Max(80));
+        let buf = render.buffer();
         let colors = settings.colors();
 
         let block = Block::bordered()
