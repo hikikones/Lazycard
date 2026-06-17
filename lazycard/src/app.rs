@@ -394,7 +394,6 @@ impl App {
             AppState::Search => {
                 self.pages.search.on_render(
                     render,
-                    &self.database,
                     colors,
                     &mut self.text,
                     &mut self.markup,

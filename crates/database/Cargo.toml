@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+constcat = { workspace = true }
 fsrs = { workspace = true }
 itoa = { workspace = true }
 ron = { workspace = true }

@@ -183,11 +183,19 @@ impl Database {
     }
 
     pub fn search_highlight(&self, id: CardId, input: &str, f: impl FnOnce(&str)) {
+        const ANSI_REVERSE: &str = "\x1b[7m";
+        const ANSI_NOT_REVERSE: &str = "\x1b[27m";
+
         self.sqlite
             .query_single(
-                "
-            SELECT rowid, highlight(cards_fts, 0, '<b>', '</b>') FROM cards_fts \
-            WHERE rowid = ?1 AND cards_fts MATCH ?2",
+                constcat::concat!(
+                    "SELECT rowid, highlight(cards_fts, 0, '",
+                    ANSI_REVERSE,
+                    "', '",
+                    ANSI_NOT_REVERSE,
+                    "') FROM cards_fts ",
+                    "WHERE rowid = ?1 AND cards_fts MATCH ?2"
+                ),
                 (id, input),
                 |row| Ok(f(row.get_ref(1)?.as_str()?)),
             )

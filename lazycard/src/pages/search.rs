@@ -21,6 +21,7 @@ pub struct SearchPage {
     results: Vec<CardId>,
     index: usize,
     query: String,
+    content: String,
     is_empty: bool,
 }
 
@@ -46,6 +47,7 @@ impl SearchPage {
             results: Vec::new(),
             index: 0,
             query: String::new(),
+            content: String::new(),
             is_empty: false,
         }
     }
@@ -59,7 +61,6 @@ impl SearchPage {
     pub fn on_render(
         &mut self,
         render: AppRender,
-        db: &Database,
         colors: &Colors,
         menu: &mut TextSegment,
         markup: &mut Markup,
@@ -135,10 +136,8 @@ impl SearchPage {
 
         // Render search results
         match self.current_card() {
-            Some(id) => {
-                db.get_card_content(id, |content| {
-                    markup.render(card_area, buf, content, kitty);
-                });
+            Some(_id) => {
+                markup.render(card_area, buf, self.content.as_str(), kitty);
             }
             None => {
                 if !self.query.is_empty() {
@@ -204,7 +203,8 @@ impl SearchPage {
                         self.query.clear();
                         self.query.push_str(input);
                         let _ = db.search(input, |id| self.results.push(id));
-                        if !self.results.is_empty() {
+                        if let Some(id) = self.current_card() {
+                            self.highlight(id, db);
                             self.state = State::Browse;
                         }
                         return SearchAction::Render;
@@ -235,6 +235,7 @@ impl SearchPage {
                 KeyCode::Right => {
                     if self.results.len() > 1 {
                         self.index = (self.index + 1) % self.results.len();
+                        self.highlight(self.current_card().unwrap(), db);
                         markup.scroll(ScrollMove::Start);
                         return SearchAction::Render;
                     }
@@ -246,6 +247,7 @@ impl SearchPage {
                         } else {
                             self.index -= 1;
                         }
+                        self.highlight(self.current_card().unwrap(), db);
                         markup.scroll(ScrollMove::Start);
                         return SearchAction::Render;
                     }
@@ -287,6 +289,13 @@ impl SearchPage {
         self.results.get(self.index).copied()
     }
 
+    fn highlight(&mut self, id: CardId, db: &Database) {
+        self.content.clear();
+        db.search_highlight(id, &self.query, |content| {
+            self.content.push_str(content);
+        });
+    }
+
     fn refresh(&mut self, db: &Database) {
         if self.is_empty || self.query.is_empty() {
             self.results.clear();
@@ -297,5 +306,9 @@ impl SearchPage {
         self.results.clear();
         let _ = db.search(self.query.as_str(), |id| self.results.push(id));
         self.index = self.index.min(self.results.len().saturating_sub(1));
+
+        if let Some(id) = self.current_card() {
+            self.highlight(id, db);
+        }
     }
 }

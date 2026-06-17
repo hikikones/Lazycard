@@ -193,11 +193,17 @@ impl Markup {
                                 AnsiTag::Italic => {
                                     style.add_modifier.insert(Modifier::ITALIC);
                                 }
+                                AnsiTag::Reverse => {
+                                    style.add_modifier.insert(Modifier::REVERSED);
+                                }
                                 AnsiTag::NotBold => {
                                     style.add_modifier.remove(Modifier::BOLD);
                                 }
                                 AnsiTag::NotItalic => {
                                     style.add_modifier.remove(Modifier::ITALIC);
+                                }
+                                AnsiTag::NotReverse => {
+                                    style.add_modifier.remove(Modifier::REVERSED);
                                 }
                                 AnsiTag::FgTrueColor(r, g, b) => {
                                     style.fg = Some(Color::Rgb(r, g, b));
