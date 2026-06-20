@@ -1,7 +1,4 @@
-use std::{
-    hash::{Hash, Hasher},
-    ops::Range,
-};
+use std::ops::Range;
 
 use ratatui::{crossterm::event::KeyCode, prelude::*};
 use syntect::{
@@ -147,12 +144,7 @@ impl Markup {
         text: &str,
         kitty: &mut KittyGraphics,
     ) {
-        let hash = {
-            let mut hasher = ahash::AHasher::default();
-            text.hash(&mut hasher);
-            hasher.finish()
-        };
-
+        let hash = utils::hash_fast(text);
         if self.area != area || self.hash != hash {
             self.area = area;
             self.hash = hash;

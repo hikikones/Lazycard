@@ -15,7 +15,6 @@ edit = { workspace = true }
 fastrand = { workspace = true }
 nucleo-matcher = { workspace = true }
 ratatui = { workspace = true }
-seahash = { workspace = true }
 serde = { workspace = true }
 terminal-colorsaurus = { workspace = true }
 toml = { workspace = true }

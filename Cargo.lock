@@ -1203,7 +1203,6 @@ dependencies = [
  "fastrand",
  "nucleo-matcher",
  "ratatui",
- "seahash",
  "serde",
  "terminal-colorsaurus",
  "toml",
@@ -2832,7 +2831,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 name = "utils"
 version = "0.1.0"
 dependencies = [
+ "ahash",
  "itoa",
+ "seahash",
  "unicode-segmentation",
 ]
 
@@ -3090,12 +3091,10 @@ dependencies = [
 name = "widgets"
 version = "0.1.0"
 dependencies = [
- "ahash",
  "base64",
  "image",
  "itoa",
  "ratatui",
- "seahash",
  "syntect",
  "textwrap",
  "unicode-segmentation",

@@ -5,5 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+ahash = { workspace = true }
 itoa = { workspace = true }
+seahash = { workspace = true }
 unicode-segmentation = { workspace = true }

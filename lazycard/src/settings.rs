@@ -183,7 +183,7 @@ impl Settings {
 
     pub fn hash(&self) -> u64 {
         toml::to_string(self)
-            .map(|s| seahash::hash(s.as_bytes()))
+            .map(|s| utils::hash_fast(s))
             .unwrap_or(0)
     }
 

@@ -8,7 +8,7 @@ use ratatui::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{CursorDelete, CursorMove, utils};
+use crate::{CursorDelete, CursorMove};
 
 pub struct TextInput {
     input: String,
@@ -93,11 +93,11 @@ impl TextInput {
     }
 
     pub fn hash(&self) -> u64 {
-        seahash::hash(self.input.as_str().as_bytes())
+        utils::hash_fast(self.input.as_str())
     }
 
     pub fn hash_trim(&self) -> u64 {
-        seahash::hash(self.input.as_str().trim().as_bytes())
+        utils::hash_fast(self.input.as_str().trim())
     }
 
     pub fn input(&mut self, key_pressed: KeyCode, key_modifiers: KeyModifiers) -> bool {
@@ -265,7 +265,7 @@ impl TextInput {
 
         // Get total input width and update scroll
         let total_width = unicode_width::UnicodeWidthStr::width(self.input.as_str());
-        self.scroll = utils::calculate_scroll(
+        self.scroll = crate::utils::calculate_scroll(
             total_width,
             line.width,
             self.cursor,
