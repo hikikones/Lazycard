@@ -128,6 +128,10 @@ pub fn print_texts_with_styles<'a>(
     fill_style: Option<Style>,
     alignment: Option<Alignment>,
 ) {
+    if buf.cell(area.as_position()).is_none() {
+        return;
+    }
+
     let texts = texts.into_iter();
 
     match alignment {
@@ -230,6 +234,10 @@ pub fn print_text_segments_with_styles<'a>(
     segments: impl IntoIterator<Item = (&'a str, u16, u16, Style)>,
     fill_style: Option<Style>,
 ) {
+    if buf.cell(area.as_position()).is_none() {
+        return;
+    }
+
     let Rect { mut x, y, .. } = area;
     for (text, width, spacing, style) in segments {
         let text_width = width.saturating_sub(spacing);
@@ -299,6 +307,10 @@ pub fn print_text_repeat(
     n: u16,
     style: impl Into<Style>,
 ) -> Rect {
+    if buf.cell(area.as_position()).is_none() {
+        return area;
+    }
+
     let style = style.into();
     let Rect {
         mut x,

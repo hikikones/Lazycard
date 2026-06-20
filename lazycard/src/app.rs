@@ -5,7 +5,7 @@ use ratatui::{
     CompletedFrame,
     buffer::Buffer,
     crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{Alignment, Constraint, Layout, Margin, Rect},
+    layout::{Alignment, Margin, Rect},
     style::{Color, Style},
 };
 use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
@@ -250,92 +250,105 @@ impl App {
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
         terminal.draw(|frame| {
-            let area = frame.area();
+            let mut area = frame.area();
             let buf = frame.buffer_mut();
 
             let colors = &self.settings.colors().clone();
 
-            // Layout
-            let [
-                nav_area,
-                menu_area,
-                body_area,
-                shortcuts_page_area,
-                shortcuts_app_area,
-            ] = Layout::vertical([
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Min(5),
-                Constraint::Length(1),
-                Constraint::Length(1),
-            ])
-            .areas(area);
-
             // Navigation
-            const SPACING: &str = "   ";
-            for (route, name, spacing) in [
-                (Route::Review, "Review", SPACING),
-                (Route::Editor(None), "Editor", SPACING),
-                (Route::Cards(None), "Cards", SPACING),
-                (Route::Tags, "Tags", SPACING),
-                (Route::Settings, "Settings", ""),
-            ] {
-                let is_current =
-                    std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
-                let style = if is_current {
-                    Style::new().fg(colors.primary).bold()
-                } else {
-                    Style::new()
-                };
-                self.text.extend([(name, style), (spacing, Style::new())]);
+            if area.height > 0 {
+                const SPACING: &str = "   ";
+                for (route, name, spacing) in [
+                    (Route::Review, "Review", SPACING),
+                    (Route::Editor(None), "Editor", SPACING),
+                    (Route::Cards(None), "Cards", SPACING),
+                    (Route::Tags, "Tags", SPACING),
+                    (Route::Settings, "Settings", ""),
+                ] {
+                    let is_current =
+                        std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
+                    let style = if is_current {
+                        Style::new().fg(colors.primary).bold()
+                    } else {
+                        Style::new()
+                    };
+                    self.text.extend([(name, style), (spacing, Style::new())]);
+                }
+                self.text.render(area, buf);
+                self.text.clear();
+
+                area.height = area.height.saturating_sub(1);
+                area.y += 1;
             }
-            self.text.render(nav_area, buf);
-            self.text.clear();
 
             // Clear any rendered image from markup and reset max items
             self.markup.delete_images(&self.kitty).unwrap();
             self.markup.set_max_items(None);
 
-            // Body
-            const MAX_WIDTH: u16 = 64;
-            const MARGIN: u16 = 1;
-            let body = body_area
-                .centered_horizontally(Constraint::Length(MAX_WIDTH + MARGIN))
-                .inner(Margin::new(MARGIN, MARGIN));
-            self.shortcuts.set_colors(Color::Reset, colors.secondary);
+            // Page content
+            if area.height > 0 {
+                self.shortcuts.set_colors(Color::Reset, colors.secondary);
 
-            self.on_render(body, buf, colors);
+                const MAX_WIDTH: u16 = 64;
+                const MARGIN: u16 = 1;
+                const SHORTCUTS_HEIGHT: u16 = 2;
 
-            // Menu
-            self.text.render(menu_area, buf);
-            self.text.clear();
-
-            // Page shortcuts
-            self.shortcuts.render(shortcuts_page_area, buf);
-            self.shortcuts.clear();
-
-            // App shortcuts
-            self.shortcuts.set_colors(Color::Reset, colors.primary);
-            self.shortcuts.extend([
-                Shortcut::new("Quit", symbols::ESCAPE),
-                Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
-                Shortcut::new("Find", symbols::ctrl!("f")),
-            ]);
-
-            if !self.pages.logs.is_empty() {
-                let key = symbols::ctrl!("l");
-                let new_logs = self.pages.logs.queue_len();
-                if new_logs > 0 {
-                    utils::format_int(new_logs, |new_logs| {
-                        self.shortcuts.push_iter(["Logs(", new_logs, ")"], key);
-                    });
+                let height_removal = if area.height > SHORTCUTS_HEIGHT * 4 {
+                    SHORTCUTS_HEIGHT
                 } else {
-                    self.shortcuts.push(Shortcut::new("Logs", key));
-                }
+                    0
+                };
+
+                let body = widgets::align(
+                    Rect {
+                        width: area.width.min(MAX_WIDTH + MARGIN * 2),
+                        height: area.height.saturating_sub(height_removal),
+                        ..area
+                    }
+                    .inner(Margin::new(MARGIN, MARGIN)),
+                    area,
+                    widgets::Alignment::CenterHorizontal,
+                );
+                self.on_render(body, buf, colors);
+
+                let body_height = body.height + MARGIN * 2;
+                area.height = area.height.saturating_sub(body_height);
+                area.y += body_height;
             }
 
-            self.shortcuts.render(shortcuts_app_area, buf);
-            self.shortcuts.clear();
+            // Page shortcuts
+            if area.y > 0 {
+                self.shortcuts.render(area, buf);
+                self.shortcuts.clear();
+
+                area.height = area.height.saturating_sub(1);
+                area.y += 1;
+            }
+
+            // App shortcuts
+            if area.y > 0 {
+                self.shortcuts.set_colors(Color::Reset, colors.primary);
+                self.shortcuts.extend([
+                    Shortcut::new("Quit", symbols::ESCAPE),
+                    Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
+                    Shortcut::new("Find", symbols::ctrl!("f")),
+                ]);
+
+                if !self.pages.logs.is_empty() {
+                    let key = symbols::ctrl!("l");
+                    let new_logs = self.pages.logs.queue_len();
+                    if new_logs > 0 {
+                        utils::format_int(new_logs, |new_logs| {
+                            self.shortcuts.push_iter(["Logs(", new_logs, ")"], key);
+                        });
+                    } else {
+                        self.shortcuts.push(Shortcut::new("Logs", key));
+                    }
+                }
+
+                self.shortcuts.render(area, buf);
+                self.shortcuts.clear();
+            }
         })
     }
 
@@ -352,7 +365,6 @@ impl App {
                         render,
                         &self.database,
                         colors,
-                        &mut self.text,
                         &mut self.markup,
                         &mut self.kitty,
                         &mut self.shortcuts,
@@ -363,7 +375,6 @@ impl App {
                         render,
                         &self.database,
                         colors,
-                        &mut self.text,
                         &mut self.markup,
                         &mut self.kitty,
                         &mut self.shortcuts,
@@ -374,7 +385,6 @@ impl App {
                         render,
                         &self.database,
                         colors,
-                        &mut self.text,
                         &mut self.markup,
                         &mut self.kitty,
                         &mut self.shortcuts,
@@ -383,7 +393,7 @@ impl App {
                 Route::Tags => {
                     self.pages
                         .tags
-                        .on_render(render, colors, &mut self.text, &mut self.shortcuts);
+                        .on_render(render, colors, &mut self.shortcuts);
                 }
                 Route::Settings => {
                     self.pages
@@ -395,7 +405,6 @@ impl App {
                 self.pages.search.on_render(
                     render,
                     colors,
-                    &mut self.text,
                     &mut self.markup,
                     &mut self.kitty,
                     &mut self.shortcuts,
@@ -404,7 +413,7 @@ impl App {
             AppState::Logs => {
                 self.pages
                     .logs
-                    .on_render(render, colors, &mut self.text, &mut self.shortcuts);
+                    .on_render(render, colors, &mut self.shortcuts);
             }
         }
     }

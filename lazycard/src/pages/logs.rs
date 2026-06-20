@@ -1,8 +1,8 @@
 use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
-    prelude::*,
+    style::Style,
 };
-use widgets::{List, ListItem, Shortcut, Shortcuts, TextSegment};
+use widgets::{List, ListItem, Shortcut, Shortcuts};
 
 use crate::{
     app::{AppInput, AppRender},
@@ -49,14 +49,8 @@ impl LogsPage {
         self.queue = 0;
     }
 
-    pub fn on_render(
-        &mut self,
-        render: AppRender,
-        colors: &Colors,
-        menu: &mut TextSegment,
-        shortcuts: &mut Shortcuts,
-    ) {
-        let (area, buf) = render.area_and_buffer();
+    pub fn on_render(&mut self, render: AppRender, colors: &Colors, shortcuts: &mut Shortcuts) {
+        let (mut area, buf) = render.area_and_buffer();
 
         if self.logs.is_empty() {
             widgets::print_ascii(
@@ -69,9 +63,18 @@ impl LogsPage {
             return;
         }
 
-        menu.push_str("Logs (", colors.neutral);
-        menu.push_int(self.logs.len(), colors.neutral);
-        menu.push_char(')', colors.neutral);
+        utils::format_int(self.logs.len(), |logs_len| {
+            widgets::print_asciis(
+                area,
+                buf,
+                ["Logs (", logs_len, ")"],
+                colors.neutral,
+                Some(widgets::Alignment::CenterHorizontal),
+            );
+        });
+
+        area.height = area.height.saturating_sub(2);
+        area.y += 2;
 
         // Render logs
         self.list.set_colors(colors.neutral, None).render(

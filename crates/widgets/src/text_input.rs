@@ -245,6 +245,10 @@ impl TextInput {
     }
 
     pub fn render(&mut self, line: Rect, buf: &mut Buffer) {
+        if buf.cell(line.as_position()).is_none() {
+            return;
+        }
+
         if self.disabled {
             let Rect { x, y, .. } = line;
             let s = if self.input.is_empty() {
@@ -252,13 +256,19 @@ impl TextInput {
             } else {
                 self.input.as_str()
             };
-            buf.set_string(x, y, s, self.colors.disabled);
+            buf.set_stringn(x, y, s, line.width as usize, self.colors.disabled);
             return;
         }
 
         if self.input.is_empty() {
             let Rect { x, y, .. } = line;
-            buf.set_string(x, y, self.placeholder, self.colors.placeholder);
+            buf.set_stringn(
+                x,
+                y,
+                self.placeholder,
+                line.width as usize,
+                self.colors.placeholder,
+            );
             buf[(x, y)].set_style(Style::new().fg(self.colors.cursor).reversed());
             return;
         }

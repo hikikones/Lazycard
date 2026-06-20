@@ -7,9 +7,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Style},
 };
-use widgets::{
-    CursorMove, KittyGraphics, List, ListItem, Markup, Shortcut, Shortcuts, TextEditor, TextSegment,
-};
+use widgets::{CursorMove, KittyGraphics, List, ListItem, Markup, Shortcut, Shortcuts, TextEditor};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -60,22 +58,14 @@ impl CardEditorPage {
         render: AppRender,
         db: &Database,
         colors: &Colors,
-        menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
         let (mut area, buf) = render.area_and_buffer();
 
-        let title = if self.card.is_some() {
-            "Edit Card"
-        } else {
-            "New Card"
-        };
-        menu.push_str(title, colors.neutral);
-
         if self.show_tags {
-            let tags_width = ((0.25 * area.width as f32).round() as u16).min(20);
+            let tags_width = (0.30 * area.width as f32).round() as u16;
             self.tags.render(
                 Rect {
                     width: tags_width,
@@ -96,10 +86,28 @@ impl CardEditorPage {
             }
         }
 
-        if self.preview {
-            markup.render(area, buf, self.editor.as_str(), kitty);
+        let title = if self.card.is_some() {
+            "Edit Card"
         } else {
-            self.editor.render(area, buf);
+            "New Card"
+        };
+        widgets::print_ascii(
+            area,
+            buf,
+            title,
+            colors.neutral,
+            Some(widgets::Alignment::CenterHorizontal),
+        );
+
+        area.height = area.height.saturating_sub(2);
+        area.y += 2;
+
+        if area.height > 0 {
+            if self.preview {
+                markup.render(area, buf, self.editor.as_str(), kitty);
+            } else {
+                self.editor.render(area, buf);
+            }
         }
 
         shortcuts.extend([

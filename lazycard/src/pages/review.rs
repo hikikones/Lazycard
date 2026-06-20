@@ -1,6 +1,6 @@
 use database::{CardId, Database};
 use ratatui::{crossterm::event::KeyCode, style::Style};
-use widgets::{KittyGraphics, Markup, MarkupItem, ScrollMove, Shortcut, Shortcuts, TextSegment};
+use widgets::{KittyGraphics, Markup, MarkupItem, ScrollMove, Shortcut, Shortcuts};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -58,12 +58,11 @@ impl ReviewPage {
         render: AppRender,
         db: &Database,
         colors: &Colors,
-        menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
-        let (area, buf) = render.area_and_buffer();
+        let (mut area, buf) = render.area_and_buffer();
 
         match self.state {
             ReviewState::None => {
@@ -76,9 +75,18 @@ impl ReviewPage {
                 );
             }
             ReviewState::Review(id) => {
-                menu.push_int(self.progress, colors.neutral);
-                menu.push_str(" / ", colors.neutral);
-                menu.push_int(self.total, colors.neutral);
+                utils::format_int2(self.progress + 1, self.total, |progress, total| {
+                    widgets::print_asciis(
+                        area,
+                        buf,
+                        [progress, " / ", total],
+                        colors.neutral,
+                        Some(widgets::Alignment::CenterHorizontal),
+                    );
+                });
+
+                area.height = area.height.saturating_sub(2);
+                area.y += 2;
 
                 db.get_card_content(id, |content| {
                     markup

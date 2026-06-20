@@ -9,7 +9,7 @@ use ratatui::{
     widgets::Widget,
 };
 use utils::Formatter;
-use widgets::{Shortcut, Shortcuts, TextInput, TextSegment, TokenItem, TokenList};
+use widgets::{Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -60,16 +60,21 @@ impl TagsPage {
 
     pub fn on_enter(&self) {}
 
-    pub fn on_render(
-        &mut self,
-        render: AppRender,
-        colors: &Colors,
-        menu: &mut TextSegment,
-        shortcuts: &mut Shortcuts,
-    ) {
+    pub fn on_render(&mut self, render: AppRender, colors: &Colors, shortcuts: &mut Shortcuts) {
         let (mut area, buf) = render.area_and_buffer();
 
-        menu.push_str("Tags", colors.neutral);
+        utils::format_int(self.tags.len(), |tags_len| {
+            widgets::print_asciis(
+                area,
+                buf,
+                ["Tags (", tags_len, ")"],
+                colors.neutral,
+                Some(widgets::Alignment::CenterHorizontal),
+            );
+        });
+
+        area.height = area.height.saturating_sub(2);
+        area.y += 2;
 
         match self.state {
             State::Browse => {
@@ -116,30 +121,34 @@ impl TagsPage {
                     Some(widgets::Alignment::CenterHorizontal),
                 );
 
+                area.height = area.height.saturating_sub(2);
                 area.y += 2;
 
-                let input_area = widgets::align(
-                    Rect {
-                        width: (0.64 * area.width as f32).round() as u16,
-                        height: 1,
-                        ..area
-                    },
-                    area,
-                    widgets::Alignment::CenterHorizontal,
-                );
-                self.input.render(input_area, buf);
-
-                area.y += 2;
-
-                if !self.message.is_empty() {
-                    widgets::print_text(
+                if area.height > 0 {
+                    let input_area = widgets::align(
+                        Rect {
+                            width: (0.64 * area.width as f32).round() as u16,
+                            height: 1,
+                            ..area
+                        },
                         area,
-                        buf,
-                        self.message.as_str(),
-                        Color::Red,
-                        false,
-                        Some(widgets::Alignment::CenterHorizontal),
+                        widgets::Alignment::CenterHorizontal,
                     );
+                    self.input.render(input_area, buf);
+
+                    area.height = area.height.saturating_sub(2);
+                    area.y += 2;
+
+                    if area.height > 0 && !self.message.is_empty() {
+                        widgets::print_text(
+                            area,
+                            buf,
+                            self.message.as_str(),
+                            Color::Red,
+                            false,
+                            Some(widgets::Alignment::CenterHorizontal),
+                        );
+                    }
                 }
 
                 shortcuts.extend([
@@ -156,41 +165,48 @@ impl TagsPage {
                     Some(widgets::Alignment::CenterHorizontal),
                 );
 
+                area.height = area.height.saturating_sub(1);
                 area.y += 1;
 
-                widgets::print_text(
-                    area,
-                    buf,
-                    self.current_tag_name(),
-                    Style::new(),
-                    false,
-                    Some(widgets::Alignment::CenterHorizontal),
-                );
-
-                area.y += 2;
-
-                let input_area = widgets::align(
-                    Rect {
-                        width: (0.64 * area.width as f32).round() as u16,
-                        height: 1,
-                        ..area
-                    },
-                    area,
-                    widgets::Alignment::CenterHorizontal,
-                );
-                self.input.render(input_area, buf);
-
-                area.y += 2;
-
-                if !self.message.is_empty() {
+                if area.height > 0 {
                     widgets::print_text(
                         area,
                         buf,
-                        self.message.as_str(),
-                        Color::Red,
+                        self.current_tag_name(),
+                        Style::new(),
                         false,
                         Some(widgets::Alignment::CenterHorizontal),
                     );
+
+                    area.height = area.height.saturating_sub(2);
+                    area.y += 2;
+
+                    if area.height > 0 {
+                        let input_area = widgets::align(
+                            Rect {
+                                width: (0.64 * area.width as f32).round() as u16,
+                                height: 1,
+                                ..area
+                            },
+                            area,
+                            widgets::Alignment::CenterHorizontal,
+                        );
+                        self.input.render(input_area, buf);
+
+                        area.height = area.height.saturating_sub(2);
+                        area.y += 2;
+
+                        if area.height > 0 && !self.message.is_empty() {
+                            widgets::print_text(
+                                area,
+                                buf,
+                                self.message.as_str(),
+                                Color::Red,
+                                false,
+                                Some(widgets::Alignment::CenterHorizontal),
+                            );
+                        }
+                    }
                 }
 
                 shortcuts.extend([
@@ -207,31 +223,37 @@ impl TagsPage {
                     Some(widgets::Alignment::CenterHorizontal),
                 );
 
+                area.height = area.height.saturating_sub(1);
                 area.y += 1;
 
-                widgets::print_text(
-                    area,
-                    buf,
-                    self.current_tag_name(),
-                    Style::new(),
-                    false,
-                    Some(widgets::Alignment::CenterHorizontal),
-                );
+                if area.height > 0 {
+                    widgets::print_text(
+                        area,
+                        buf,
+                        self.current_tag_name(),
+                        Style::new(),
+                        false,
+                        Some(widgets::Alignment::CenterHorizontal),
+                    );
 
-                area.y += 2;
+                    area.height = area.height.saturating_sub(2);
+                    area.y += 2;
 
-                let checkmark = if delete_cards {
-                    (symbols::CHECKMARK_YES, Style::new().fg(Color::Green))
-                } else {
-                    (symbols::CHECKMARK_NO, Style::new().fg(Color::Red))
-                };
-                widgets::print_texts_with_styles(
-                    area,
-                    buf,
-                    [("Also delete cards: ", Style::new()), checkmark],
-                    None,
-                    Some(widgets::Alignment::CenterHorizontal),
-                );
+                    if area.height > 0 {
+                        let checkmark = if delete_cards {
+                            (symbols::CHECKMARK_YES, Style::new().fg(Color::Green))
+                        } else {
+                            (symbols::CHECKMARK_NO, Style::new().fg(Color::Red))
+                        };
+                        widgets::print_texts_with_styles(
+                            area,
+                            buf,
+                            [("Also delete cards: ", Style::new()), checkmark],
+                            None,
+                            Some(widgets::Alignment::CenterHorizontal),
+                        );
+                    }
+                }
 
                 shortcuts.extend([
                     Shortcut::new("Yes", "y"),

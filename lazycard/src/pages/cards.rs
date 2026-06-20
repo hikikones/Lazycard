@@ -8,9 +8,7 @@ use ratatui::{
     style::{Color, Style},
 };
 use utils::Formatter;
-use widgets::{
-    KittyGraphics, List, ListItem, Markup, ScrollMove, Shortcut, Shortcuts, TextSegment,
-};
+use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Shortcut, Shortcuts};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -71,7 +69,6 @@ impl CardsPage {
         render: AppRender,
         db: &Database,
         colors: &Colors,
-        menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
@@ -101,14 +98,24 @@ impl CardsPage {
 
         match self.current_card() {
             Some(id) => {
-                let neutral = Style::new().fg(colors.neutral);
-                menu.push_int(self.index + 1, neutral);
-                menu.push_str(" / ", neutral);
-                menu.push_int(self.cards.len(), neutral);
-
-                db.get_card_content(id, |content| {
-                    markup.render(area, buf, content, kitty);
+                utils::format_int2(self.index + 1, self.cards.len(), |index, cards_len| {
+                    widgets::print_asciis(
+                        area,
+                        buf,
+                        [index, " / ", cards_len],
+                        colors.neutral,
+                        Some(widgets::Alignment::CenterHorizontal),
+                    );
                 });
+
+                area.height = area.height.saturating_sub(2);
+                area.y += 2;
+
+                if area.height > 0 {
+                    db.get_card_content(id, |content| {
+                        markup.render(area, buf, content, kitty);
+                    });
+                }
             }
             None => {
                 widgets::print_ascii(

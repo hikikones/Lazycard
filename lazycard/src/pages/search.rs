@@ -4,7 +4,7 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Padding},
 };
-use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput, TextSegment};
+use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput};
 
 use crate::{
     app::{AppInput, AppRender},
@@ -62,14 +62,22 @@ impl SearchPage {
         &mut self,
         render: AppRender,
         colors: &Colors,
-        menu: &mut TextSegment,
         markup: &mut Markup,
         kitty: &mut KittyGraphics,
         shortcuts: &mut Shortcuts,
     ) {
         let (mut area, buf) = render.area_and_buffer();
 
-        menu.push_str("Search", colors.neutral);
+        widgets::print_ascii(
+            area,
+            buf,
+            "Search",
+            colors.neutral,
+            Some(widgets::Alignment::CenterHorizontal),
+        );
+
+        area.height = area.height.saturating_sub(2);
+        area.y += 2;
 
         if self.is_empty {
             widgets::print_ascii(
