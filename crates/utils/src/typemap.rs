@@ -14,62 +14,41 @@ impl TypeMap {
         }
     }
 
-    pub fn insert<T: 'static>(&mut self, value: T) {
+    pub fn insert<T: Any>(&mut self, value: T) {
         self.map.insert(TypeId::of::<T>(), Box::new(value));
     }
 
-    pub fn remove<T: 'static>(&mut self) -> Option<T> {
+    pub fn remove<T: Any>(&mut self) -> T {
         self.map
             .remove(&TypeId::of::<T>())
             .and_then(|v| v.downcast::<T>().ok())
             .map(|v| *v)
+            .unwrap()
     }
 
-    /// Unified multi-query API
-    pub fn get<Q>(&mut self) -> Option<Q::Output>
-    where
-        Q: Query,
-    {
-        Q::get(self)
+    pub fn get<F: Fetch>(&mut self) -> F::Output {
+        F::get(self).unwrap()
     }
 }
 
-//
-// =======================================================
-// Core Query trait
-// =======================================================
-//
-
-pub trait Query {
+// Core fetch trait
+pub trait Fetch {
     type Output;
 
     fn get(map: &mut TypeMap) -> Option<Self::Output>;
 }
 
-//
-// =======================================================
-// Internal QueryItem trait
-// (turns types into raw pointers safely)
-// =======================================================
-//
-
-trait QueryItem {
-    type Target: 'static;
+// Internal fetch item trait
+trait FetchItem {
     type Ptr;
 
     fn type_id() -> TypeId;
-
     fn fetch_ptr(map: &mut TypeMap) -> Option<Self::Ptr>;
-
     unsafe fn from_ptr(ptr: Self::Ptr) -> Self;
 }
 
-//
 // Immutable reference
-//
-
-impl<'a, T: 'static> QueryItem for &'a T {
-    type Target = T;
+impl<'a, T: 'static> FetchItem for &'a T {
     type Ptr = *const T;
 
     fn type_id() -> TypeId {
@@ -88,12 +67,8 @@ impl<'a, T: 'static> QueryItem for &'a T {
     }
 }
 
-//
 // Mutable reference
-//
-
-impl<'a, T: 'static> QueryItem for &'a mut T {
-    type Target = T;
+impl<'a, T: 'static> FetchItem for &'a mut T {
     type Ptr = *mut T;
 
     fn type_id() -> TypeId {
@@ -112,87 +87,66 @@ impl<'a, T: 'static> QueryItem for &'a mut T {
     }
 }
 
-//
-// =======================================================
-// Safety helper: prevent duplicate types in a query
-// =======================================================
-//
+// Fetch a single item
+impl<T> Fetch for T
+where
+    T: FetchItem,
+{
+    type Output = T;
 
+    fn get(map: &mut TypeMap) -> Option<Self::Output> {
+        T::fetch_ptr(map).map(|ptr| unsafe { T::from_ptr(ptr) })
+    }
+}
+
+// Ensure that fetching multiple types does not conflict
+#[cfg(debug_assertions)]
 fn assert_unique(ids: &[TypeId]) {
     for i in 0..ids.len() {
         for j in i + 1..ids.len() {
-            assert!(ids[i] != ids[j], "duplicate type in TypeMap::get query");
+            debug_assert_ne!(
+                ids[i],
+                ids[j],
+                "duplicate type found in {}::get",
+                std::any::type_name::<TypeMap>()
+            );
         }
     }
 }
 
-//
-// =======================================================
-// Macro: tuple implementations (1–8)
-// =======================================================
-//
-
-impl<A> Query for A
-where
-    A: QueryItem,
-{
-    type Output = A;
-
-    fn get(map: &mut TypeMap) -> Option<Self::Output> {
-        let ids = [A::type_id()];
-        assert_unique(&ids);
-
-        unsafe {
-            let ptr = A::fetch_ptr(map)?;
-            Some(A::from_ptr(ptr))
-        }
-    }
-}
-
-macro_rules! impl_query {
+macro_rules! impl_fetch_item {
     ($($name:ident),+) => {
-        impl<$($name),+> Query for ($($name,)+)
+        impl<$($name),+> Fetch for ($($name,)+)
         where
-            $($name: QueryItem,)+
+            $($name: FetchItem,)+
         {
             type Output = Self;
 
             fn get(map: &mut TypeMap) -> Option<Self> {
-                let ids = [
-                    $($name::type_id()),+
-                ];
+                #[cfg(debug_assertions)]
+                assert_unique(&[ $( $name::type_id() ),+ ]);
 
-                assert_unique(&ids);
-
-                unsafe {
-                    Some((
-                        $(
-                            {
-                                let ptr = $name::fetch_ptr(map)?;
-                                $name::from_ptr(ptr)
-                            },
-                        )+
-                    ))
-                }
+                Some((
+                    $(
+                        {
+                            let ptr = $name::fetch_ptr(map)?;
+                            unsafe { $name::from_ptr(ptr) }
+                        },
+                    )+
+                ))
             }
         }
     };
 }
 
-impl_query!(A);
-impl_query!(A, B);
-impl_query!(A, B, C);
-impl_query!(A, B, C, D);
-impl_query!(A, B, C, D, E);
-impl_query!(A, B, C, D, E, F);
-impl_query!(A, B, C, D, E, F, G);
-impl_query!(A, B, C, D, E, F, G, H);
-
-//
-// =======================================================
-// Tests
-// =======================================================
-//
+impl_fetch_item!(A);
+impl_fetch_item!(A, B);
+impl_fetch_item!(A, B, C);
+impl_fetch_item!(A, B, C, D);
+impl_fetch_item!(A, B, C, D, E);
+impl_fetch_item!(A, B, C, D, E, F);
+impl_fetch_item!(A, B, C, D, E, F, G);
+impl_fetch_item!(A, B, C, D, E, F, G, H);
 
 #[cfg(test)]
 mod tests {
@@ -212,7 +166,7 @@ mod tests {
         let mut map = TypeMap::new();
         map.insert(Foo(10));
 
-        let foo = map.get::<&Foo>().unwrap();
+        let foo = map.get::<&Foo>();
         assert_eq!(foo.0, 10);
     }
 
@@ -223,7 +177,7 @@ mod tests {
         map.insert(Bar(20));
         map.insert(Baz(30));
 
-        let (foo, bar, baz) = map.get::<(&Foo, &mut Bar, &Baz)>().unwrap();
+        let (foo, bar, baz) = map.get::<(&Foo, &mut Bar, &Baz)>();
 
         bar.0 = foo.0 + baz.0;
 
@@ -236,6 +190,6 @@ mod tests {
         let mut map = TypeMap::new();
         map.insert(Foo(1));
 
-        let _ = map.get::<(&Foo, &mut Foo)>().unwrap();
+        let _ = map.get::<(&Foo, &mut Foo)>();
     }
 }
