@@ -121,18 +121,13 @@ impl TokenList {
         self.index != old_index
     }
 
-    pub fn render<T: TokenItem>(
+    pub fn process_items<T: TokenItem>(
         &mut self,
         area: Rect,
-        buf: &mut Buffer,
-        items: impl IntoIterator<Item = T, IntoIter: Clone>,
-        mut render_item: impl FnMut(Rect, &mut Buffer, T, bool),
-    ) {
-        let items = items.into_iter();
-
-        // Process all items every render for index and scroll data
+        items: impl IntoIterator<Item = T>,
+    ) -> &mut Self {
         self.total_items = 0;
-        for (i, x, y, _) in iter_items(area.width, self.gap, items.clone()) {
+        for (i, x, y, _) in iter_items(area.width, self.gap, items) {
             if self.index == i {
                 self.index_col = x;
                 self.index_row = y;
@@ -140,7 +135,16 @@ impl TokenList {
             self.total_items += 1;
             self.total_lines = y + 1;
         }
+        self
+    }
 
+    pub fn render<T: TokenItem>(
+        &mut self,
+        area: Rect,
+        buf: &mut Buffer,
+        items: impl IntoIterator<Item = T>,
+        mut render_item: impl FnMut(Rect, &mut Buffer, T, bool),
+    ) {
         // Determine scroll
         let scroll = if self.size.height != area.height {
             // Refresh scroll on window resize

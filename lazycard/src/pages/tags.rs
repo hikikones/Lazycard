@@ -87,8 +87,8 @@ impl TagsPage {
                     return;
                 }
 
-                // TODO: Fix that scrollbar does not show on first render
-                // due to TokenList::lines() being zero.
+                // Process list before render
+                self.list.process_items(area, self.tags.iter());
 
                 // Scrollbar
                 let scrollable = self.list.lines() > area.height as usize && area.width > 10;
