@@ -20,6 +20,7 @@ pub struct TextInput {
     margin_top: usize,
     margin_bottom: usize,
     colors: TextInputColors,
+    width: u16,
 }
 
 impl TextInput {
@@ -38,6 +39,7 @@ impl TextInput {
             margin_top: 0,
             margin_bottom: 0,
             colors: TextInputColors::new(),
+            width: 0,
         }
     }
 
@@ -273,17 +275,26 @@ impl TextInput {
             return;
         }
 
-        // Get total input width and update scroll
+        // Get total input width
         let total_width = unicode_width::UnicodeWidthStr::width(self.input.as_str());
-        self.scroll = crate::utils::calculate_scroll(
+
+        // Determine scroll
+        let scroll = if self.width != line.width {
+            // Refresh scroll on window resize
+            0
+        } else {
+            self.scroll
+        };
+        self.scroll = crate::Scrollbar::calculate_scroll_with_margins(
             total_width,
             line.width,
             self.cursor,
-            self.scroll,
+            scroll,
             self.margin_top,
             self.margin_bottom,
             0,
         );
+        self.width = line.width;
 
         // Render
         let selection = self.try_selection().unwrap_or(self.cursor..self.cursor);

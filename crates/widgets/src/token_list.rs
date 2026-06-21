@@ -42,6 +42,14 @@ impl TokenList {
         self.index
     }
 
+    pub const fn scroll(&self) -> usize {
+        self.scroll as usize
+    }
+
+    pub const fn lines(&self) -> usize {
+        self.total_lines as usize
+    }
+
     pub const fn set_index(&mut self, i: usize) -> &mut Self {
         self.index = i;
         self
@@ -140,14 +148,11 @@ impl TokenList {
         } else {
             self.scroll
         };
-        self.scroll = crate::calculate_scroll(
+        self.scroll = crate::Scrollbar::calculate_scroll(
             self.total_lines as usize,
             area.height,
             self.index_row as usize,
             scroll as usize,
-            0,
-            0,
-            0,
         ) as u16;
 
         self.size = Size::from(area);

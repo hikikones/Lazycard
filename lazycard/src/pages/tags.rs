@@ -9,7 +9,7 @@ use ratatui::{
     widgets::Widget,
 };
 use utils::Formatter;
-use widgets::{Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
+use widgets::{Scrollbar, ScrollbarColors, Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -17,9 +17,6 @@ use crate::{
     settings::Colors,
     symbols,
 };
-
-// TODO: Scrollbar.
-// TODO: Ignore case-sensitivity?
 
 pub struct TagsPage {
     tags: Vec<TagItem>,
@@ -90,6 +87,22 @@ impl TagsPage {
                     return;
                 }
 
+                // TODO: Fix that scrollbar does not show on first render
+                // due to TokenList::lines() being zero.
+
+                // Scrollbar
+                let scrollable = self.list.lines() > area.height as usize && area.width > 10;
+                let scroll_area = scrollable.then(|| {
+                    let scroll_area = Rect {
+                        x: area.x + area.width.saturating_sub(1),
+                        width: 1,
+                        ..area
+                    };
+                    area.width = area.width.saturating_sub(3);
+                    scroll_area
+                });
+
+                // Render tags
                 self.list.render(
                     area,
                     buf,
@@ -104,6 +117,13 @@ impl TagsPage {
                         Span::styled(name, style).render(area, buf);
                     },
                 );
+
+                // Render scrollbar
+                if let Some(scroll_area) = scroll_area {
+                    Scrollbar::new()
+                        .with_colors(ScrollbarColors::new(colors.neutral, None))
+                        .render(scroll_area, buf, self.list.scroll(), self.list.lines());
+                }
 
                 shortcuts.extend([
                     Shortcut::new("New", "n"),

@@ -6,7 +6,8 @@ use ratatui::{
     widgets::{Block, Padding},
 };
 use widgets::{
-    CursorMove, List, ListItem, Shortcut, Shortcuts, TextInput, TextInputColors, TextSegment,
+    CursorMove, List, ListItem, Scrollbar, ScrollbarColors, Shortcut, Shortcuts, TextInput,
+    TextInputColors, TextSegment,
 };
 
 use crate::{
@@ -106,8 +107,20 @@ impl SettingsPage {
             .title_style(Color::Reset)
             .border_style(colors.secondary)
             .padding(Padding::uniform(1));
-        let settings_area = block.inner(area);
+        let mut settings_area = block.inner(area);
         block.render(area, buf);
+
+        // Scrollbar
+        let scrollable = SETTINGS.len() > settings_area.height as usize && settings_area.width > 10;
+        let scroll_area = scrollable.then(|| {
+            let scroll_area = Rect {
+                x: settings_area.x + settings_area.width.saturating_sub(1),
+                width: 1,
+                ..settings_area
+            };
+            settings_area.width = settings_area.width.saturating_sub(3);
+            scroll_area
+        });
 
         let mut setting_area = Rect {
             width: settings_area.width / 2,
@@ -126,11 +139,8 @@ impl SettingsPage {
         };
 
         let current_setting = self.current();
-        self.list.set_colors(colors.neutral, None).render(
-            settings_area,
-            buf,
-            SETTINGS,
-            |line, buf, setting, index| {
+        self.list
+            .render(settings_area, buf, SETTINGS, |line, buf, setting, index| {
                 setting_area.y = line.y;
                 input_area.y = line.y;
 
@@ -204,8 +214,14 @@ impl SettingsPage {
                 }
 
                 self.text.clear();
-            },
-        );
+            });
+
+        // Render scrollbar
+        if let Some(scroll_area) = scroll_area {
+            Scrollbar::new()
+                .with_colors(ScrollbarColors::new(colors.neutral, None))
+                .render(scroll_area, buf, self.list.scroll(), SETTINGS.len());
+        }
 
         // Description and shortcuts
         const COLOR_DESCRIPTION: &str = "Set color by name, hex code or indexed value";

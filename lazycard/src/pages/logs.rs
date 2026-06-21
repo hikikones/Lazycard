@@ -1,8 +1,9 @@
 use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
+    layout::Rect,
     style::Style,
 };
-use widgets::{List, ListItem, Shortcut, Shortcuts};
+use widgets::{List, ListItem, Scrollbar, ScrollbarColors, Shortcut, Shortcuts};
 
 use crate::{
     app::{AppInput, AppRender},
@@ -76,12 +77,21 @@ impl LogsPage {
         area.height = area.height.saturating_sub(2);
         area.y += 2;
 
+        // Scrollbar
+        let scrollable = self.logs.len() > area.height as usize && area.width > 10;
+        let scroll_area = scrollable.then(|| {
+            let scroll_area = Rect {
+                x: area.x + area.width.saturating_sub(1),
+                width: 1,
+                ..area
+            };
+            area.width = area.width.saturating_sub(3);
+            scroll_area
+        });
+
         // Render logs
-        self.list.set_colors(colors.neutral, None).render(
-            area,
-            buf,
-            self.logs.iter(),
-            |line, buf, log, item| {
+        self.list
+            .render(area, buf, self.logs.iter(), |line, buf, log, item| {
                 let (scroll, style) = if item == ListItem::Selected {
                     let max_scroll = log.width.saturating_sub(line.width as usize);
                     self.horizontal_scroll = max_scroll.min(self.horizontal_scroll);
@@ -94,8 +104,14 @@ impl LogsPage {
                 };
 
                 widgets::print_text(line, buf, &log.message[scroll..], style, true, None);
-            },
-        );
+            });
+
+        // Render scrollbar
+        if let Some(scroll_area) = scroll_area {
+            Scrollbar::new()
+                .with_colors(ScrollbarColors::new(colors.neutral, None))
+                .render(scroll_area, buf, self.list.scroll(), self.logs.len());
+        }
 
         // Shortcuts
         shortcuts.push(Shortcut::new("Clear", "c"));

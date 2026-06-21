@@ -8,7 +8,10 @@ use ratatui::{
     style::{Color, Style},
 };
 use utils::Formatter;
-use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Shortcut, Shortcuts};
+use widgets::{
+    KittyGraphics, List, ListItem, Markup, ScrollMove, Scrollbar, ScrollbarColors, Shortcut,
+    Shortcuts,
+};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -382,14 +385,24 @@ impl TagsSidebar {
             return;
         }
 
-        area.y += 1;
-        area.height = area.height.saturating_sub(1);
+        area.y += 2;
+        area.height = area.height.saturating_sub(2);
 
-        self.list.set_colors(colors.neutral, None).render(
-            area,
-            buf,
-            self.tags.iter(),
-            |line, buf, tag, item| {
+        // Scrollbar
+        let scrollable = self.tags.len() > area.height as usize && area.width > 10;
+        let scroll_area = scrollable.then(|| {
+            let scroll_area = Rect {
+                x: area.x + area.width.saturating_sub(1),
+                width: 1,
+                ..area
+            };
+            area.width = area.width.saturating_sub(3);
+            scroll_area
+        });
+
+        // Render tags
+        self.list
+            .render(area, buf, self.tags.iter(), |line, buf, tag, item| {
                 let id = tag.id;
                 let name = self.names.slice(tag.name.clone());
                 let symbol = match item {
@@ -406,8 +419,14 @@ impl TagsSidebar {
                 };
 
                 widgets::print_texts(line, buf, [symbol, name], color, false, None);
-            },
-        );
+            });
+
+        // Render scrollbar
+        if let Some(scroll_area) = scroll_area {
+            Scrollbar::new()
+                .with_colors(ScrollbarColors::new(colors.neutral, None))
+                .render(scroll_area, buf, self.list.scroll(), self.tags.len());
+        }
     }
 }
 

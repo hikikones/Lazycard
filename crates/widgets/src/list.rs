@@ -2,10 +2,7 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
-    style::Color,
 };
-
-use crate::utils;
 
 pub struct List {
     index: usize,
@@ -14,8 +11,6 @@ pub struct List {
     margin_top: usize,
     margin_bottom: usize,
     padding_bottom: usize,
-    thumb_color: Color,
-    track_color: Option<Color>,
     len: usize,
     height: u16,
 }
@@ -46,8 +41,6 @@ impl List {
             margin_top: 0,
             margin_bottom: 0,
             padding_bottom: 0,
-            thumb_color: Color::Gray,
-            track_color: Some(Color::DarkGray),
             len: 0,
             height: 0,
         }
@@ -76,6 +69,10 @@ impl List {
         self.selector
     }
 
+    pub const fn scroll(&self) -> usize {
+        self.scroll
+    }
+
     pub fn selection(&self) -> Option<std::ops::Range<usize>> {
         self.selector
             .and_then(|selector| match self.index.cmp(&selector) {
@@ -95,12 +92,6 @@ impl List {
                 }
             })
             .unwrap_or(self.index..=self.index)
-    }
-
-    pub const fn set_colors(&mut self, thumb: Color, track: Option<Color>) -> &mut Self {
-        self.thumb_color = thumb;
-        self.track_color = track;
-        self
     }
 
     pub const fn set_margins(&mut self, top: usize, bottom: usize) -> &mut Self {
@@ -220,7 +211,7 @@ impl List {
 
     pub fn render<T>(
         &mut self,
-        mut area: Rect,
+        area: Rect,
         buf: &mut Buffer,
         items: impl IntoIterator<Item = T, IntoIter: ExactSizeIterator>,
         mut render_line: impl FnMut(Rect, &mut Buffer, T, ListItem),
@@ -239,7 +230,7 @@ impl List {
         } else {
             self.scroll
         };
-        self.scroll = utils::calculate_scroll(
+        self.scroll = crate::Scrollbar::calculate_scroll_with_margins(
             items.len(),
             area.height,
             self.index,
@@ -253,33 +244,13 @@ impl List {
         self.height = area.height;
 
         // Render
-        let height = area.height as usize;
-        let scrollable = items.len() > height;
-
-        if scrollable {
-            let scrollbar = Rect {
-                x: area.x + area.width.saturating_sub(1),
-                width: 1,
-                ..area
-            };
-            area.width = area.width.saturating_sub(3);
-            utils::render_scrollbar(
-                scrollbar,
-                buf,
-                items.len(),
-                self.scroll,
-                self.thumb_color,
-                self.track_color,
-            );
-        }
-
         let selection = self.selection_inclusive();
         let mut line = Rect { height: 1, ..area };
 
         items
             .enumerate()
             .skip(self.scroll)
-            .take(height)
+            .take(area.height as usize)
             .for_each(|(i, item)| {
                 let list_item = if i == self.index {
                     ListItem::Selected
