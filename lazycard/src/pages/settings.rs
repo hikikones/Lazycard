@@ -3,7 +3,6 @@ use std::str::FromStr;
 use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     prelude::*,
-    widgets::{Block, Padding},
 };
 use widgets::{
     CursorMove, List, ListItem, Scrollbar, ScrollbarColors, Shortcut, Shortcuts, TextInput,
@@ -97,52 +96,39 @@ impl SettingsPage {
         settings: &mut Settings,
         shortcuts: &mut Shortcuts,
     ) {
-        let area = render.area().centered_horizontally(Constraint::Max(80));
+        let mut area = render.area().centered_horizontally(Constraint::Max(80));
         let buf = render.buffer();
         let colors = settings.colors();
 
-        let block = Block::bordered()
-            .title(" Settings ")
-            .title_alignment(Alignment::Center)
-            .title_style(Color::Reset)
-            .border_style(colors.secondary)
-            .padding(Padding::uniform(1));
-        let mut settings_area = block.inner(area);
-        block.render(area, buf);
-
         // Scrollbar
-        let scrollable = SETTINGS.len() > settings_area.height as usize && settings_area.width > 10;
+        let scrollable = SETTINGS.len() > area.height as usize && area.width > 10;
         let scroll_area = scrollable.then(|| {
             let scroll_area = Rect {
-                x: settings_area.x + settings_area.width.saturating_sub(1),
+                x: area.x + area.width.saturating_sub(1),
                 width: 1,
-                ..settings_area
+                ..area
             };
-            settings_area.width = settings_area.width.saturating_sub(3);
+            area.width = area.width.saturating_sub(3);
             scroll_area
         });
 
         let mut setting_area = Rect {
-            width: settings_area.width / 2,
-            ..settings_area
+            width: area.width / 2,
+            ..area
         };
         let mut input_area = Rect {
             x: setting_area.x + setting_area.width + 1,
             width: setting_area.width.saturating_sub(1),
             ..setting_area
         };
-
-        let description_area = Rect {
-            y: area.y + area.height.saturating_sub(1),
-            height: 1,
-            ..settings_area
-        };
-
+        let mut last_y = area.y;
         let current_setting = self.current();
+
         self.list
-            .render(settings_area, buf, SETTINGS, |line, buf, setting, index| {
+            .render(area, buf, SETTINGS, |line, buf, setting, index| {
                 setting_area.y = line.y;
                 input_area.y = line.y;
+                last_y = line.y;
 
                 let (symbol, style) = if index == ListItem::Selected {
                     (
@@ -241,13 +227,20 @@ impl SettingsPage {
         };
 
         if !description.is_empty() {
-            widgets::print_asciis(
-                description_area,
-                buf,
-                [" ", description, " "],
-                colors.neutral,
-                Some(widgets::Alignment::CenterHorizontal),
-            );
+            let description_area = Rect {
+                y: area.y + area.height.saturating_sub(1),
+                height: 1,
+                ..area
+            };
+            if description_area.y >= last_y + 2 {
+                widgets::print_asciis(
+                    description_area,
+                    buf,
+                    [" ", description, " "],
+                    colors.neutral,
+                    Some(widgets::Alignment::CenterHorizontal),
+                );
+            }
         }
 
         if !self.is_saved {
