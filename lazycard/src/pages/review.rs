@@ -10,13 +10,11 @@ use crate::{
 };
 
 pub struct ReviewPage {
-    due: Vec<CardId>,
-    total: usize,
-    progress: usize,
+    total: u32,
+    progress: u32,
     state: ReviewState,
     markup_items: Vec<MarkupItem>,
     reveal_len: usize,
-    rng: fastrand::Rng,
     desired_retention: f32,
 }
 
@@ -29,13 +27,11 @@ enum ReviewState {
 impl ReviewPage {
     pub fn new() -> Self {
         Self {
-            due: Vec::new(),
             total: 0,
             progress: 0,
             state: ReviewState::None,
             markup_items: Vec::new(),
             reveal_len: 0,
-            rng: fastrand::Rng::new(),
             desired_retention: 0.0,
         }
     }
@@ -45,8 +41,7 @@ impl ReviewPage {
     }
 
     pub fn on_enter(&mut self, db: &Database, markup: &mut Markup) {
-        db.get_due_cards(|id| self.due.push(id));
-        self.total = self.due.len();
+        self.total = db.get_due_count();
 
         if self.total > 0 {
             self.next_card(db, markup);
@@ -100,7 +95,7 @@ impl ReviewPage {
                     shortcuts.extend([Shortcut::new("Show", symbols::SPACE)]);
                 }
 
-                if !self.due.is_empty() {
+                if self.has_more_cards() {
                     shortcuts.push(Shortcut::new("Skip", symbols::ARROW_RIGHT));
                 }
 
@@ -144,14 +139,17 @@ impl ReviewPage {
                         let success = key == KeyCode::Char('y');
                         db.review_card(id, success, self.desired_retention);
                         self.progress += 1;
-                        self.next_card(db, markup);
+                        if self.is_done() {
+                            self.state = ReviewState::Done;
+                        } else {
+                            self.next_card(db, markup);
+                        }
                         return Action::Render;
                     }
                 }
                 KeyCode::Right => {
-                    if !self.due.is_empty() {
+                    if self.has_more_cards() {
                         self.next_card(db, markup);
-                        self.due.push(id);
                         return Action::Render;
                     }
                 }
@@ -168,7 +166,6 @@ impl ReviewPage {
     }
 
     pub fn on_exit(&mut self) {
-        self.due.clear();
         self.total = 0;
         self.progress = 0;
         self.state = ReviewState::None;
@@ -177,23 +174,27 @@ impl ReviewPage {
     }
 
     fn next_card(&mut self, db: &Database, markup: &mut Markup) {
-        if self.due.is_empty() {
-            self.state = ReviewState::Done;
-            return;
+        let next_card = if let ReviewState::Review(id) = self.state {
+            db.get_due_card_random_except(id)
+        } else {
+            db.get_due_card_random()
+        };
+
+        match next_card {
+            Some(id) => {
+                db.get_card_content(id, |content| {
+                    self.markup_items.clear();
+                    Markup::parse_items(content, &mut self.markup_items);
+                });
+                self.reveal_len = 0;
+                self.state = ReviewState::Review(id);
+                self.reveal_more();
+                markup.scroll(ScrollMove::Start);
+            }
+            None => {
+                self.state = ReviewState::Done;
+            }
         }
-
-        let random_index = self.rng.usize(0..self.due.len());
-        let id = self.due.swap_remove(random_index);
-
-        db.get_card_content(id, |content| {
-            self.markup_items.clear();
-            Markup::parse_items(content, &mut self.markup_items);
-        });
-
-        self.reveal_len = 0;
-        self.state = ReviewState::Review(id);
-        self.reveal_more();
-        markup.scroll(ScrollMove::Start);
     }
 
     fn reveal_more(&mut self) {
@@ -210,5 +211,13 @@ impl ReviewPage {
 
     const fn is_fully_revealed(&self) -> bool {
         self.reveal_len == self.markup_items.len()
+    }
+
+    const fn is_done(&self) -> bool {
+        self.progress == self.total
+    }
+
+    const fn has_more_cards(&self) -> bool {
+        (self.total - self.progress) > 1
     }
 }

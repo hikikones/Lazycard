@@ -142,9 +142,14 @@ impl TokenList {
         &mut self,
         area: Rect,
         buf: &mut Buffer,
-        items: impl IntoIterator<Item = T>,
+        items: impl IntoIterator<Item = T, IntoIter: Clone>,
         mut render_item: impl FnMut(Rect, &mut Buffer, T, bool),
     ) {
+        let items = items.into_iter();
+
+        // Process all items every render for index and scroll data
+        self.process_items(area, items.clone());
+
         // Determine scroll
         let scroll = if self.size.height != area.height {
             // Refresh scroll on window resize

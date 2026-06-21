@@ -12,7 +12,6 @@ constcat = { workspace = true }
 database = { workspace = true }
 directories = { workspace = true }
 edit = { workspace = true }
-fastrand = { workspace = true }
 nucleo-matcher = { workspace = true }
 ratatui = { workspace = true }
 serde = { workspace = true }

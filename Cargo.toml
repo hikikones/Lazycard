@@ -30,7 +30,6 @@ constcat = { version = "0.6", default-features = false }
 database = { path = "crates/database", default-features = false }
 directories = { version = "6.0", default-features = false }
 edit = { version = "0.1", default-features = false, features = ["better-path"] }
-fastrand = { version = "2.4", default-features = false }
 fsrs = { version = "6.6", default-features = false }
 image = {
   version = "0.25",
