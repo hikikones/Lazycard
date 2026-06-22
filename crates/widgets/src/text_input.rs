@@ -247,7 +247,7 @@ impl TextInput {
     }
 
     pub fn render(&mut self, line: Rect, buf: &mut Buffer) {
-        if buf.cell(line.as_position()).is_none() {
+        if line.is_empty() || buf.cell(line.as_position()).is_none() {
             return;
         }
 
@@ -286,7 +286,7 @@ impl TextInput {
             self.scroll
         };
         self.scroll = crate::Scrollbar::calculate_scroll_with_margins(
-            total_width,
+            total_width + 1,
             line.width,
             self.cursor,
             scroll,
