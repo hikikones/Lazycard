@@ -114,6 +114,11 @@ impl AnsiWriter {
         self.inner.push_str(s);
     }
 
+    pub fn push_fmt(&mut self, args: std::fmt::Arguments<'_>) {
+        use std::fmt::Write;
+        let _ = self.inner.write_fmt(args);
+    }
+
     pub fn push_tag(&mut self, tag: AnsiTag) {
         self.inner.push_str(ANSI_SEQUENCE_START);
         self.write_tag(tag);

@@ -1,4 +1,7 @@
-use std::ops::Range;
+use std::{
+    ops::Range,
+    path::{Path, PathBuf},
+};
 
 use ratatui::{crossterm::event::KeyCode, prelude::*};
 use syntect::{
@@ -25,6 +28,7 @@ pub struct Markup {
     image_id_start: u32,
     image_id_counter: u32,
     image_has_rendered: bool,
+    assets_path: PathBuf,
     area: Rect,
     hash: u64,
 }
@@ -51,15 +55,18 @@ enum Item {
         text: Range<usize>,
         _language: Range<usize>,
     },
-    Image {
-        id: u32,
-        dims: Dimensions,
-    },
+    Image(ImageItem),
     ImageDescription {
         text: Range<usize>,
     },
     Break,
     EmptyLine,
+}
+
+#[derive(Debug, Clone)]
+enum ImageItem {
+    Ok { id: u32, dims: Dimensions },
+    Err { text: Range<usize> },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -74,7 +81,7 @@ pub enum MarkupItem {
 }
 
 impl Markup {
-    pub fn new(syntax_highlight_theme: &'static str) -> Self {
+    pub fn new(assets_path: PathBuf, syntax_highlight_theme: &'static str) -> Self {
         Self {
             items: Vec::new(),
             ansi: AnsiWriter::new(),
@@ -88,6 +95,7 @@ impl Markup {
             image_id_start: 90,
             image_id_counter: 0,
             image_has_rendered: false,
+            assets_path,
             area: Rect::ZERO,
             hash: 0,
         }
@@ -148,7 +156,7 @@ impl Markup {
         if self.area != area || self.hash != hash {
             self.area = area;
             self.hash = hash;
-            self.compute(text, area.width, kitty);
+            self.process(text, area.width, kitty);
         }
 
         fn is_in_viewport(curr_line: u16, top: u16, bot: u16) -> bool {
@@ -196,6 +204,9 @@ impl Markup {
                                 }
                                 AnsiTag::NotReverse => {
                                     style.add_modifier.remove(Modifier::REVERSED);
+                                }
+                                AnsiTag::FgRed => {
+                                    style.fg = Some(Color::Red);
                                 }
                                 AnsiTag::FgTrueColor(r, g, b) => {
                                     style.fg = Some(Color::Rgb(r, g, b));
@@ -274,43 +285,58 @@ impl Markup {
                         Alignment::Left,
                     );
                 }
-                Item::Image { id, dims } => {
-                    let max_width = kitty.width(area.width);
-                    let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
-                    let resized_area = kitty.area(resized_dims);
+                Item::Image(image) => match image {
+                    ImageItem::Ok { id, dims } => {
+                        let max_width = kitty.width(area.width);
+                        let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
+                        let resized_area = kitty.area(resized_dims);
 
-                    if is_in_viewport(
-                        current_line,
-                        viewport_top.saturating_sub(resized_area.rows - 1),
-                        viewport_bot,
-                    ) {
-                        let is_at_top = area.y == top_y;
-                        let rows_outside_top = if is_at_top {
-                            current_line.abs_diff(self.scroll)
-                        } else {
-                            0
-                        };
-                        let image_rows = (resized_area.rows - rows_outside_top).min(area.height);
-                        let image_area = Rect {
-                            height: image_rows,
-                            ..area
-                        };
-                        kitty.render(
-                            image_area,
-                            buf,
-                            id,
-                            dims,
-                            ResizeMode::FitWidthCropHeight { rows_outside_top },
-                            crate::utils::Alignment::CenterHorizontal,
-                        );
-                        self.image_has_rendered = true;
+                        if is_in_viewport(
+                            current_line,
+                            viewport_top.saturating_sub(resized_area.rows - 1),
+                            viewport_bot,
+                        ) {
+                            let is_at_top = area.y == top_y;
+                            let rows_outside_top = if is_at_top {
+                                current_line.abs_diff(self.scroll)
+                            } else {
+                                0
+                            };
+                            let image_rows =
+                                (resized_area.rows - rows_outside_top).min(area.height);
+                            let image_area = Rect {
+                                height: image_rows,
+                                ..area
+                            };
+                            kitty.render(
+                                image_area,
+                                buf,
+                                id,
+                                dims,
+                                ResizeMode::FitWidthCropHeight { rows_outside_top },
+                                crate::utils::Alignment::CenterHorizontal,
+                            );
+                            self.image_has_rendered = true;
 
-                        area.y += image_rows;
-                        area.height = area.height.saturating_sub(image_rows);
+                            area.y += image_rows;
+                            area.height = area.height.saturating_sub(image_rows);
+                        }
+
+                        current_line += resized_area.rows;
                     }
-
-                    current_line += resized_area.rows;
-                }
+                    ImageItem::Err { text } => {
+                        render_ansi_text(
+                            &mut area,
+                            buf,
+                            self.wrapped_ansi.slice(text),
+                            &mut current_line,
+                            viewport_top,
+                            viewport_bot,
+                            &mut self.text_segment,
+                            Alignment::Center,
+                        );
+                    }
+                },
                 Item::ImageDescription { text } => {
                     render_ansi_text(
                         &mut area,
@@ -399,12 +425,12 @@ impl Markup {
         v.pop();
     }
 
-    fn compute(&mut self, text: &str, width: u16, kitty: &mut KittyGraphics) {
+    fn process(&mut self, markup: &str, width: u16, kitty: &mut KittyGraphics) {
         self.items.clear();
         self.wrapped_ansi.clear();
         self.image_id_counter = 0;
 
-        for (block, _) in BlockParser::new(text) {
+        for (block, _) in BlockParser::new(markup) {
             match block {
                 BlockElement::Paragraph { text, alignment } => {
                     let range = self.parse_text(text, width, None);
@@ -442,11 +468,50 @@ impl Markup {
                     self.ansi.clear();
                 }
                 BlockElement::Image { description, path } => {
-                    kitty.load(path).unwrap();
+                    let image_path = Path::new(path)
+                        .file_name()
+                        .map(|name| self.assets_path.join(name));
+
+                    fn load_and_encode_image(
+                        path: Option<PathBuf>,
+                        id: u32,
+                        kitty: &mut KittyGraphics,
+                    ) -> Result<Dimensions, String> {
+                        let Some(path) = path else {
+                            return Err(String::from("No image filename found"));
+                        };
+                        kitty.load(&path).map_err(|err| {
+                            format!(
+                                "Could not load image\n\"{}\"\ndue to\n\"{}\"",
+                                path.display(),
+                                err
+                            )
+                        })?;
+                        let dims = kitty.encode(id).map_err(|err| {
+                            format!(
+                                "Could not encode image\n\"{}\"\ndue to\n\"{}\"",
+                                path.display(),
+                                err
+                            )
+                        })?;
+                        Ok(dims)
+                    }
+
                     let id = self.image_id_start + self.image_id_counter;
-                    let dims = kitty.encode(id).unwrap();
-                    self.items.push(Item::Image { id, dims });
-                    self.image_id_counter += 1;
+                    match load_and_encode_image(image_path, id, kitty) {
+                        Ok(dims) => {
+                            self.items.push(Item::Image(ImageItem::Ok { id, dims }));
+                            self.image_id_counter += 1;
+                        }
+                        Err(err) => {
+                            self.ansi.push_tag(AnsiTag::FgRed);
+                            self.ansi.extend(["ERROR\n", &err]);
+                            textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
+                            let range = self.wrapped_ansi.push_str(self.ansi.as_str());
+                            self.ansi.clear();
+                            self.items.push(Item::Image(ImageItem::Err { text: range }));
+                        }
+                    }
 
                     if !description.is_empty() {
                         let range = self.parse_text(description, width, None);
@@ -501,13 +566,6 @@ impl Markup {
         range
     }
 
-    const fn max_items(&self) -> usize {
-        match self.max_items {
-            Some(max) => max,
-            None => self.items.len(),
-        }
-    }
-
     fn compute_total_lines(&self, kitty: &KittyGraphics) -> u16 {
         let mut total_lines = 0;
 
@@ -522,12 +580,17 @@ impl Markup {
                 Item::Code { text, .. } => {
                     total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
                 }
-                Item::Image { dims, .. } => {
-                    let max_width = kitty.width(self.area.width);
-                    let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
-                    let resized_area = kitty.area(resized_dims);
-                    total_lines += resized_area.rows;
-                }
+                Item::Image(image) => match image {
+                    ImageItem::Ok { dims, .. } => {
+                        let max_width = kitty.width(self.area.width);
+                        let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
+                        let resized_area = kitty.area(resized_dims);
+                        total_lines += resized_area.rows;
+                    }
+                    ImageItem::Err { text } => {
+                        total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
+                    }
+                },
                 Item::ImageDescription { text } => {
                     total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
                 }
@@ -541,6 +604,13 @@ impl Markup {
         }
 
         total_lines
+    }
+
+    const fn max_items(&self) -> usize {
+        match self.max_items {
+            Some(max) => max,
+            None => self.items.len(),
+        }
     }
 }
 

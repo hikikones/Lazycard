@@ -13,16 +13,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Args = clap::Parser::parse();
 
     let cell_size = widgets::CellSize::query()?.unwrap();
+
     let Some(database_file) = args.database.or_else(|| get_database_file()) else {
-        return Err("No database file path specified or a \
+        return Err("No database file specified or a \
         default one could not be retrieved from the operating system")?;
     };
+    let Some(assets_dir) = args.assets.or_else(|| get_assets_dir()) else {
+        return Err("No assets directory specified or a \
+        default one could not be retrieved from the operating system")?;
+    };
+
+    // Make sure assets dir is created
+    if !assets_dir.exists() {
+        std::fs::create_dir_all(&assets_dir).map_err(|err| {
+            format!(
+                "Failed to create assets directory at \"{}\" due to {}",
+                assets_dir.display(),
+                err
+            )
+        })?;
+    }
+    // If already exists, make sure it is actually a dir
+    else if !assets_dir.is_dir() {
+        return Err(format!(
+            "Specified assets directory {} is not a directory",
+            assets_dir.display()
+        ))?;
+    }
+
     // let db = database::Database::open(database_file)?;
     let db = database::Database::open_in_memory()?;
 
     let terminal = terminal::Terminal::init()?;
 
-    let mut app = app::App::new(db, cell_size, args.settings);
+    let mut app = app::App::new(db, cell_size, assets_dir, args.settings);
     let res = app.run(terminal);
     app.quit()?;
 
@@ -32,9 +56,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn get_database_file() -> Option<std::path::PathBuf> {
-    const FILENAME: &str = "database.ron";
+    const FILENAME: &str = "database.db";
     directories::ProjectDirs::from(APP_QUALIFIER, APP_ORGANIZATION, APP_NAME)
         .map(|project_dirs| project_dirs.config_dir().join(FILENAME))
+}
+
+fn get_assets_dir() -> Option<std::path::PathBuf> {
+    const DIRNAME: &str = "assets";
+    directories::ProjectDirs::from(APP_QUALIFIER, APP_ORGANIZATION, APP_NAME)
+        .map(|project_dirs| project_dirs.config_dir().join(DIRNAME))
 }
 
 #[derive(Debug, clap::Parser)]
@@ -42,8 +72,13 @@ fn get_database_file() -> Option<std::path::PathBuf> {
 struct Args {
     /// The path for your database file. If not set,
     /// the location will be determined by the conventions of your operating system.
-    #[arg(long, value_name = "DATABASE_FILE.ron", value_hint = clap::ValueHint::FilePath)]
+    #[arg(long, value_name = "DATABASE_FILE.db", value_hint = clap::ValueHint::FilePath)]
     database: Option<std::path::PathBuf>,
+
+    /// The directory for your assets. If not set,
+    /// the location will be determined by the conventions of your operating system.
+    #[arg(long, value_name = "ASSETS_DIR", value_hint = clap::ValueHint::DirPath)]
+    assets: Option<std::path::PathBuf>,
 
     /// The path for your settings file. If not set,
     /// the location will be determined by the conventions of your operating system.

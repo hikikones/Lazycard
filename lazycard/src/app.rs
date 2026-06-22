@@ -76,7 +76,12 @@ impl<'a> AppRender<'a> {
 }
 
 impl App {
-    pub fn new(database: Database, cell_size: CellSize, settings_path: Option<PathBuf>) -> Self {
+    pub fn new(
+        database: Database,
+        cell_size: CellSize,
+        assets_dir: PathBuf,
+        settings_path: Option<PathBuf>,
+    ) -> Self {
         let mut logs = LogsPage::new();
         logs.enqueue(Log::new("message"));
         logs.enqueue(Log::new("message"));
@@ -107,7 +112,7 @@ impl App {
             state: AppState::Route,
             pages,
             database,
-            markup: Markup::new(settings.syntax_highlighting()),
+            markup: Markup::new(assets_dir, settings.syntax_highlighting()),
             kitty: KittyGraphics::new(cell_size),
             text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts: Shortcuts::new(),
