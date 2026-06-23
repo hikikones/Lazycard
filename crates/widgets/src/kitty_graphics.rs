@@ -1,11 +1,19 @@
-use ratatui::{buffer::Buffer, layout::Rect};
+use ratatui::{
+    buffer::Buffer,
+    layout::{Alignment, Position, Rect},
+    style::Color,
+    widgets::{Block, Widget},
+};
 
 // TODO: Handle division by zero?
-// TODO: Use Size struct from ratatui instead of custom Area.
+// TODO: Use Size struct from ratatui instead of custom Area?
+
+const KITTY_START: &str = "\x1b_G";
+const KITTY_END: &str = "\x1b\\";
 
 pub struct KittyGraphics {
     frames: Vec<image::Frame>,
-    zlib_deflate: ZlibDeflate,
+    deflate: Deflate,
     base64: Base64,
     formatter: utils::Formatter,
     cell_size: CellSize,
@@ -16,7 +24,7 @@ impl KittyGraphics {
     pub const fn new(cell_size: CellSize) -> Self {
         Self {
             frames: Vec::new(),
-            zlib_deflate: ZlibDeflate::new(),
+            deflate: Deflate::new(),
             base64: Base64::new(),
             formatter: utils::Formatter::new(),
             cell_size,
@@ -55,7 +63,7 @@ impl KittyGraphics {
                         }
                     }
                 } else {
-                    let mut reader = image::ImageReader::open(path).unwrap();
+                    let mut reader = image::ImageReader::open(path)?;
                     reader.set_format(image::ImageFormat::Png);
                     let image = reader.decode()?.to_rgba8();
                     self.frames.push(image::Frame::new(image));
@@ -96,14 +104,14 @@ impl KittyGraphics {
         Ok(())
     }
 
-    pub fn encode(&mut self, id: u32) -> std::io::Result<Dimensions> {
+    pub fn encode(&mut self, id: u32) -> Result<Dimensions, KittyEncodeError> {
         use std::io::Write;
 
         debug_assert_ne!(id, 0);
 
         let rgba = self.frames[0].buffer();
         let dims = Dimensions::from_tuple(rgba.dimensions());
-        let compressed = self.zlib_deflate.compress(rgba.as_raw()).unwrap();
+        let compressed = self.deflate.compress(rgba.as_raw())?;
         let b64 = self.base64.encode(compressed);
 
         let mut stdout = std::io::stdout().lock();
@@ -135,7 +143,7 @@ impl KittyGraphics {
                 let delay = self.frames[i].delay().numer_denom_ms().0 as i32;
                 let rgba = self.frames[i].buffer();
                 let dims = Dimensions::from_tuple(rgba.dimensions());
-                let compressed = self.zlib_deflate.compress(rgba.as_raw()).unwrap();
+                let compressed = self.deflate.compress(rgba.as_raw())?;
                 let b64 = self.base64.encode(compressed);
 
                 let (root_header, chunk_header) = self.formatter.push_fmt2(
@@ -168,7 +176,7 @@ impl KittyGraphics {
             // Set animation controls
             write!(
                 stdout,
-                "\x1b_G{},{},{},{},{}\x1b\\",
+                "{KITTY_START}{},{},{},{},{}{KITTY_END}",
                 KittyAction::AnimationControl,
                 KittyId(id),
                 KittyAnimationState::RunNormal,
@@ -199,7 +207,7 @@ impl KittyGraphics {
 
         // Start kitty graphics
         self.formatter.push_fmt(format_args!(
-            "\x1b_G{},{},{},{},{}",
+            "{KITTY_START}{},{},{},{},{}",
             KittyAction::Display,
             KittyId(id),
             KittyPlacement(id),
@@ -264,10 +272,10 @@ impl KittyGraphics {
         };
 
         // End kitty graphics
-        self.formatter.push_str("\x1b\\");
+        self.formatter.push_str(KITTY_END);
 
         // Image alignment
-        let Rect { x, y, .. } = crate::utils::align(
+        let image_area = crate::utils::align(
             Rect {
                 width: image_size.columns,
                 height: image_size.rows,
@@ -278,18 +286,40 @@ impl KittyGraphics {
         );
 
         // Time to render by writing to stdout
-        {
+        fn transmit(pos: Position, kitty: &str) -> std::io::Result<()> {
             use std::io::Write;
+
             let mut stdout = std::io::stdout().lock();
 
             // Set cursor position (row, col)
-            write!(stdout, "\x1b[{};{}H", y + 1, x + 1).unwrap();
+            write!(stdout, "\x1b[{};{}H", pos.y + 1, pos.x + 1)?;
 
             // Transmit kitty display command
-            write!(stdout, "{}", self.formatter).unwrap();
+            write!(stdout, "{}", kitty)?;
 
             // Make sure all is written
-            stdout.flush().unwrap();
+            stdout.flush()
+        }
+
+        match transmit(image_area.as_position(), self.formatter.as_str()) {
+            Ok(_) => {}
+            Err(err) => {
+                let color = Color::Red;
+                let block = Block::bordered()
+                    .title(" ERROR ")
+                    .title_alignment(Alignment::Center)
+                    .style(color);
+                let inner = block.inner(image_area);
+                block.render(image_area, buf);
+                crate::utils::print_text(
+                    inner,
+                    buf,
+                    format!("{err}"),
+                    color,
+                    false,
+                    Some(crate::Alignment::Center),
+                );
+            }
         }
 
         self.formatter.clear();
@@ -301,7 +331,7 @@ impl KittyGraphics {
         let mut stdout = std::io::stdout();
         write!(
             stdout,
-            "\x1b_G{},{},{}\x1b\\",
+            "{KITTY_START}{},{},{}{KITTY_END}",
             KittyAction::Delete(KittyDelete::Id),
             KittyId(id),
             self.kitty_verbosity
@@ -327,7 +357,7 @@ impl KittyGraphics {
         for id in ids {
             write!(
                 stdout,
-                "\x1b_G{},{},{}\x1b\\",
+                "{KITTY_START}{},{},{}{KITTY_END}",
                 KittyAction::Delete(KittyDelete::Id),
                 KittyId(id),
                 self.kitty_verbosity
@@ -346,7 +376,7 @@ impl KittyGraphics {
         let mut stdout = std::io::stdout();
         write!(
             stdout,
-            "\x1b_G{},{}\x1b\\",
+            "{KITTY_START}{},{}{KITTY_END}",
             KittyAction::Delete(KittyDelete::Range(min_inclusive, max_inclusive)),
             self.kitty_verbosity
         )?;
@@ -361,7 +391,7 @@ impl KittyGraphics {
         let mut stdout = std::io::stdout();
         write!(
             stdout,
-            "\x1b_G{},{}\x1b\\",
+            "{KITTY_START}{},{}{KITTY_END}",
             KittyAction::Delete(KittyDelete::AllVisible),
             self.kitty_verbosity
         )?;
@@ -413,18 +443,30 @@ impl KittyGraphics {
         let b64_len = b64.len();
 
         if b64_len <= CHUNK_SIZE {
-            return write!(w, "\x1b_G{root_header};{b64}\x1b\\");
+            return write!(w, "{KITTY_START}{root_header};{b64}{KITTY_END}");
         }
 
-        write!(w, "\x1b_G{root_header},m=1;{}\x1b\\", &b64[0..CHUNK_SIZE])?;
+        write!(
+            w,
+            "{KITTY_START}{root_header},m=1;{}{KITTY_END}",
+            &b64[0..CHUNK_SIZE]
+        )?;
         let mut start = CHUNK_SIZE;
         let mut end = CHUNK_SIZE * 2;
         while end < b64_len {
-            write!(w, "\x1b_G{chunk_header},m=1;{}\x1b\\", &b64[start..end])?;
+            write!(
+                w,
+                "{KITTY_START}{chunk_header},m=1;{}{KITTY_END}",
+                &b64[start..end]
+            )?;
             start = end;
             end += CHUNK_SIZE;
         }
-        write!(w, "\x1b_G{chunk_header},m=0;{}\x1b\\", &b64[start..])?;
+        write!(
+            w,
+            "{KITTY_START}{chunk_header},m=0;{}{KITTY_END}",
+            &b64[start..]
+        )?;
 
         Ok(())
     }
@@ -794,14 +836,14 @@ impl std::fmt::Display for KittyVerbosity {
     }
 }
 
-struct ZlibDeflate(Vec<u8>);
+struct Deflate(Vec<u8>);
 
-impl ZlibDeflate {
+impl Deflate {
     const fn new() -> Self {
         Self(Vec::new())
     }
 
-    fn compress(&mut self, input: &[u8]) -> Result<&[u8], zlib_rs::ReturnCode> {
+    fn compress(&mut self, input: &[u8]) -> Result<&[u8], DeflateError> {
         // Reset buffer with zeroes
         let zeroes = zlib_rs::compress_bound(input.len());
         self.0.clear();
@@ -812,10 +854,25 @@ impl ZlibDeflate {
         let (compressed, rc) = zlib_rs::compress_slice(&mut self.0, input, config);
         match rc {
             zlib_rs::ReturnCode::Ok => Ok(compressed),
-            _ => Err(rc),
+            _ => Err(DeflateError(rc)),
         }
     }
 }
+
+#[derive(Debug)]
+pub struct DeflateError(zlib_rs::ReturnCode);
+
+impl std::fmt::Display for DeflateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let error = unsafe { std::ffi::CStr::from_ptr(self.0.error_message()) };
+        f.write_fmt(format_args!(
+            "{} in deflate compression",
+            error.to_string_lossy()
+        ))
+    }
+}
+
+impl std::error::Error for DeflateError {}
 
 struct Base64(String);
 
@@ -830,5 +887,34 @@ impl Base64 {
         self.0.clear();
         STANDARD.encode_string(input, &mut self.0);
         self.0.as_str()
+    }
+}
+
+#[derive(Debug)]
+pub enum KittyEncodeError {
+    Io(std::io::Error),
+    Compress(DeflateError),
+}
+
+impl std::fmt::Display for KittyEncodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KittyEncodeError::Io(err) => f.write_fmt(format_args!("std::io::Error: {err}")),
+            KittyEncodeError::Compress(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for KittyEncodeError {}
+
+impl From<std::io::Error> for KittyEncodeError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value)
+    }
+}
+
+impl From<DeflateError> for KittyEncodeError {
+    fn from(value: DeflateError) -> Self {
+        Self::Compress(value)
     }
 }
