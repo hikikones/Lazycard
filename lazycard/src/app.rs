@@ -285,7 +285,7 @@ impl App {
             }
 
             // Clear any rendered image from markup and reset max items
-            self.markup.delete_images(&self.kitty).unwrap();
+            self.markup.delete_images(&self.kitty)?;
             self.markup.set_max_items(None);
 
             // Page content
@@ -352,6 +352,8 @@ impl App {
                 self.shortcuts.render(area, buf);
                 self.shortcuts.clear();
             }
+
+            Ok(())
         })
     }
 

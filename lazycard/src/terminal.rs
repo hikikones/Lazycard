@@ -19,9 +19,9 @@ impl Terminal {
 
     pub fn draw<F>(&mut self, render_callback: F) -> std::io::Result<CompletedFrame<'_>>
     where
-        F: FnOnce(&mut Frame),
+        F: FnOnce(&mut Frame) -> std::io::Result<()>,
     {
-        self.0.draw(render_callback)
+        self.0.try_draw(render_callback)
     }
 
     pub fn temp_leave<T>(&mut self, f: impl FnOnce() -> std::io::Result<T>) -> std::io::Result<T> {
