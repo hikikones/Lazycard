@@ -290,8 +290,6 @@ impl App {
 
             // Page content
             if area.height > 0 {
-                self.shortcuts.set_colors(Color::Reset, colors.secondary);
-
                 const MAX_WIDTH: u16 = 64;
                 const MARGIN: u16 = 1;
                 const SHORTCUTS_HEIGHT: u16 = 2;
@@ -321,7 +319,9 @@ impl App {
 
             // Page shortcuts
             if area.y > 0 {
-                self.shortcuts.render(area, buf);
+                self.shortcuts
+                    .set_colors(Color::Reset, colors.secondary)
+                    .render(area, buf);
                 self.shortcuts.clear();
 
                 area.height = area.height.saturating_sub(1);
@@ -330,7 +330,6 @@ impl App {
 
             // App shortcuts
             if area.y > 0 {
-                self.shortcuts.set_colors(Color::Reset, colors.primary);
                 self.shortcuts.extend([
                     Shortcut::new("Quit", symbols::ESCAPE),
                     Shortcut::new("Navigate", symbols::shift!(symbols::TAB)),
@@ -349,7 +348,9 @@ impl App {
                     }
                 }
 
-                self.shortcuts.render(area, buf);
+                self.shortcuts
+                    .set_colors(Color::Reset, colors.primary)
+                    .render(area, buf);
                 self.shortcuts.clear();
             }
 
