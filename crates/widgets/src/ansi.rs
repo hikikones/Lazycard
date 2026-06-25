@@ -4,7 +4,7 @@ use std::fmt::Write;
 const ANSI_SEQUENCE_START: &str = "\x1b[";
 const ANSI_SEQUENCE_END: char = 'm';
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum AnsiTag {
     // Reset
     Reset,
@@ -79,6 +79,82 @@ pub enum AnsiTag {
     BgTrueColor(u8, u8, u8),
 }
 
+impl std::fmt::Display for AnsiTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            AnsiTag::Reset => f.write_char('0'),
+
+            AnsiTag::Bold => f.write_char('1'),
+            AnsiTag::Faint => f.write_char('2'),
+            AnsiTag::Italic => f.write_char('3'),
+            AnsiTag::Underline => f.write_char('4'),
+            AnsiTag::SlowBlink => f.write_char('5'),
+            AnsiTag::RapidBlink => f.write_char('6'),
+            AnsiTag::Reverse => f.write_char('7'),
+            AnsiTag::Conceal => f.write_char('8'),
+            AnsiTag::CrossedOut => f.write_char('9'),
+            AnsiTag::Framed => f.write_str("51"),
+            AnsiTag::Encircled => f.write_str("52"),
+            AnsiTag::Overlined => f.write_str("53"),
+
+            AnsiTag::NotBold => f.write_str("22"),
+            AnsiTag::NotItalic => f.write_str("23"),
+            AnsiTag::NotUnderline => f.write_str("24"),
+            AnsiTag::NotBlink => f.write_str("25"),
+            AnsiTag::NotReverse => f.write_str("27"),
+            AnsiTag::Reveal => f.write_str("28"),
+            AnsiTag::NotCrossedOut => f.write_str("29"),
+            AnsiTag::NotFramedOrEncircled => f.write_str("54"),
+            AnsiTag::NotOverlined => f.write_str("55"),
+
+            AnsiTag::FgBlack => f.write_str("30"),
+            AnsiTag::FgRed => f.write_str("31"),
+            AnsiTag::FgGreen => f.write_str("32"),
+            AnsiTag::FgYellow => f.write_str("33"),
+            AnsiTag::FgBlue => f.write_str("34"),
+            AnsiTag::FgMagenta => f.write_str("35"),
+            AnsiTag::FgCyan => f.write_str("36"),
+            AnsiTag::FgWhite => f.write_str("37"),
+
+            AnsiTag::FgBrightBlack => f.write_str("90"),
+            AnsiTag::FgBrightRed => f.write_str("91"),
+            AnsiTag::FgBrightGreen => f.write_str("92"),
+            AnsiTag::FgBrightYellow => f.write_str("93"),
+            AnsiTag::FgBrightBlue => f.write_str("94"),
+            AnsiTag::FgBrightMagenta => f.write_str("95"),
+            AnsiTag::FgBrightCyan => f.write_str("96"),
+            AnsiTag::FgBrightWhite => f.write_str("97"),
+
+            AnsiTag::FgDefault => f.write_str("39"),
+
+            AnsiTag::BgBlack => f.write_str("40"),
+            AnsiTag::BgRed => f.write_str("41"),
+            AnsiTag::BgGreen => f.write_str("42"),
+            AnsiTag::BgYellow => f.write_str("43"),
+            AnsiTag::BgBlue => f.write_str("44"),
+            AnsiTag::BgMagenta => f.write_str("45"),
+            AnsiTag::BgCyan => f.write_str("46"),
+            AnsiTag::BgWhite => f.write_str("47"),
+
+            AnsiTag::BgBrightBlack => f.write_str("100"),
+            AnsiTag::BgBrightRed => f.write_str("101"),
+            AnsiTag::BgBrightGreen => f.write_str("102"),
+            AnsiTag::BgBrightYellow => f.write_str("103"),
+            AnsiTag::BgBrightBlue => f.write_str("104"),
+            AnsiTag::BgBrightMagenta => f.write_str("105"),
+            AnsiTag::BgBrightCyan => f.write_str("106"),
+            AnsiTag::BgBrightWhite => f.write_str("107"),
+
+            AnsiTag::BgDefault => f.write_str("49"),
+
+            AnsiTag::Fg256(n) => f.write_fmt(format_args!("38;5;{}", n)),
+            AnsiTag::Bg256(n) => f.write_fmt(format_args!("48;5;{}", n)),
+            AnsiTag::FgTrueColor(r, g, b) => f.write_fmt(format_args!("38;2;{};{};{}", r, g, b)),
+            AnsiTag::BgTrueColor(r, g, b) => f.write_fmt(format_args!("48;2;{};{};{}", r, g, b)),
+        }
+    }
+}
+
 pub struct AnsiWriter {
     inner: String,
 }
@@ -88,6 +164,10 @@ impl AnsiWriter {
         Self {
             inner: String::new(),
         }
+    }
+
+    pub const fn len(&self) -> usize {
+        self.inner.len()
     }
 
     pub const fn as_str(&self) -> &str {
@@ -120,99 +200,33 @@ impl AnsiWriter {
     }
 
     pub fn push_tag(&mut self, tag: AnsiTag) {
-        self.inner.push_str(ANSI_SEQUENCE_START);
-        self.write_tag(tag);
-        self.inner.push(ANSI_SEQUENCE_END);
+        let _ = self.inner.write_fmt(format_args!(
+            "{ANSI_SEQUENCE_START}{tag}{ANSI_SEQUENCE_END}"
+        ));
+    }
+
+    pub fn insert_char(&mut self, i: usize, ch: char) {
+        self.inner.insert(i, ch);
+    }
+
+    pub fn insert_str(&mut self, i: usize, s: &str) {
+        self.inner.insert_str(i, s);
+    }
+
+    pub fn insert_tag(&mut self, i: usize, tag: AnsiTag) {
+        self.insert_str(i, &format!("{tag}"));
     }
 
     pub fn extend<'a>(&mut self, iter: impl IntoIterator<Item = &'a str>) {
         self.inner.extend(iter);
     }
 
-    pub fn clear(&mut self) {
-        self.inner.clear();
+    pub fn textwrap(&mut self, width: u16) {
+        textwrap::fill_inplace(&mut self.inner, width as usize);
     }
 
-    fn write_tag(&mut self, tag: AnsiTag) {
-        match tag {
-            AnsiTag::Reset => self.inner.push('0'),
-
-            AnsiTag::Bold => self.inner.push('1'),
-            AnsiTag::Faint => self.inner.push('2'),
-            AnsiTag::Italic => self.inner.push('3'),
-            AnsiTag::Underline => self.inner.push('4'),
-            AnsiTag::SlowBlink => self.inner.push('5'),
-            AnsiTag::RapidBlink => self.inner.push('6'),
-            AnsiTag::Reverse => self.inner.push('7'),
-            AnsiTag::Conceal => self.inner.push('8'),
-            AnsiTag::CrossedOut => self.inner.push('9'),
-            AnsiTag::Framed => self.inner.push_str("51"),
-            AnsiTag::Encircled => self.inner.push_str("52"),
-            AnsiTag::Overlined => self.inner.push_str("53"),
-
-            AnsiTag::NotBold => self.inner.push_str("22"),
-            AnsiTag::NotItalic => self.inner.push_str("23"),
-            AnsiTag::NotUnderline => self.inner.push_str("24"),
-            AnsiTag::NotBlink => self.inner.push_str("25"),
-            AnsiTag::NotReverse => self.inner.push_str("27"),
-            AnsiTag::Reveal => self.inner.push_str("28"),
-            AnsiTag::NotCrossedOut => self.inner.push_str("29"),
-            AnsiTag::NotFramedOrEncircled => self.inner.push_str("54"),
-            AnsiTag::NotOverlined => self.inner.push_str("55"),
-
-            AnsiTag::FgBlack => self.inner.push_str("30"),
-            AnsiTag::FgRed => self.inner.push_str("31"),
-            AnsiTag::FgGreen => self.inner.push_str("32"),
-            AnsiTag::FgYellow => self.inner.push_str("33"),
-            AnsiTag::FgBlue => self.inner.push_str("34"),
-            AnsiTag::FgMagenta => self.inner.push_str("35"),
-            AnsiTag::FgCyan => self.inner.push_str("36"),
-            AnsiTag::FgWhite => self.inner.push_str("37"),
-
-            AnsiTag::FgBrightBlack => self.inner.push_str("90"),
-            AnsiTag::FgBrightRed => self.inner.push_str("91"),
-            AnsiTag::FgBrightGreen => self.inner.push_str("92"),
-            AnsiTag::FgBrightYellow => self.inner.push_str("93"),
-            AnsiTag::FgBrightBlue => self.inner.push_str("94"),
-            AnsiTag::FgBrightMagenta => self.inner.push_str("95"),
-            AnsiTag::FgBrightCyan => self.inner.push_str("96"),
-            AnsiTag::FgBrightWhite => self.inner.push_str("97"),
-
-            AnsiTag::FgDefault => self.inner.push_str("39"),
-
-            AnsiTag::BgBlack => self.inner.push_str("40"),
-            AnsiTag::BgRed => self.inner.push_str("41"),
-            AnsiTag::BgGreen => self.inner.push_str("42"),
-            AnsiTag::BgYellow => self.inner.push_str("43"),
-            AnsiTag::BgBlue => self.inner.push_str("44"),
-            AnsiTag::BgMagenta => self.inner.push_str("45"),
-            AnsiTag::BgCyan => self.inner.push_str("46"),
-            AnsiTag::BgWhite => self.inner.push_str("47"),
-
-            AnsiTag::BgBrightBlack => self.inner.push_str("100"),
-            AnsiTag::BgBrightRed => self.inner.push_str("101"),
-            AnsiTag::BgBrightGreen => self.inner.push_str("102"),
-            AnsiTag::BgBrightYellow => self.inner.push_str("103"),
-            AnsiTag::BgBrightBlue => self.inner.push_str("104"),
-            AnsiTag::BgBrightMagenta => self.inner.push_str("105"),
-            AnsiTag::BgBrightCyan => self.inner.push_str("106"),
-            AnsiTag::BgBrightWhite => self.inner.push_str("107"),
-
-            AnsiTag::BgDefault => self.inner.push_str("49"),
-
-            AnsiTag::Fg256(n) => {
-                let _ = write!(self.inner, "38;5;{}", n);
-            }
-            AnsiTag::Bg256(n) => {
-                let _ = write!(self.inner, "48;5;{}", n);
-            }
-            AnsiTag::FgTrueColor(r, g, b) => {
-                let _ = write!(self.inner, "38;2;{};{};{}", r, g, b);
-            }
-            AnsiTag::BgTrueColor(r, g, b) => {
-                let _ = write!(self.inner, "48;2;{};{};{}", r, g, b);
-            }
-        }
+    pub fn clear(&mut self) {
+        self.inner.clear();
     }
 }
 

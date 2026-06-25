@@ -506,7 +506,7 @@ impl Markup {
                         Err(err) => {
                             self.ansi.push_tag(AnsiTag::FgRed);
                             self.ansi.extend(["ERROR\n", &err]);
-                            textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
+                            self.ansi.textwrap(width);
                             let range = self.wrapped_ansi.push_str(self.ansi.as_str());
                             self.ansi.clear();
                             self.items.push(Item::Image(ImageItem::Err { text: range }));
@@ -547,7 +547,7 @@ impl Markup {
         }
 
         // Break text into lines using textwrap which ignores ansi codes
-        textwrap::fill_inplace(self.ansi.inner_mut(), width as usize);
+        self.ansi.textwrap(width);
 
         // Store result and use later with returned range
         let range = match indent {
