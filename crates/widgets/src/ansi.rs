@@ -214,7 +214,8 @@ impl AnsiWriter {
     }
 
     pub fn insert_tag(&mut self, i: usize, tag: AnsiTag) {
-        self.insert_str(i, &format!("{tag}"));
+        self.inner
+            .insert_str(i, &format!("{ANSI_SEQUENCE_START}{tag}{ANSI_SEQUENCE_END}"));
     }
 
     pub fn extend<'a>(&mut self, iter: impl IntoIterator<Item = &'a str>) {
