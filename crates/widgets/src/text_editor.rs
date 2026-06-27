@@ -10,6 +10,7 @@ pub struct TextEditor {
     cursor: usize,
     selector: Option<usize>,
     placeholder: &'static str,
+    wrapped: String,
     lines: Vec<VisualLine>,
     preferred_column: u16,
     scroll: u16,
@@ -79,6 +80,7 @@ impl TextEditor {
             cursor: 0,
             selector: None,
             placeholder: "",
+            wrapped: String::new(),
             lines: Vec::new(),
             preferred_column: 0,
             scroll: 0,
@@ -227,7 +229,7 @@ impl TextEditor {
             CursorMove::Down => {
                 let pos = self.cursor_position();
                 self.cursor = if pos.y + 1 >= self.lines.len() as u16 {
-                    self.input.len()
+                    self.wrapped.len()
                 } else {
                     self.column_to_index(pos.y + 1, self.preferred_column)
                 }
@@ -236,7 +238,7 @@ impl TextEditor {
                 self.cursor = 0;
             }
             CursorMove::End => {
-                self.cursor = self.input.len();
+                self.cursor = self.wrapped.len();
             }
         }
 
@@ -290,6 +292,7 @@ impl TextEditor {
         self.input.clear();
         self.cursor = 0;
         self.selector = None;
+        self.wrapped.clear();
         self.lines.clear();
         self.preferred_column = 0;
         self.scroll = 0;
@@ -304,6 +307,7 @@ impl TextEditor {
 
         // Disabled
         if self.disabled {
+            // TODO: Entire text should be rendered as disabled...
             let Rect { x, y, .. } = area;
             let s = if self.input.is_empty() {
                 self.placeholder
@@ -367,7 +371,7 @@ impl TextEditor {
             .enumerate()
         {
             let (mut x, y) = (area.x, area.y + i as u16);
-            let text = &self.input[line.range()];
+            let text = &self.wrapped[line.range()];
             for g in graphemes(text).map(map_grapheme) {
                 (x, _) = buf.set_stringn(x, y, g, usize::MAX, normal_style);
             }
@@ -438,17 +442,21 @@ impl TextEditor {
     }
 
     fn relayout(&mut self, max_width: u16) {
+        self.wrapped.clear();
         self.lines.clear();
+
+        self.wrapped.push_str(self.input.as_str());
+        textwrap::fill_inplace(&mut self.wrapped, max_width as usize);
 
         let mut start = 0;
         let mut column = 0;
 
-        for (i, g) in grapheme_indices(&self.input) {
+        for (i, g) in grapheme_indices(&self.wrapped) {
             let w = grapheme_width(g);
 
             if g.contains('\n') {
                 self.lines
-                    .push(VisualLine::new(&self.input, start..i + g.len()));
+                    .push(VisualLine::new(&self.wrapped, start..i + g.len()));
 
                 start = i + g.len();
                 column = 0;
@@ -456,7 +464,7 @@ impl TextEditor {
             }
 
             if column + w > max_width {
-                self.lines.push(VisualLine::new(&self.input, start..i));
+                self.lines.push(VisualLine::new(&self.wrapped, start..i));
 
                 start = i;
                 column = w;
@@ -466,7 +474,7 @@ impl TextEditor {
         }
 
         self.lines
-            .push(VisualLine::new(&self.input, start..self.input.len()));
+            .push(VisualLine::new(&self.wrapped, start..self.wrapped.len()));
     }
 
     fn cursor_position(&self) -> Position {
@@ -482,7 +490,7 @@ impl TextEditor {
     fn index_to_position(&self, index: usize) -> Position {
         let row = self.index_to_row(index);
         let line = &self.lines[row as usize];
-        let text = &self.input[line.range()];
+        let text = &self.wrapped[line.range()];
         let col = graphemes(&text[..index - line.start])
             .map(grapheme_width)
             .sum();
@@ -496,7 +504,7 @@ impl TextEditor {
         let mut column = 0;
         let mut index = line.start;
 
-        for (i, g) in grapheme_indices(&self.input[line.range()]) {
+        for (i, g) in grapheme_indices(&self.wrapped[line.range()]) {
             if g.contains('\n') {
                 break;
             }
