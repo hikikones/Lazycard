@@ -124,8 +124,12 @@ impl TextEditor {
         self
     }
 
-    pub const fn set_enabled(&mut self, value: bool) -> &mut Self {
-        self.set_disabled(!value)
+    pub const fn toggle_disabled(&mut self) -> &mut Self {
+        self.set_disabled(!self.disabled)
+    }
+
+    pub const fn is_disabled(&self) -> bool {
+        self.disabled
     }
 
     pub fn is_empty(&self) -> bool {
@@ -288,39 +292,30 @@ impl TextEditor {
         }
     }
 
-    pub fn clear(&mut self) {
-        self.input.clear();
-        self.cursor = 0;
-        self.selector = None;
-        self.wrapped.clear();
-        self.lines.clear();
-        self.preferred_column = 0;
-        self.scroll = 0;
-        self.last_size = Size::ZERO;
-        self.last_hash = 0;
-    }
-
     pub fn render(&mut self, area: Rect, buf: &mut Buffer) {
         if area.is_empty() || buf.cell(area.as_position()).is_none() {
             return;
         }
 
+        let last_size = self.last_size;
+
         // Disabled
         if self.disabled {
-            // TODO: Entire text should be rendered as disabled...
-            let Rect { x, y, .. } = area;
-            let s = if self.input.is_empty() {
-                self.placeholder
+            if self.input.is_empty() {
+                buf.set_stringn(
+                    area.x,
+                    area.y,
+                    self.placeholder,
+                    area.width as usize,
+                    self.colors.disabled,
+                );
             } else {
-                self.input.as_str()
-            };
-            buf.set_stringn(x, y, s, area.width as usize, self.colors.disabled);
+                self.process_input(last_size, area.as_size());
+                self.update_scroll(last_size.height, area.height);
+                self.render_text(area, buf, self.colors.disabled);
+            }
             return;
         }
-
-        let cursor_style = Style::new().fg(self.colors.cursor).reversed();
-        let selection_style = Style::new().fg(self.colors.selector).reversed();
-        let normal_style = Style::new().fg(self.colors.normal);
 
         // Placeholder
         if self.input.is_empty() {
@@ -332,90 +327,28 @@ impl TextEditor {
                 area.width as usize,
                 self.colors.placeholder,
             );
-            buf[(x, y)].set_style(cursor_style);
+            buf[(x, y)].set_style(Style::new().fg(self.colors.cursor).reversed());
             return;
         }
 
-        // Process layout
-        let hash = utils::hash_fast(self.input.as_str());
-        if self.last_size.width != area.width || self.last_hash != hash {
-            self.relayout(area.width);
-        }
+        // Render
+        self.process_input(last_size, area.as_size());
+        self.update_scroll(last_size.height, area.height);
+        self.render_text(area, buf, self.colors.normal);
+        self.render_selection(area, buf, self.colors.selector);
+        self.render_cursor(area, buf, self.colors.cursor);
+    }
 
-        // Determine scroll
-        let scroll = if self.last_size.height != area.height {
-            // Refresh scroll on window resize
-            0
-        } else {
-            self.scroll
-        };
-        self.scroll = crate::Scrollbar::calculate_scroll_with_margins(
-            self.lines.len(),
-            area.height,
-            self.index_to_row(self.cursor) as usize,
-            scroll as usize,
-            self.margin_top,
-            self.margin_bottom,
-            0,
-        ) as u16;
-
-        self.last_size = area.as_size();
-        self.last_hash = hash;
-
-        // Render text
-        for (i, line) in self
-            .lines
-            .iter()
-            .skip(self.scroll as usize)
-            .take(area.height as usize)
-            .enumerate()
-        {
-            let (mut x, y) = (area.x, area.y + i as u16);
-            let text = &self.wrapped[line.range()];
-            for g in graphemes(text).map(map_grapheme) {
-                (x, _) = buf.set_stringn(x, y, g, usize::MAX, normal_style);
-            }
-        }
-
-        // Render selection
-        if let Some(range) = self.try_selection() {
-            let start = self.index_to_position(range.start);
-            let end = self.index_to_position(range.end);
-
-            for (i, line) in self
-                .lines
-                .iter()
-                .enumerate()
-                .skip(self.scroll as usize)
-                .take(area.height as usize)
-            {
-                let i = i as u16;
-                if i < start.y || i > end.y {
-                    continue;
-                }
-
-                let col_start = if i == start.y { start.x } else { 0 };
-                let col_end = if i == end.y { end.x } else { line.width };
-
-                for col in col_start..col_end {
-                    let x = area.x + col;
-                    let y = area.y + i.saturating_sub(self.scroll);
-                    match buf.cell_mut((x, y)) {
-                        Some(cell) => {
-                            cell.set_style(selection_style);
-                        }
-                        None => break,
-                    }
-                }
-            }
-        }
-
-        // Render cursor
-        let mut cpos = self.cursor_position() + area.as_position().into();
-        cpos.y = cpos.y.saturating_sub(self.scroll);
-        if let Some(cell) = buf.cell_mut(cpos) {
-            cell.set_style(cursor_style);
-        }
+    pub fn clear(&mut self) {
+        self.input.clear();
+        self.cursor = 0;
+        self.selector = None;
+        self.wrapped.clear();
+        self.lines.clear();
+        self.preferred_column = 0;
+        self.scroll = 0;
+        self.last_size = Size::ZERO;
+        self.last_hash = 0;
     }
 
     fn selection(&self, selector: usize) -> Option<std::ops::Range<usize>> {
@@ -439,6 +372,96 @@ impl TextEditor {
         self.cursor = range.start;
         self.input.replace_range(range, "");
         true
+    }
+
+    fn render_text(&self, area: Rect, buf: &mut Buffer, color: Color) {
+        let style = Style::new().fg(color);
+
+        for (i, line) in self
+            .lines
+            .iter()
+            .skip(self.scroll as usize)
+            .take(area.height as usize)
+            .enumerate()
+        {
+            let (mut x, y) = (area.x, area.y + i as u16);
+            let text = &self.wrapped[line.range()];
+            for g in graphemes(text).map(map_grapheme) {
+                (x, _) = buf.set_stringn(x, y, g, usize::MAX, style);
+            }
+        }
+    }
+
+    fn render_selection(&self, area: Rect, buf: &mut Buffer, color: Color) {
+        if let Some(range) = self.try_selection() {
+            let start = self.index_to_position(range.start);
+            let end = self.index_to_position(range.end);
+
+            let style = Style::new().fg(color).reversed();
+
+            for (i, line) in self
+                .lines
+                .iter()
+                .enumerate()
+                .skip(self.scroll as usize)
+                .take(area.height as usize)
+            {
+                let i = i as u16;
+                if i < start.y || i > end.y {
+                    continue;
+                }
+
+                let col_start = if i == start.y { start.x } else { 0 };
+                let col_end = if i == end.y { end.x } else { line.width };
+
+                for col in col_start..col_end {
+                    let x = area.x + col;
+                    let y = area.y + i.saturating_sub(self.scroll);
+                    match buf.cell_mut((x, y)) {
+                        Some(cell) => {
+                            cell.set_style(style);
+                        }
+                        None => break,
+                    }
+                }
+            }
+        }
+    }
+
+    fn render_cursor(&self, area: Rect, buf: &mut Buffer, color: Color) {
+        let mut cpos = self.cursor_position() + area.as_position().into();
+        cpos.y = cpos.y.saturating_sub(self.scroll);
+
+        if let Some(cell) = buf.cell_mut(cpos) {
+            cell.set_style(Style::new().fg(color).reversed());
+        }
+    }
+
+    fn update_scroll(&mut self, last_height: u16, height: u16) {
+        let scroll = if last_height != height {
+            // Refresh scroll on window resize
+            0
+        } else {
+            self.scroll
+        };
+        self.scroll = crate::Scrollbar::calculate_scroll_with_margins(
+            self.lines.len(),
+            height,
+            self.index_to_row(self.cursor) as usize,
+            scroll as usize,
+            self.margin_top,
+            self.margin_bottom,
+            0,
+        ) as u16;
+    }
+
+    fn process_input(&mut self, last_size: Size, size: Size) {
+        let hash = utils::hash_fast(self.input.as_str());
+        if last_size.width != size.width || self.last_hash != hash {
+            self.last_size = size;
+            self.last_hash = hash;
+            self.relayout(size.width);
+        }
     }
 
     fn relayout(&mut self, max_width: u16) {
