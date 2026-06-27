@@ -38,12 +38,10 @@ pub enum SearchAction {
 }
 
 impl SearchPage {
-    pub const fn new(colors: &Colors) -> Self {
+    pub const fn new() -> Self {
         Self {
             state: State::Search,
-            search: TextInput::new()
-                .with_placeholder("Search...")
-                .with_colors(colors.text_input()),
+            search: TextInput::new().with_placeholder("Search..."),
             results: Vec::new(),
             index: 0,
             query: String::new(),
@@ -118,6 +116,7 @@ impl SearchPage {
             widgets::Alignment::CenterHorizontal,
         );
         self.search
+            .set_colors(colors.text_input())
             .set_enabled(matches!(self.state, State::Search))
             .render(search_line, buf);
 

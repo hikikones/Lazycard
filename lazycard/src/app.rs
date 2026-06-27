@@ -96,14 +96,13 @@ impl App {
             .unwrap_or_default()
             .with_path(settings_path);
 
-        let colors = settings.colors();
         let pages = Pages {
             review: ReviewPage::new(),
-            editor: CardEditorPage::new(colors),
+            editor: CardEditorPage::new(),
             cards: CardsPage::new(),
-            tags: TagsPage::new(&database, colors),
+            tags: TagsPage::new(&database),
             settings: SettingsPage::new(&settings),
-            search: SearchPage::new(colors),
+            search: SearchPage::new(),
             logs,
         };
 

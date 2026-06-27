@@ -20,7 +20,7 @@ pub struct TextInput {
     margin_top: usize,
     margin_bottom: usize,
     colors: TextInputColors,
-    width: u16,
+    last_width: u16,
 }
 
 impl TextInput {
@@ -39,7 +39,7 @@ impl TextInput {
             margin_top: 0,
             margin_bottom: 0,
             colors: TextInputColors::new(),
-            width: 0,
+            last_width: 0,
         }
     }
 
@@ -262,6 +262,10 @@ impl TextInput {
             return;
         }
 
+        let cursor_style = Style::new().fg(self.colors.cursor).reversed();
+        let selection_style = Style::new().fg(self.colors.selector).reversed();
+        let normal_style = Style::new().fg(self.colors.normal);
+
         if self.input.is_empty() {
             let Rect { x, y, .. } = line;
             buf.set_stringn(
@@ -271,7 +275,7 @@ impl TextInput {
                 line.width as usize,
                 self.colors.placeholder,
             );
-            buf[(x, y)].set_style(Style::new().fg(self.colors.cursor).reversed());
+            buf[(x, y)].set_style(cursor_style);
             return;
         }
 
@@ -279,7 +283,7 @@ impl TextInput {
         let total_width = unicode_width::UnicodeWidthStr::width(self.input.as_str());
 
         // Determine scroll
-        let scroll = if self.width != line.width {
+        let scroll = if self.last_width != line.width {
             // Refresh scroll on window resize
             0
         } else {
@@ -294,7 +298,7 @@ impl TextInput {
             self.margin_bottom,
             0,
         );
-        self.width = line.width;
+        self.last_width = line.width;
 
         // Render
         let selection = self.try_selection().unwrap_or(self.cursor..self.cursor);
@@ -312,11 +316,11 @@ impl TextInput {
                 let is_cursor = i == self.cursor;
                 let is_selected = selection.contains(&i);
                 let style = if is_cursor {
-                    Style::new().fg(self.colors.cursor).reversed()
+                    cursor_style
                 } else if is_selected {
-                    Style::new().fg(self.colors.selector).reversed()
+                    selection_style
                 } else {
-                    Style::new().fg(self.colors.normal)
+                    normal_style
                 };
                 (x, _) = buf.set_stringn(x, y, g, grapheme_width, style);
             }
@@ -325,7 +329,7 @@ impl TextInput {
         if self.cursor == self.input.len()
             && let Some(cell) = buf.cell_mut((x, y))
         {
-            cell.set_style(Style::new().fg(self.colors.cursor).reversed());
+            cell.set_style(cursor_style);
         }
     }
 

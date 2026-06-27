@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
-use widgets::TextInputColors;
+use widgets::{TextEditorColors, TextInputColors};
 
 const VERSION: u8 = 0;
 
@@ -224,6 +224,16 @@ pub struct Colors {
 impl Colors {
     pub const fn text_input(&self) -> TextInputColors {
         TextInputColors {
+            normal: Color::Reset,
+            cursor: self.secondary,
+            selector: self.neutral,
+            placeholder: self.neutral,
+            disabled: self.neutral,
+        }
+    }
+
+    pub const fn text_editor(&self) -> TextEditorColors {
+        TextEditorColors {
             normal: Color::Reset,
             cursor: self.secondary,
             selector: self.neutral,

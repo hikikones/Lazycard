@@ -551,12 +551,11 @@ and another one
     db.add_tag_for_card(cid1, tid1);
     db.add_tag_for_card(cid2, tid2);
     db.add_tag_for_card(cid2, tid3);
-    // panic!("{}", db.sqlite.last_insert_rowid());
 }
 
 //
 //
-//
+// TODO REMOVE?
 // EXISTS/NOT QUERY for tags maybe
 
 // SELECT c.id

@@ -29,11 +29,11 @@ pub struct CardEditorPage {
 }
 
 impl CardEditorPage {
-    pub fn new(colors: &Colors) -> Self {
+    pub fn new() -> Self {
         Self {
             editor: TextEditor::new()
                 .with_placeholder("Content...")
-                .with_colors(colors.secondary, colors.neutral),
+                .with_margins(2, 2),
             preview: false,
             show_tags: false,
             tags: TagsSidebar::new(),
@@ -109,7 +109,9 @@ impl CardEditorPage {
             if self.preview {
                 markup.render(area, buf, self.editor.as_str(), kitty);
             } else {
-                self.editor.render(area, buf);
+                self.editor
+                    .set_colors(colors.text_editor())
+                    .render(area, buf);
             }
         }
 

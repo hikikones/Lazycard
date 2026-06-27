@@ -35,7 +35,7 @@ enum State {
 }
 
 impl TagsPage {
-    pub fn new(db: &Database, colors: &Colors) -> Self {
+    pub fn new(db: &Database) -> Self {
         let mut tags = Vec::new();
         let mut names = Formatter::new();
 
@@ -46,9 +46,7 @@ impl TagsPage {
             names,
             list: TokenList::new(),
             state: State::Browse,
-            input: TextInput::new()
-                .with_placeholder("Tag name...")
-                .with_colors(colors.text_input()),
+            input: TextInput::new().with_placeholder("Tag name..."),
             message: String::new(),
         };
         tags_page.sort();
@@ -154,7 +152,9 @@ impl TagsPage {
                         area,
                         widgets::Alignment::CenterHorizontal,
                     );
-                    self.input.render(input_area, buf);
+                    self.input
+                        .set_colors(colors.text_input())
+                        .render(input_area, buf);
 
                     area.height = area.height.saturating_sub(2);
                     area.y += 2;
@@ -211,7 +211,9 @@ impl TagsPage {
                             area,
                             widgets::Alignment::CenterHorizontal,
                         );
-                        self.input.render(input_area, buf);
+                        self.input
+                            .set_colors(colors.text_input())
+                            .render(input_area, buf);
 
                         area.height = area.height.saturating_sub(2);
                         area.y += 2;
