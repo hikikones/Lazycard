@@ -41,8 +41,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ))?;
     }
 
-    // let db = database::Database::open(database_file)?;
     let db = database::Database::open_in_memory()?;
+    // TODO
+    // let db = match database::Database::open(&database_file) {
+    //     Ok(db) => db,
+    //     Err(err) => {
+    //         return Err(format!(
+    //             "Failed to open database \"{}\" due to {}",
+    //             database_file.display(),
+    //             err,
+    //         ))?;
+    //     }
+    // };
 
     let terminal = terminal::Terminal::init()?;
 

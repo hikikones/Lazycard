@@ -2,6 +2,8 @@ use std::path::Path;
 
 use crate::{scheduler::*, sqlite::*};
 
+pub type DatabaseResult<T> = Result<T, DatabaseError>;
+
 pub struct Database {
     sqlite: Sqlite,
     scheduler: Scheduler,
@@ -17,15 +19,15 @@ impl Database {
         }
     }
 
-    pub fn open(path: impl AsRef<Path>) -> SqliteResult<Self> {
+    pub fn open(path: impl AsRef<Path>) -> DatabaseResult<Self> {
         let db = Self::new(Sqlite::open(path)?);
-        db.migrate();
+        db.migrate()?;
         Ok(db)
     }
 
-    pub fn open_in_memory() -> SqliteResult<Self> {
+    pub fn open_in_memory() -> DatabaseResult<Self> {
         let db = Self::new(Sqlite::open_in_memory()?);
-        db.migrate();
+        db.migrate()?;
         Ok(db)
     }
 
@@ -353,7 +355,6 @@ impl Database {
             .unwrap();
     }
 
-    // TODO: Add query for cards count (amount of tags for a card)
     pub fn get_tags_for_card(&self, id: CardId, mut f: impl FnMut(TagId)) {
         self.sqlite
             .query(
@@ -407,20 +408,21 @@ impl Database {
             .unwrap();
     }
 
-    fn migrate(&self) {
+    fn migrate(&self) -> DatabaseResult<()> {
         const VERSION: SqliteId = 1;
 
-        match self.sqlite.version() {
+        let version = self.sqlite.version();
+        match version {
             0 => {
-                self.sqlite
-                    .execute_batch(include_str!("schema_v1.sql"))
-                    .unwrap();
+                self.sqlite.execute_batch(include_str!("schema_v1.sql"))?;
                 self.sqlite.set_version(VERSION);
                 add_test_data(self);
             }
             VERSION => {}
-            _ => todo!(),
+            _ => return DatabaseResult::Err(DatabaseError::Version(version)),
         }
+
+        Ok(())
     }
 }
 
@@ -470,6 +472,29 @@ impl ToSql for TagId {
 impl FromSql for TagId {
     fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         value.as_i64().map(|n| Self(n))
+    }
+}
+
+#[derive(Debug)]
+pub enum DatabaseError {
+    Sqlite(SqliteError),
+    Version(SqliteId),
+}
+
+impl std::fmt::Display for DatabaseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DatabaseError::Sqlite(err) => err.fmt(f),
+            &DatabaseError::Version(v) => f.write_fmt(format_args!("unknown version: {v}")),
+        }
+    }
+}
+
+impl std::error::Error for DatabaseError {}
+
+impl From<SqliteError> for DatabaseError {
+    fn from(err: SqliteError) -> Self {
+        Self::Sqlite(err)
     }
 }
 
@@ -552,64 +577,3 @@ and another one
     db.add_tag_for_card(cid2, tid2);
     db.add_tag_for_card(cid2, tid3);
 }
-
-//
-//
-// TODO REMOVE?
-// EXISTS/NOT QUERY for tags maybe
-
-// SELECT c.id
-// FROM cards c
-// WHERE
-//     EXISTS (
-//         SELECT 1
-//         FROM card_tags ct
-//         WHERE ct.card_id = c.id
-//           AND ct.tag_id = ?
-//     )
-// AND EXISTS (
-//         SELECT 1
-//         FROM card_tags ct
-//         WHERE ct.card_id = c.id
-//           AND ct.tag_id = ?
-//     )
-// AND NOT EXISTS (
-//         SELECT 1
-//         FROM card_tags ct
-//         WHERE ct.card_id = c.id
-//           AND ct.tag_id = ?
-//     )
-// AND NOT EXISTS (
-//         SELECT 1
-//         FROM card_tags ct
-//         WHERE ct.card_id = c.id
-//           AND ct.tag_id = ?
-//     );
-
-// sample code
-// let includes: Vec<TagId> = includes.collect();
-// let excludes: Vec<TagId> = excludes.collect();
-
-// let mut sql = String::from("SELECT c.id FROM cards c WHERE 1=1");
-
-// for _ in &includes {
-//     sql.push_str(
-//         " AND EXISTS (
-//             SELECT 1
-//             FROM card_tags ct
-//             WHERE ct.card_id = c.id
-//               AND ct.tag_id = ?
-//         )",
-//     );
-// }
-
-// for _ in &excludes {
-//     sql.push_str(
-//         " AND NOT EXISTS (
-//             SELECT 1
-//             FROM card_tags ct
-//             WHERE ct.card_id = c.id
-//               AND ct.tag_id = ?
-//         )",
-//     );
-// }

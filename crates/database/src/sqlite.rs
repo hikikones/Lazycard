@@ -5,7 +5,8 @@ use rusqlite::{Connection, OptionalExtension};
 pub use rusqlite::{OpenFlags, Params, Row, params, params_from_iter, types::*};
 
 pub type SqliteId = i64;
-pub type SqliteResult<T> = Result<T, rusqlite::Error>;
+pub type SqliteError = rusqlite::Error;
+pub type SqliteResult<T> = Result<T, SqliteError>;
 
 pub struct Sqlite(Connection);
 
