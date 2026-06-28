@@ -389,10 +389,11 @@ impl TextEditor {
             .take(area.height as usize)
             .enumerate()
         {
-            let (mut x, y) = (area.x, area.y + i as u16);
-            let text = &self.wrapped[line.range()];
-            for g in graphemes(text).map(map_grapheme) {
-                (x, _) = buf.set_stringn(x, y, g, usize::MAX, style);
+            let (mut x, y, mut width) = (area.x, area.y + i as u16, line.width);
+            for g in graphemes(&self.wrapped[line.range()]).map(grapheme_render) {
+                let (next_x, _) = buf.set_stringn(x, y, g, width as usize, style);
+                width -= next_x - x;
+                x = next_x;
             }
         }
     }
@@ -480,8 +481,6 @@ impl TextEditor {
         let mut column = 0;
 
         for (i, g) in grapheme_indices(&self.wrapped) {
-            let w = grapheme_width(g);
-
             if g.contains('\n') {
                 self.lines
                     .push(VisualLine::new(&self.wrapped, start..i + g.len()));
@@ -491,13 +490,14 @@ impl TextEditor {
                 continue;
             }
 
-            if column + w > max_width {
+            let width = grapheme_width(g);
+            if column + width > max_width {
                 self.lines.push(VisualLine::new(&self.wrapped, start..i));
 
                 start = i;
-                column = w;
+                column = width;
             } else {
-                column += w;
+                column += width;
             }
         }
 
@@ -528,9 +528,7 @@ impl TextEditor {
         let row = self.index_to_row(index);
         let line = &self.lines[row as usize];
         let text = &self.wrapped[line.range()];
-        let col = graphemes(&text[..index - line.start])
-            .map(grapheme_width)
-            .sum();
+        let col = text_width(&text[..index - line.start]);
 
         Position { x: col, y: row }
     }
@@ -571,12 +569,33 @@ impl VisualLine {
         Self {
             start: range.start,
             end: range.end,
-            width: grapheme_width(&text[range]),
+            width: text_width(&text[range]),
         }
     }
 
     const fn range(&self) -> std::ops::Range<usize> {
         self.start..self.end
+    }
+}
+
+fn text_width(s: &str) -> u16 {
+    graphemes(s).map(grapheme_width).sum()
+}
+
+fn grapheme_width(g: &str) -> u16 {
+    match g {
+        "\t" => 4,
+        _ => unicode_width::UnicodeWidthStr::width(g) as u16,
+    }
+}
+
+fn grapheme_render(g: &str) -> &str {
+    if g.contains('\n') {
+        " "
+    } else if g == "\t" {
+        "    "
+    } else {
+        g
     }
 }
 
@@ -588,22 +607,4 @@ fn graphemes(s: &str) -> unicode_segmentation::Graphemes<'_> {
 fn grapheme_indices(s: &str) -> unicode_segmentation::GraphemeIndices<'_> {
     use unicode_segmentation::UnicodeSegmentation;
     s.grapheme_indices(true)
-}
-
-fn map_grapheme(g: &str) -> &str {
-    // TODO: convert whitespace (newline, tab etc) to space " "?
-    if g.chars().any(|c| c.is_whitespace()) {
-        " "
-    } else {
-        g
-    }
-}
-
-fn grapheme_width(g: &str) -> u16 {
-    // TODO: need custom width for some stuff?
-    match g {
-        // "\n" => 0,
-        // "\t" => 4,
-        _ => unicode_width::UnicodeWidthStr::width(g) as u16,
-    }
 }
