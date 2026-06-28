@@ -273,16 +273,18 @@ impl<'a> Iterator for AnsiParser<'a> {
             }
 
             // Parse ansi code
-            const MAX_CODE_LEN: usize = 16;
             let code_start = ansi_start + ANSI_SEQUENCE_START.len();
-            let code_end = (code_start + MAX_CODE_LEN + 1).min(self.input.len());
-            let Some(end) = self.input[code_start..code_end].find(ANSI_SEQUENCE_END) else {
+            let Some(code_end) = self.input[code_start..]
+                .char_indices()
+                .take(17) // Should be enough for code len
+                .find(|(_, c)| *c == ANSI_SEQUENCE_END)
+                .map(|(i, _)| i + code_start)
+            else {
                 self.start = code_start;
                 continue;
             };
 
-            let end = code_start + end;
-            let code = &self.input[code_start..end];
+            let code = &self.input[code_start..code_end];
             if code.contains(";") {
                 // Extended colors
                 let mut split = code.split(";");
@@ -296,13 +298,13 @@ impl<'a> Iterator for AnsiParser<'a> {
                             split.next().map(|n| n.parse::<u8>()),
                         ) {
                             (Some("38"), Some("5"), Some(Ok(index))) => {
-                                self.start = end + 1;
-                                self.text_start = end + 1;
+                                self.start = code_end + 1;
+                                self.text_start = code_end + 1;
                                 return Some(AnsiEvent::Tag(AnsiTag::Fg256(index)));
                             }
                             (Some("48"), Some("5"), Some(Ok(index))) => {
-                                self.start = end + 1;
-                                self.text_start = end + 1;
+                                self.start = code_end + 1;
+                                self.text_start = code_end + 1;
                                 return Some(AnsiEvent::Tag(AnsiTag::Bg256(index)));
                             }
                             _ => {
@@ -321,13 +323,13 @@ impl<'a> Iterator for AnsiParser<'a> {
                             split.next().map(|n| n.parse::<u8>()),
                         ) {
                             (Some("38"), Some("2"), Some(Ok(r)), Some(Ok(g)), Some(Ok(b))) => {
-                                self.start = end + 1;
-                                self.text_start = end + 1;
+                                self.start = code_end + 1;
+                                self.text_start = code_end + 1;
                                 return Some(AnsiEvent::Tag(AnsiTag::FgTrueColor(r, g, b)));
                             }
                             (Some("48"), Some("2"), Some(Ok(r)), Some(Ok(g)), Some(Ok(b))) => {
-                                self.start = end + 1;
-                                self.text_start = end + 1;
+                                self.start = code_end + 1;
+                                self.text_start = code_end + 1;
                                 return Some(AnsiEvent::Tag(AnsiTag::BgTrueColor(r, g, b)));
                             }
                             _ => {
@@ -420,8 +422,8 @@ impl<'a> Iterator for AnsiParser<'a> {
 
                 match tag {
                     Some(tag) => {
-                        self.start = end + 1;
-                        self.text_start = end + 1;
+                        self.start = code_end + 1;
+                        self.text_start = code_end + 1;
                         return Some(AnsiEvent::Tag(tag));
                     }
                     None => {
