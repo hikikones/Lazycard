@@ -590,12 +590,9 @@ fn grapheme_width(g: &str) -> u16 {
 }
 
 fn grapheme_render(g: &str) -> &str {
-    if g.contains('\n') {
-        " "
-    } else if g == "\t" {
-        "    "
-    } else {
-        g
+    match g {
+        "\t" => "    ",
+        _ => g,
     }
 }
 
