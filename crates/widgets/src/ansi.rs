@@ -1,8 +1,9 @@
 /// ANSI writer and parser for most Select Graphic Rendition (SGR) attributes.
-use std::fmt::Write;
+use std::{fmt::Write, str::CharIndices};
 
-const ANSI_SEQUENCE_START: &str = "\x1b[";
-const ANSI_SEQUENCE_END: char = 'm';
+const ANSI_START: char = '\x1b';
+const ANSI_START2: char = '[';
+const ANSI_END: char = 'm';
 
 #[derive(Debug, Clone, Copy)]
 pub enum AnsiTag {
@@ -79,78 +80,154 @@ pub enum AnsiTag {
     BgTrueColor(u8, u8, u8),
 }
 
+impl AnsiTag {
+    const fn from_u8(value: u8) -> Option<Self> {
+        let tag = match value {
+            0 => Self::Reset,
+
+            1 => Self::Bold,
+            2 => Self::Faint,
+            3 => Self::Italic,
+            4 => Self::Underline,
+            5 => Self::SlowBlink,
+            6 => Self::RapidBlink,
+            7 => Self::Reverse,
+            8 => Self::Conceal,
+            9 => Self::CrossedOut,
+
+            22 => Self::NotBold,
+            23 => Self::NotItalic,
+            24 => Self::NotUnderline,
+            25 => Self::NotBlink,
+            27 => Self::NotReverse,
+            28 => Self::Reveal,
+            29 => Self::NotCrossedOut,
+
+            30 => Self::FgBlack,
+            31 => Self::FgRed,
+            32 => Self::FgGreen,
+            33 => Self::FgYellow,
+            34 => Self::FgBlue,
+            35 => Self::FgMagenta,
+            36 => Self::FgCyan,
+            37 => Self::FgWhite,
+
+            39 => Self::FgDefault,
+
+            40 => Self::BgBlack,
+            41 => Self::BgRed,
+            42 => Self::BgGreen,
+            43 => Self::BgYellow,
+            44 => Self::BgBlue,
+            45 => Self::BgMagenta,
+            46 => Self::BgCyan,
+            47 => Self::BgWhite,
+
+            49 => Self::BgDefault,
+
+            51 => Self::Framed,
+            52 => Self::Encircled,
+            53 => Self::Overlined,
+            54 => Self::NotFramedOrEncircled,
+            55 => Self::NotOverlined,
+
+            90 => Self::FgBrightBlack,
+            91 => Self::FgBrightRed,
+            92 => Self::FgBrightGreen,
+            93 => Self::FgBrightYellow,
+            94 => Self::FgBrightBlue,
+            95 => Self::FgBrightMagenta,
+            96 => Self::FgBrightCyan,
+            97 => Self::FgBrightWhite,
+
+            100 => Self::BgBrightBlack,
+            101 => Self::BgBrightRed,
+            102 => Self::BgBrightGreen,
+            103 => Self::BgBrightYellow,
+            104 => Self::BgBrightBlue,
+            105 => Self::BgBrightMagenta,
+            106 => Self::BgBrightCyan,
+            107 => Self::BgBrightWhite,
+
+            _ => return None,
+        };
+
+        Some(tag)
+    }
+}
+
 impl std::fmt::Display for AnsiTag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            AnsiTag::Reset => f.write_char('0'),
+            Self::Reset => f.write_char('0'),
 
-            AnsiTag::Bold => f.write_char('1'),
-            AnsiTag::Faint => f.write_char('2'),
-            AnsiTag::Italic => f.write_char('3'),
-            AnsiTag::Underline => f.write_char('4'),
-            AnsiTag::SlowBlink => f.write_char('5'),
-            AnsiTag::RapidBlink => f.write_char('6'),
-            AnsiTag::Reverse => f.write_char('7'),
-            AnsiTag::Conceal => f.write_char('8'),
-            AnsiTag::CrossedOut => f.write_char('9'),
-            AnsiTag::Framed => f.write_str("51"),
-            AnsiTag::Encircled => f.write_str("52"),
-            AnsiTag::Overlined => f.write_str("53"),
+            Self::Bold => f.write_char('1'),
+            Self::Faint => f.write_char('2'),
+            Self::Italic => f.write_char('3'),
+            Self::Underline => f.write_char('4'),
+            Self::SlowBlink => f.write_char('5'),
+            Self::RapidBlink => f.write_char('6'),
+            Self::Reverse => f.write_char('7'),
+            Self::Conceal => f.write_char('8'),
+            Self::CrossedOut => f.write_char('9'),
+            Self::Framed => f.write_str("51"),
+            Self::Encircled => f.write_str("52"),
+            Self::Overlined => f.write_str("53"),
 
-            AnsiTag::NotBold => f.write_str("22"),
-            AnsiTag::NotItalic => f.write_str("23"),
-            AnsiTag::NotUnderline => f.write_str("24"),
-            AnsiTag::NotBlink => f.write_str("25"),
-            AnsiTag::NotReverse => f.write_str("27"),
-            AnsiTag::Reveal => f.write_str("28"),
-            AnsiTag::NotCrossedOut => f.write_str("29"),
-            AnsiTag::NotFramedOrEncircled => f.write_str("54"),
-            AnsiTag::NotOverlined => f.write_str("55"),
+            Self::NotBold => f.write_str("22"),
+            Self::NotItalic => f.write_str("23"),
+            Self::NotUnderline => f.write_str("24"),
+            Self::NotBlink => f.write_str("25"),
+            Self::NotReverse => f.write_str("27"),
+            Self::Reveal => f.write_str("28"),
+            Self::NotCrossedOut => f.write_str("29"),
+            Self::NotFramedOrEncircled => f.write_str("54"),
+            Self::NotOverlined => f.write_str("55"),
 
-            AnsiTag::FgBlack => f.write_str("30"),
-            AnsiTag::FgRed => f.write_str("31"),
-            AnsiTag::FgGreen => f.write_str("32"),
-            AnsiTag::FgYellow => f.write_str("33"),
-            AnsiTag::FgBlue => f.write_str("34"),
-            AnsiTag::FgMagenta => f.write_str("35"),
-            AnsiTag::FgCyan => f.write_str("36"),
-            AnsiTag::FgWhite => f.write_str("37"),
+            Self::FgBlack => f.write_str("30"),
+            Self::FgRed => f.write_str("31"),
+            Self::FgGreen => f.write_str("32"),
+            Self::FgYellow => f.write_str("33"),
+            Self::FgBlue => f.write_str("34"),
+            Self::FgMagenta => f.write_str("35"),
+            Self::FgCyan => f.write_str("36"),
+            Self::FgWhite => f.write_str("37"),
 
-            AnsiTag::FgBrightBlack => f.write_str("90"),
-            AnsiTag::FgBrightRed => f.write_str("91"),
-            AnsiTag::FgBrightGreen => f.write_str("92"),
-            AnsiTag::FgBrightYellow => f.write_str("93"),
-            AnsiTag::FgBrightBlue => f.write_str("94"),
-            AnsiTag::FgBrightMagenta => f.write_str("95"),
-            AnsiTag::FgBrightCyan => f.write_str("96"),
-            AnsiTag::FgBrightWhite => f.write_str("97"),
+            Self::FgBrightBlack => f.write_str("90"),
+            Self::FgBrightRed => f.write_str("91"),
+            Self::FgBrightGreen => f.write_str("92"),
+            Self::FgBrightYellow => f.write_str("93"),
+            Self::FgBrightBlue => f.write_str("94"),
+            Self::FgBrightMagenta => f.write_str("95"),
+            Self::FgBrightCyan => f.write_str("96"),
+            Self::FgBrightWhite => f.write_str("97"),
 
-            AnsiTag::FgDefault => f.write_str("39"),
+            Self::FgDefault => f.write_str("39"),
 
-            AnsiTag::BgBlack => f.write_str("40"),
-            AnsiTag::BgRed => f.write_str("41"),
-            AnsiTag::BgGreen => f.write_str("42"),
-            AnsiTag::BgYellow => f.write_str("43"),
-            AnsiTag::BgBlue => f.write_str("44"),
-            AnsiTag::BgMagenta => f.write_str("45"),
-            AnsiTag::BgCyan => f.write_str("46"),
-            AnsiTag::BgWhite => f.write_str("47"),
+            Self::BgBlack => f.write_str("40"),
+            Self::BgRed => f.write_str("41"),
+            Self::BgGreen => f.write_str("42"),
+            Self::BgYellow => f.write_str("43"),
+            Self::BgBlue => f.write_str("44"),
+            Self::BgMagenta => f.write_str("45"),
+            Self::BgCyan => f.write_str("46"),
+            Self::BgWhite => f.write_str("47"),
 
-            AnsiTag::BgBrightBlack => f.write_str("100"),
-            AnsiTag::BgBrightRed => f.write_str("101"),
-            AnsiTag::BgBrightGreen => f.write_str("102"),
-            AnsiTag::BgBrightYellow => f.write_str("103"),
-            AnsiTag::BgBrightBlue => f.write_str("104"),
-            AnsiTag::BgBrightMagenta => f.write_str("105"),
-            AnsiTag::BgBrightCyan => f.write_str("106"),
-            AnsiTag::BgBrightWhite => f.write_str("107"),
+            Self::BgBrightBlack => f.write_str("100"),
+            Self::BgBrightRed => f.write_str("101"),
+            Self::BgBrightGreen => f.write_str("102"),
+            Self::BgBrightYellow => f.write_str("103"),
+            Self::BgBrightBlue => f.write_str("104"),
+            Self::BgBrightMagenta => f.write_str("105"),
+            Self::BgBrightCyan => f.write_str("106"),
+            Self::BgBrightWhite => f.write_str("107"),
 
-            AnsiTag::BgDefault => f.write_str("49"),
+            Self::BgDefault => f.write_str("49"),
 
-            AnsiTag::Fg256(n) => f.write_fmt(format_args!("38;5;{}", n)),
-            AnsiTag::Bg256(n) => f.write_fmt(format_args!("48;5;{}", n)),
-            AnsiTag::FgTrueColor(r, g, b) => f.write_fmt(format_args!("38;2;{};{};{}", r, g, b)),
-            AnsiTag::BgTrueColor(r, g, b) => f.write_fmt(format_args!("48;2;{};{};{}", r, g, b)),
+            Self::Fg256(n) => f.write_fmt(format_args!("38;5;{}", n)),
+            Self::Bg256(n) => f.write_fmt(format_args!("48;5;{}", n)),
+            Self::FgTrueColor(r, g, b) => f.write_fmt(format_args!("38;2;{};{};{}", r, g, b)),
+            Self::BgTrueColor(r, g, b) => f.write_fmt(format_args!("48;2;{};{};{}", r, g, b)),
         }
     }
 }
@@ -200,9 +277,9 @@ impl AnsiWriter {
     }
 
     pub fn push_tag(&mut self, tag: AnsiTag) {
-        let _ = self.inner.write_fmt(format_args!(
-            "{ANSI_SEQUENCE_START}{tag}{ANSI_SEQUENCE_END}"
-        ));
+        self.inner.extend([ANSI_START, ANSI_START2]);
+        let _ = self.inner.write_fmt(format_args!("{tag}"));
+        self.inner.push(ANSI_END);
     }
 
     pub fn insert_char(&mut self, i: usize, ch: char) {
@@ -215,7 +292,7 @@ impl AnsiWriter {
 
     pub fn insert_tag(&mut self, i: usize, tag: AnsiTag) {
         self.inner
-            .insert_str(i, &format!("{ANSI_SEQUENCE_START}{tag}{ANSI_SEQUENCE_END}"));
+            .insert_str(i, &format!("{ANSI_START}{ANSI_START2}{tag}{ANSI_END}"));
     }
 
     pub fn extend<'a>(&mut self, iter: impl IntoIterator<Item = &'a str>) {
@@ -239,17 +316,90 @@ pub enum AnsiEvent<'a> {
 
 pub struct AnsiParser<'a> {
     input: &'a str,
+    chars: CharIndices<'a>,
     start: usize,
-    text_start: usize,
+    tag: Option<AnsiTag>,
 }
 
 impl<'a> AnsiParser<'a> {
-    pub const fn new(input: &'a str) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Self {
             input,
+            chars: input.char_indices(),
             start: 0,
-            text_start: 0,
+            tag: None,
         }
+    }
+
+    fn parse_ansi_code(&mut self) -> Option<(usize, AnsiTag)> {
+        let Some((i, ANSI_START2)) = self.chars.next() else {
+            return None;
+        };
+
+        let code_start = i + ANSI_START2.len_utf8();
+        let Some(code_end) = self.find_ansi_end() else {
+            return None;
+        };
+
+        let code = &self.input[code_start..code_end];
+        let tag = if code.contains(";") {
+            // Extended colors
+            let mut split = code.split(";");
+            let count = split.clone().count();
+            match count {
+                3 => {
+                    // Indexed color
+                    match (
+                        split.next(),
+                        split.next(),
+                        split.next().map(|n| n.parse::<u8>()),
+                    ) {
+                        (Some("38"), Some("5"), Some(Ok(index))) => Some(AnsiTag::Fg256(index)),
+                        (Some("48"), Some("5"), Some(Ok(index))) => Some(AnsiTag::Bg256(index)),
+                        _ => return None,
+                    }
+                }
+                5 => {
+                    // True color
+                    match (
+                        split.next(),
+                        split.next(),
+                        split.next().map(|n| n.parse::<u8>()),
+                        split.next().map(|n| n.parse::<u8>()),
+                        split.next().map(|n| n.parse::<u8>()),
+                    ) {
+                        (Some("38"), Some("2"), Some(Ok(r)), Some(Ok(g)), Some(Ok(b))) => {
+                            Some(AnsiTag::FgTrueColor(r, g, b))
+                        }
+                        (Some("48"), Some("2"), Some(Ok(r)), Some(Ok(g)), Some(Ok(b))) => {
+                            Some(AnsiTag::BgTrueColor(r, g, b))
+                        }
+                        _ => return None,
+                    }
+                }
+                _ => return None,
+            }
+        } else {
+            // Single code
+            let Ok(num) = code.parse::<u8>() else {
+                return None;
+            };
+            AnsiTag::from_u8(num)
+        };
+
+        tag.map(|tag| (code_end + ANSI_END.len_utf8(), tag))
+    }
+
+    fn find_ansi_end(&mut self) -> Option<usize> {
+        let mut end = None;
+        let max_code_len = 17; // Should be enough for code len
+        for _ in 0..max_code_len {
+            if let Some((i, ANSI_END)) = self.chars.next() {
+                end = Some(i);
+                break;
+            }
+        }
+        end
     }
 }
 
@@ -257,186 +407,30 @@ impl<'a> Iterator for AnsiParser<'a> {
     type Item = AnsiEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.start == self.input.len() {
-            return None;
+        if let Some(tag) = self.tag.take() {
+            return Some(AnsiEvent::Tag(tag));
         }
 
-        while let Some(i) = self.input[self.start..].find(ANSI_SEQUENCE_START) {
-            let ansi_start = self.start + i;
-
-            // Return text before we parse ansi code
-            if self.text_start < ansi_start {
-                let text = &self.input[self.text_start..ansi_start];
-                self.start = ansi_start;
-                self.text_start = ansi_start;
-                return Some(AnsiEvent::Text(text));
-            }
-
-            // Parse ansi code
-            let code_start = ansi_start + ANSI_SEQUENCE_START.len();
-            let Some(code_end) = self.input[code_start..]
-                .char_indices()
-                .take(17) // Should be enough for code len
-                .find(|(_, c)| *c == ANSI_SEQUENCE_END)
-                .map(|(i, _)| i + code_start)
-            else {
-                self.start = code_start;
-                continue;
-            };
-
-            let code = &self.input[code_start..code_end];
-            if code.contains(";") {
-                // Extended colors
-                let mut split = code.split(";");
-                let count = split.clone().count();
-                match count {
-                    3 => {
-                        // Indexed color
-                        match (
-                            split.next(),
-                            split.next(),
-                            split.next().map(|n| n.parse::<u8>()),
-                        ) {
-                            (Some("38"), Some("5"), Some(Ok(index))) => {
-                                self.start = code_end + 1;
-                                self.text_start = code_end + 1;
-                                return Some(AnsiEvent::Tag(AnsiTag::Fg256(index)));
-                            }
-                            (Some("48"), Some("5"), Some(Ok(index))) => {
-                                self.start = code_end + 1;
-                                self.text_start = code_end + 1;
-                                return Some(AnsiEvent::Tag(AnsiTag::Bg256(index)));
-                            }
-                            _ => {
-                                self.start = code_start;
-                                continue;
-                            }
-                        }
-                    }
-                    5 => {
-                        // True color
-                        match (
-                            split.next(),
-                            split.next(),
-                            split.next().map(|n| n.parse::<u8>()),
-                            split.next().map(|n| n.parse::<u8>()),
-                            split.next().map(|n| n.parse::<u8>()),
-                        ) {
-                            (Some("38"), Some("2"), Some(Ok(r)), Some(Ok(g)), Some(Ok(b))) => {
-                                self.start = code_end + 1;
-                                self.text_start = code_end + 1;
-                                return Some(AnsiEvent::Tag(AnsiTag::FgTrueColor(r, g, b)));
-                            }
-                            (Some("48"), Some("2"), Some(Ok(r)), Some(Ok(g)), Some(Ok(b))) => {
-                                self.start = code_end + 1;
-                                self.text_start = code_end + 1;
-                                return Some(AnsiEvent::Tag(AnsiTag::BgTrueColor(r, g, b)));
-                            }
-                            _ => {
-                                self.start = code_start;
-                                continue;
-                            }
-                        }
-                    }
-                    _ => {
-                        self.start = code_start;
-                        continue;
-                    }
-                }
-            } else {
-                // Single code
-                let Ok(num) = code.parse::<u8>() else {
-                    self.start = code_start;
-                    continue;
+        while let Some((i, c)) = self.chars.next() {
+            if c == ANSI_START
+                && let Some((end, tag)) = self.parse_ansi_code()
+            {
+                let event = if self.start < i {
+                    // Set tag and return text
+                    self.tag = Some(tag);
+                    AnsiEvent::Text(&self.input[self.start..i])
+                } else {
+                    // Return tag
+                    AnsiEvent::Tag(tag)
                 };
-
-                let tag = match num {
-                    0 => Some(AnsiTag::Reset),
-
-                    1 => Some(AnsiTag::Bold),
-                    2 => Some(AnsiTag::Faint),
-                    3 => Some(AnsiTag::Italic),
-                    4 => Some(AnsiTag::Underline),
-                    5 => Some(AnsiTag::SlowBlink),
-                    6 => Some(AnsiTag::RapidBlink),
-                    7 => Some(AnsiTag::Reverse),
-                    8 => Some(AnsiTag::Conceal),
-                    9 => Some(AnsiTag::CrossedOut),
-
-                    22 => Some(AnsiTag::NotBold),
-                    23 => Some(AnsiTag::NotItalic),
-                    24 => Some(AnsiTag::NotUnderline),
-                    25 => Some(AnsiTag::NotBlink),
-                    27 => Some(AnsiTag::NotReverse),
-                    28 => Some(AnsiTag::Reveal),
-                    29 => Some(AnsiTag::NotCrossedOut),
-
-                    30 => Some(AnsiTag::FgBlack),
-                    31 => Some(AnsiTag::FgRed),
-                    32 => Some(AnsiTag::FgGreen),
-                    33 => Some(AnsiTag::FgYellow),
-                    34 => Some(AnsiTag::FgBlue),
-                    35 => Some(AnsiTag::FgMagenta),
-                    36 => Some(AnsiTag::FgCyan),
-                    37 => Some(AnsiTag::FgWhite),
-
-                    39 => Some(AnsiTag::FgDefault),
-
-                    40 => Some(AnsiTag::BgBlack),
-                    41 => Some(AnsiTag::BgRed),
-                    42 => Some(AnsiTag::BgGreen),
-                    43 => Some(AnsiTag::BgYellow),
-                    44 => Some(AnsiTag::BgBlue),
-                    45 => Some(AnsiTag::BgMagenta),
-                    46 => Some(AnsiTag::BgCyan),
-                    47 => Some(AnsiTag::BgWhite),
-
-                    49 => Some(AnsiTag::BgDefault),
-
-                    51 => Some(AnsiTag::Framed),
-                    52 => Some(AnsiTag::Encircled),
-                    53 => Some(AnsiTag::Overlined),
-                    54 => Some(AnsiTag::NotFramedOrEncircled),
-                    55 => Some(AnsiTag::NotOverlined),
-
-                    90 => Some(AnsiTag::FgBrightBlack),
-                    91 => Some(AnsiTag::FgBrightRed),
-                    92 => Some(AnsiTag::FgBrightGreen),
-                    93 => Some(AnsiTag::FgBrightYellow),
-                    94 => Some(AnsiTag::FgBrightBlue),
-                    95 => Some(AnsiTag::FgBrightMagenta),
-                    96 => Some(AnsiTag::FgBrightCyan),
-                    97 => Some(AnsiTag::FgBrightWhite),
-
-                    100 => Some(AnsiTag::BgBrightBlack),
-                    101 => Some(AnsiTag::BgBrightRed),
-                    102 => Some(AnsiTag::BgBrightGreen),
-                    103 => Some(AnsiTag::BgBrightYellow),
-                    104 => Some(AnsiTag::BgBrightBlue),
-                    105 => Some(AnsiTag::BgBrightMagenta),
-                    106 => Some(AnsiTag::BgBrightCyan),
-                    107 => Some(AnsiTag::BgBrightWhite),
-
-                    _ => None,
-                };
-
-                match tag {
-                    Some(tag) => {
-                        self.start = code_end + 1;
-                        self.text_start = code_end + 1;
-                        return Some(AnsiEvent::Tag(tag));
-                    }
-                    None => {
-                        self.start = code_start;
-                        continue;
-                    }
-                }
+                self.start = end;
+                return Some(event);
             }
         }
 
+        let remaining = &self.input[self.start..];
         self.start = self.input.len();
 
-        let remaining = &self.input[self.text_start..];
         if remaining.is_empty() {
             None
         } else {
