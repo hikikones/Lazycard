@@ -223,26 +223,30 @@ impl TextEditor {
                 }
             }
             CursorMove::Up => {
-                let pos = self.cursor_position();
-                self.cursor = if pos.y == 0 {
-                    0
+                let row = self.cursor_row();
+                if row == 0 {
+                    self.cursor = 0;
+                    self.preferred_column = 0;
                 } else {
-                    self.column_to_index(pos.y - 1, self.preferred_column)
+                    self.cursor = self.column_to_index(row - 1, self.preferred_column);
                 }
             }
             CursorMove::Down => {
-                let pos = self.cursor_position();
-                self.cursor = if pos.y + 1 >= self.lines.len() as u16 {
-                    self.wrapped.len()
+                let row = self.cursor_row();
+                if row + 1 >= self.lines.len() as u16 {
+                    self.cursor = self.wrapped.len();
+                    self.preferred_column = self.cursor_position().x;
                 } else {
-                    self.column_to_index(pos.y + 1, self.preferred_column)
+                    self.cursor = self.column_to_index(row + 1, self.preferred_column);
                 }
             }
             CursorMove::Start => {
                 self.cursor = 0;
+                self.preferred_column = 0;
             }
             CursorMove::End => {
                 self.cursor = self.wrapped.len();
+                self.preferred_column = self.cursor_position().x;
             }
         }
 
@@ -256,6 +260,7 @@ impl TextEditor {
 
         self.cursor = self.input.len();
         self.selector = Some(0);
+        self.preferred_column = self.cursor_position().x;
 
         self.cursor != old_cursor || self.selector != old_selector
     }
@@ -498,6 +503,11 @@ impl TextEditor {
 
         self.lines
             .push(VisualLine::new(&self.wrapped, start..self.wrapped.len()));
+        self.preferred_column = self.cursor_position().x;
+    }
+
+    fn cursor_row(&self) -> u16 {
+        self.index_to_row(self.cursor)
     }
 
     fn cursor_position(&self) -> Position {
@@ -511,6 +521,10 @@ impl TextEditor {
     }
 
     fn index_to_position(&self, index: usize) -> Position {
+        if self.lines.is_empty() {
+            return Position::ORIGIN;
+        }
+
         let row = self.index_to_row(index);
         let line = &self.lines[row as usize];
         let text = &self.wrapped[line.range()];
