@@ -316,3 +316,65 @@ impl<'a> Iterator for PeekableCharsPrevious<'a> {
         next
     }
 }
+
+pub struct WordsIter<'a> {
+    text: &'a str,
+    graphemes: GraphemeIndices<'a>,
+    event: Option<(usize, &'a str, WordsEvent)>,
+    word: Option<usize>,
+}
+
+#[derive(Debug)]
+pub enum WordsEvent {
+    Newline,
+    Whitespace,
+    Word,
+}
+
+impl<'a> WordsIter<'a> {
+    pub fn new(text: &'a str) -> Self {
+        Self {
+            text,
+            graphemes: text.grapheme_indices(true),
+            event: None,
+            word: None,
+        }
+    }
+}
+
+impl<'a> Iterator for WordsIter<'a> {
+    type Item = (usize, &'a str, WordsEvent);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.event.is_some() {
+            return self.event.take();
+        }
+
+        while let Some((i, g)) = self.graphemes.next() {
+            let is_whitespace = g.chars().all(char::is_whitespace);
+            if is_whitespace {
+                let is_newline = g.contains('\n');
+                let next_event = if is_newline {
+                    WordsEvent::Newline
+                } else {
+                    WordsEvent::Whitespace
+                };
+
+                if let Some(ws) = self.word.take() {
+                    self.event = Some((i, g, next_event));
+                    return Some((ws, &self.text[ws..i], WordsEvent::Word));
+                } else {
+                    return Some((i, g, next_event));
+                }
+            } else {
+                if self.word.is_none() {
+                    self.word = Some(i);
+                }
+            }
+        }
+
+        self.word
+            .take()
+            .map(|i| (i, &self.text[i..], WordsEvent::Word))
+    }
+}
