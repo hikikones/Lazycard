@@ -15,6 +15,8 @@ use crate::{
     text_segment::TextSegment,
 };
 
+// TODO: Render "\t" properly.
+
 pub struct Markup {
     items: Vec<Item>,
     ansi: AnsiWriter,

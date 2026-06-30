@@ -25,16 +25,12 @@ impl Sqlite {
 
     pub fn version(&self) -> SqliteId {
         self.0
-            .query_row("SELECT user_version FROM pragma_user_version", (), |row| {
-                row.get(0)
-            })
+            .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap()
     }
 
     pub fn set_version(&self, version: SqliteId) {
-        self.0
-            .execute(&format!("PRAGMA user_version = {version}"), ())
-            .unwrap();
+        self.0.pragma_update(None, "user_version", version).unwrap();
     }
 
     pub fn execute(&self, sql: &str, args: impl Params) -> SqliteResult<usize> {
