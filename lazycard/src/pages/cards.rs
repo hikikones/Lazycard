@@ -8,10 +8,7 @@ use ratatui::{
     style::{Color, Style},
 };
 use utils::Formatter;
-use widgets::{
-    KittyGraphics, List, ListItem, Markup, ScrollMove, Scrollbar, ScrollbarColors, Shortcut,
-    Shortcuts,
-};
+use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Scrollbar, Shortcut, Shortcuts};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -387,16 +384,7 @@ impl TagsSidebar {
         area.height = area.height.saturating_sub(2);
 
         // Scrollbar
-        let scrollable = self.tags.len() > area.height as usize && area.width > 10;
-        let scroll_area = scrollable.then(|| {
-            let scroll_area = Rect {
-                x: area.x + area.width.saturating_sub(1),
-                width: 1,
-                ..area
-            };
-            area.width = area.width.saturating_sub(3);
-            scroll_area
-        });
+        let scroll_area = Scrollbar::is_scrollable(self.tags.len(), &mut area);
 
         // Render tags
         self.list
@@ -421,9 +409,12 @@ impl TagsSidebar {
 
         // Render scrollbar
         if let Some(scroll_area) = scroll_area {
-            Scrollbar::new()
-                .with_colors(ScrollbarColors::new(colors.neutral, None))
-                .render(scroll_area, buf, self.list.scroll(), self.tags.len());
+            Scrollbar::new().with_colors(colors.scrollbar()).render(
+                scroll_area,
+                buf,
+                self.list.scroll(),
+                self.tags.len(),
+            );
         }
     }
 }

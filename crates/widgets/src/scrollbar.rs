@@ -131,6 +131,28 @@ impl Scrollbar {
             current_scroll
         }
     }
+
+    pub fn is_scrollable(total_lines: usize, area: &mut Rect) -> Option<Rect> {
+        Self::is_scrollable_with_options(total_lines, area, 10, 2)
+    }
+
+    pub fn is_scrollable_with_options(
+        total_lines: usize,
+        area: &mut Rect,
+        min_width: u16,
+        scrollbar_gap: u16,
+    ) -> Option<Rect> {
+        let scrollable = total_lines > area.height as usize && area.width > min_width;
+        scrollable.then(|| {
+            let scroll_area = Rect {
+                x: area.x + area.width.saturating_sub(1),
+                width: 1,
+                ..*area
+            };
+            area.width = area.width.saturating_sub(1 + scrollbar_gap);
+            scroll_area
+        })
+    }
 }
 
 pub struct ScrollbarColors {

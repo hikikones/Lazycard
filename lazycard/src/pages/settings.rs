@@ -4,10 +4,7 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     prelude::*,
 };
-use widgets::{
-    CursorMove, List, ListItem, Scrollbar, ScrollbarColors, Shortcut, Shortcuts, TextInput,
-    TextSegment,
-};
+use widgets::{CursorMove, List, ListItem, Scrollbar, Shortcut, Shortcuts, TextInput, TextSegment};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -101,16 +98,7 @@ impl SettingsPage {
         let colors = settings.colors();
 
         // Scrollbar
-        let scrollable = SETTINGS.len() > area.height as usize && area.width > 10;
-        let scroll_area = scrollable.then(|| {
-            let scroll_area = Rect {
-                x: area.x + area.width.saturating_sub(1),
-                width: 1,
-                ..area
-            };
-            area.width = area.width.saturating_sub(3);
-            scroll_area
-        });
+        let scroll_area = Scrollbar::is_scrollable(SETTINGS.len(), &mut area);
 
         let mut setting_area = Rect {
             width: area.width / 2,
@@ -204,9 +192,12 @@ impl SettingsPage {
 
         // Render scrollbar
         if let Some(scroll_area) = scroll_area {
-            Scrollbar::new()
-                .with_colors(ScrollbarColors::new(colors.neutral, None))
-                .render(scroll_area, buf, self.list.scroll(), SETTINGS.len());
+            Scrollbar::new().with_colors(colors.scrollbar()).render(
+                scroll_area,
+                buf,
+                self.list.scroll(),
+                SETTINGS.len(),
+            );
         }
 
         // Description and shortcuts

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
-use widgets::{TextEditorColors, TextInputColors};
+use widgets::{ScrollbarColors, TextEditorColors, TextInputColors};
 
 const VERSION: u8 = 0;
 
@@ -239,6 +239,13 @@ impl Colors {
             selector: self.neutral,
             placeholder: self.neutral,
             disabled: self.neutral,
+        }
+    }
+
+    pub const fn scrollbar(&self) -> ScrollbarColors {
+        ScrollbarColors {
+            thumb: self.neutral,
+            track: None,
         }
     }
 }
