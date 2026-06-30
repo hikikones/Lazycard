@@ -35,6 +35,32 @@ pub struct Markup {
     hash: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SyntaxHighlightTheme {
+    Base16OceanDark,
+    Base16OceanLight,
+    Base16MochaDark,
+    Base16EightiesDark,
+    InspiredGitHub,
+    SolarizedDark,
+    SolarizedLight,
+}
+
+impl SyntaxHighlightTheme {
+    const fn as_str(self) -> &'static str {
+        match self {
+            SyntaxHighlightTheme::Base16OceanDark => "base16-ocean.dark",
+            SyntaxHighlightTheme::Base16OceanLight => "base16-ocean.light",
+            SyntaxHighlightTheme::Base16MochaDark => "base16-mocha.dark",
+            SyntaxHighlightTheme::Base16EightiesDark => "base16-eighties.dark",
+            SyntaxHighlightTheme::InspiredGitHub => "InspiredGitHub",
+            SyntaxHighlightTheme::SolarizedDark => "Solarized (dark)",
+            SyntaxHighlightTheme::SolarizedLight => "Solarized (light)",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum ScrollMove {
     Up,
     Down,
@@ -42,6 +68,17 @@ pub enum ScrollMove {
     PageDown,
     Start,
     End,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MarkupItem {
+    Paragraph,
+    ListItem,
+    Code,
+    Image,
+    ImageDescription,
+    Break,
+    EmptyLine,
 }
 
 #[derive(Debug, Clone)]
@@ -71,27 +108,14 @@ enum ImageItem {
     Err { text: Range<usize> },
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum MarkupItem {
-    Paragraph,
-    ListItem,
-    Code,
-    Image,
-    ImageDescription,
-    Break,
-    EmptyLine,
-}
-
-// TODO: Use a SyntaxHighlightTheme enum.
-
 impl Markup {
-    pub fn new(assets_path: PathBuf, syntax_highlight_theme: &'static str) -> Self {
+    pub fn new(assets: PathBuf, theme: SyntaxHighlightTheme) -> Self {
         Self {
             items: Vec::new(),
             ansi: AnsiWriter::new(),
             buffer: String::new(),
             wrapped_ansi: Formatter::new(),
-            code_highlighter: CodeHighlighter::new(syntax_highlight_theme),
+            code_highlighter: CodeHighlighter::new(theme),
             text_segment: TextSegment::new(),
             scroll: 0,
             desired_scroll: None,
@@ -100,7 +124,7 @@ impl Markup {
             image_id_start: 90,
             image_id_counter: 0,
             image_has_rendered: false,
-            assets_path,
+            assets_path: assets,
             area: Rect::ZERO,
             hash: 0,
         }
@@ -550,14 +574,14 @@ impl Markup {
                         };
                         kitty.load(&path).map_err(|err| {
                             format!(
-                                "Could not load image\n\"{}\"\ndue to\n\"{}\"",
+                                "Failed to load image\n\"{}\"\ndue to\n\"{}\"",
                                 path.display(),
                                 err
                             )
                         })?;
                         let dims = kitty.encode(id).map_err(|err| {
                             format!(
-                                "Could not encode image\n\"{}\"\ndue to\n\"{}\"",
+                                "Failed to encode image\n\"{}\"\ndue to\n\"{}\"",
                                 path.display(),
                                 err
                             )
@@ -934,11 +958,11 @@ struct CodeHighlighter {
 }
 
 impl CodeHighlighter {
-    fn new(theme: &'static str) -> Self {
+    fn new(theme: SyntaxHighlightTheme) -> Self {
         Self {
             syntax_set: SyntaxSet::load_defaults_newlines(),
             theme_set: ThemeSet::load_defaults(),
-            theme,
+            theme: theme.as_str(),
         }
     }
 

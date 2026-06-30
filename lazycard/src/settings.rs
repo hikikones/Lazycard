@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
-use widgets::{ScrollbarColors, TextEditorColors, TextInputColors};
+use widgets::{ScrollbarColors, SyntaxHighlightTheme, TextEditorColors, TextInputColors};
 
 const VERSION: u8 = 0;
 
@@ -12,7 +12,7 @@ pub struct Settings {
     pub colors: Colors,
 
     #[serde(skip)]
-    syntax_highlight: SyntaxHighlight,
+    theme: ThemeMode,
     #[serde(skip)]
     path: Option<PathBuf>,
 }
@@ -22,32 +22,13 @@ impl Default for Settings {
         let general = General {
             desired_retention: 80,
         };
-        let (colors, syntax_highlight) =
-            match terminal_colorsaurus::theme_mode(terminal_colorsaurus::QueryOptions::default())
-                .unwrap_or(terminal_colorsaurus::ThemeMode::Dark)
-            {
-                terminal_colorsaurus::ThemeMode::Dark => (
-                    Colors {
-                        primary: Color::LightYellow,
-                        secondary: Color::Yellow,
-                        neutral: Color::Indexed(245),
-                    },
-                    SyntaxHighlight::Dark,
-                ),
-                terminal_colorsaurus::ThemeMode::Light => (
-                    Colors {
-                        primary: Color::LightCyan,
-                        secondary: Color::Cyan,
-                        neutral: Color::Indexed(245),
-                    },
-                    SyntaxHighlight::Light,
-                ),
-            };
+        let theme = ThemeMode::default();
+        let colors = Colors::from_theme(theme);
 
         Self {
             general,
             colors,
-            syntax_highlight,
+            theme,
             path: None,
         }
     }
@@ -82,8 +63,11 @@ impl Settings {
         self.colors.neutral
     }
 
-    pub const fn syntax_highlighting(&self) -> &'static str {
-        self.syntax_highlight.as_str()
+    pub const fn syntax_highlight_theme(&self) -> SyntaxHighlightTheme {
+        match self.theme {
+            ThemeMode::Dark => SyntaxHighlightTheme::Base16EightiesDark,
+            ThemeMode::Light => SyntaxHighlightTheme::InspiredGitHub,
+        }
     }
 
     pub const fn set_primary(&mut self, color: Color) {
@@ -198,18 +182,19 @@ pub struct General {
     desired_retention: u8,
 }
 
-#[derive(Clone, Default)]
-pub enum SyntaxHighlight {
-    #[default]
+#[derive(Debug, Clone, Copy)]
+enum ThemeMode {
     Dark,
     Light,
 }
 
-impl SyntaxHighlight {
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Dark => "base16-eighties.dark",
-            Self::Light => "InspiredGitHub",
+impl Default for ThemeMode {
+    fn default() -> Self {
+        match terminal_colorsaurus::theme_mode(terminal_colorsaurus::QueryOptions::default())
+            .unwrap_or(terminal_colorsaurus::ThemeMode::Dark)
+        {
+            terminal_colorsaurus::ThemeMode::Dark => Self::Dark,
+            terminal_colorsaurus::ThemeMode::Light => Self::Light,
         }
     }
 }
@@ -222,6 +207,22 @@ pub struct Colors {
 }
 
 impl Colors {
+    const fn from_theme(theme: ThemeMode) -> Self {
+        let neutral = Color::Indexed(245);
+        match theme {
+            ThemeMode::Dark => Self {
+                primary: Color::LightYellow,
+                secondary: Color::Yellow,
+                neutral,
+            },
+            ThemeMode::Light => Self {
+                primary: Color::LightCyan,
+                secondary: Color::Cyan,
+                neutral,
+            },
+        }
+    }
+
     pub const fn text_input(&self) -> TextInputColors {
         TextInputColors {
             normal: Color::Reset,

@@ -83,13 +83,6 @@ impl App {
         settings_path: Option<PathBuf>,
     ) -> Self {
         let mut logs = LogsPage::new();
-        logs.enqueue(Log::new("message"));
-        logs.enqueue(Log::new("message"));
-        logs.enqueue(Log::new("message"));
-        logs.enqueue(Log::new("message"));
-        logs.enqueue(Log::new("message"));
-        logs.enqueue(Log::new("message"));
-        logs.enqueue(Log::new("message dlkaj waj ioajioawjd ioajdioajd ioajdioajdioajdioajidoajdioajdioajdioajdioajwidoajiodjaidojaiodjwiodjaioj"));
 
         let settings = Settings::read(settings_path.clone())
             .inspect_err(|err| logs.enqueue(Log::new(err)))
@@ -111,7 +104,7 @@ impl App {
             state: AppState::Route,
             pages,
             database,
-            markup: Markup::new(assets_dir, settings.syntax_highlighting()),
+            markup: Markup::new(assets_dir, settings.syntax_highlight_theme()),
             kitty: KittyGraphics::new(cell_size),
             text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts: Shortcuts::new(),
