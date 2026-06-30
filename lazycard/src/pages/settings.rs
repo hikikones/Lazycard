@@ -6,7 +6,7 @@ use ratatui::{
 };
 use widgets::{
     CursorMove, List, ListItem, Scrollbar, ScrollbarColors, Shortcut, Shortcuts, TextInput,
-    TextInputColors, TextSegment,
+    TextSegment,
 };
 
 use crate::{
@@ -415,13 +415,7 @@ impl ColorSetting {
     }
 
     const fn set_active(&mut self, active: bool, colors: &Colors) {
-        self.0.set_disabled(!active).set_colors(TextInputColors {
-            normal: Color::Reset,
-            cursor: colors.primary,
-            selector: colors.neutral,
-            placeholder: colors.neutral,
-            disabled: colors.neutral,
-        });
+        self.0.set_disabled(!active).set_colors(colors.text_input());
     }
 
     fn input(&mut self, key: KeyCode, modifiers: KeyModifiers) -> bool {
