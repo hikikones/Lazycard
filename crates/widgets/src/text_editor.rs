@@ -5,12 +5,16 @@ use ratatui::{
     style::{Color, Style},
 };
 
+use crate::AnsiWriter;
+
+// TODO: Use ansi codes for syntax highlighting.
+
 pub struct TextEditor {
     input: String,
     cursor: usize,
     selector: Option<usize>,
     placeholder: &'static str,
-    wrapped: String,
+    ansi: AnsiWriter,
     lines: Vec<VisualLine>,
     preferred_column: u16,
     scroll: u16,
@@ -80,7 +84,7 @@ impl TextEditor {
             cursor: 0,
             selector: None,
             placeholder: "",
-            wrapped: String::new(),
+            ansi: AnsiWriter::new(),
             lines: Vec::new(),
             preferred_column: 0,
             scroll: 0,
@@ -234,7 +238,7 @@ impl TextEditor {
             CursorMove::Down => {
                 let row = self.cursor_row();
                 if row + 1 >= self.lines.len() as u16 {
-                    self.cursor = self.wrapped.len();
+                    self.cursor = self.input.len();
                     self.preferred_column = self.cursor_position().x;
                 } else {
                     self.cursor = self.column_to_index(row + 1, self.preferred_column);
@@ -245,7 +249,7 @@ impl TextEditor {
                 self.preferred_column = 0;
             }
             CursorMove::End => {
-                self.cursor = self.wrapped.len();
+                self.cursor = self.input.len();
                 self.preferred_column = self.cursor_position().x;
             }
         }
@@ -348,7 +352,7 @@ impl TextEditor {
         self.input.clear();
         self.cursor = 0;
         self.selector = None;
-        self.wrapped.clear();
+        self.ansi.clear();
         self.lines.clear();
         self.preferred_column = 0;
         self.scroll = 0;
@@ -390,7 +394,7 @@ impl TextEditor {
             .enumerate()
         {
             let (mut x, y, mut width) = (area.x, area.y + i as u16, line.width);
-            for g in graphemes(&self.wrapped[line.range()]).map(grapheme_render) {
+            for g in graphemes(self.ansi.slice(line.range())).map(grapheme_render) {
                 let (next_x, _) = buf.set_stringn(x, y, g, width as usize, style);
                 width -= next_x - x;
                 x = next_x;
@@ -471,19 +475,19 @@ impl TextEditor {
     }
 
     fn relayout(&mut self, max_width: u16) {
-        self.wrapped.clear();
+        self.ansi.clear();
         self.lines.clear();
 
-        self.wrapped.push_str(self.input.as_str());
-        textwrap::fill_inplace(&mut self.wrapped, max_width as usize);
+        self.ansi.push_str(self.input.as_str());
+        self.ansi.textwrap(max_width);
 
         let mut start = 0;
         let mut column = 0;
 
-        for (i, g) in grapheme_indices(&self.wrapped) {
+        for (i, g) in grapheme_indices(self.ansi.as_str()) {
             if g.contains('\n') {
                 self.lines
-                    .push(VisualLine::new(&self.wrapped, start..i + g.len()));
+                    .push(VisualLine::new(self.ansi.as_str(), start..i + g.len()));
 
                 start = i + g.len();
                 column = 0;
@@ -492,7 +496,8 @@ impl TextEditor {
 
             let width = grapheme_width(g);
             if column + width > max_width {
-                self.lines.push(VisualLine::new(&self.wrapped, start..i));
+                self.lines
+                    .push(VisualLine::new(self.ansi.as_str(), start..i));
 
                 start = i;
                 column = width;
@@ -502,7 +507,7 @@ impl TextEditor {
         }
 
         self.lines
-            .push(VisualLine::new(&self.wrapped, start..self.wrapped.len()));
+            .push(VisualLine::new(self.ansi.as_str(), start..self.ansi.len()));
         self.preferred_column = self.cursor_position().x;
     }
 
@@ -521,15 +526,10 @@ impl TextEditor {
     }
 
     fn index_to_position(&self, index: usize) -> Position {
-        if self.lines.is_empty() {
-            return Position::ORIGIN;
-        }
-
         let row = self.index_to_row(index);
         let line = &self.lines[row as usize];
-        let text = &self.wrapped[line.range()];
+        let text = self.ansi.slice(line.range());
         let col = text_width(&text[..index - line.start]);
-
         Position { x: col, y: row }
     }
 
@@ -539,7 +539,7 @@ impl TextEditor {
         let mut column = 0;
         let mut index = line.start;
 
-        for (i, g) in grapheme_indices(&self.wrapped[line.range()]) {
+        for (i, g) in grapheme_indices(self.ansi.slice(line.range())) {
             if g.contains('\n') {
                 break;
             }

@@ -1,5 +1,5 @@
 /// ANSI writer and parser for most Select Graphic Rendition (SGR) attributes.
-use std::{fmt::Write, str::CharIndices};
+use std::{fmt::Write, ops::Range, str::CharIndices};
 
 const ANSI_START: char = '\x1b';
 const ANSI_START2: char = '[';
@@ -261,6 +261,10 @@ impl AnsiWriter {
 
     pub const fn inner_mut(&mut self) -> &mut String {
         &mut self.inner
+    }
+
+    pub fn slice(&self, range: Range<usize>) -> &str {
+        &self.inner[range]
     }
 
     pub fn push_char(&mut self, c: char) {
