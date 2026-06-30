@@ -5,9 +5,6 @@ use ratatui::{
     widgets::{Block, Widget},
 };
 
-// TODO: Handle division by zero?
-// TODO: Use Size struct from ratatui instead of custom Area?
-
 const KITTY_START: &str = "\x1b_G";
 const KITTY_END: &str = "\x1b\\";
 
@@ -487,11 +484,6 @@ impl CellSize {
 
     pub fn query() -> std::io::Result<Option<Self>> {
         use std::io::{Read, Write};
-
-        // TODO: For more terminal support, you can run two other CSI t escape codes:
-        //  1. b"\x1b[14t" returns the screen size in pixels (height, width), and
-        //  2. b"\x1b[18t" returns the screen size in character cells (rows, cols).
-        // From this, you can calculate the pixel size.
 
         ratatui::crossterm::terminal::enable_raw_mode()?;
 

@@ -284,13 +284,7 @@ impl SearchPage {
         SearchAction::None
     }
 
-    pub fn on_exit(&mut self) {
-        // self.state = State::Search;
-        // self.search.clear();
-        // self.results.clear();
-        // self.index = 0;
-        //todo?
-    }
+    pub fn on_exit(&self) {}
 
     fn current_card(&self) -> Option<CardId> {
         self.results.get(self.index).copied()

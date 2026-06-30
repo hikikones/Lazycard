@@ -191,9 +191,7 @@ impl CardsPage {
         Action::None
     }
 
-    pub fn on_exit(&mut self) {
-        //todo?
-    }
+    pub fn on_exit(&self) {}
 
     fn current_card(&self) -> Option<CardId> {
         self.cards.get(self.index).copied()

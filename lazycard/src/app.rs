@@ -240,7 +240,6 @@ impl App {
     }
 
     pub fn quit(self) -> Result<(), Box<dyn std::error::Error>> {
-        //todo?
         Ok(())
     }
 
