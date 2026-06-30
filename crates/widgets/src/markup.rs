@@ -8,6 +8,7 @@ use syntect::{
     easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::LinesWithEndings,
 };
 use unicode_segmentation::UnicodeSegmentation;
+use utils::Formatter;
 
 use crate::{
     ansi::{AnsiEvent, AnsiParser, AnsiTag, AnsiWriter},
@@ -15,11 +16,10 @@ use crate::{
     text_segment::TextSegment,
 };
 
-// TODO: Render "\t" properly.
-
 pub struct Markup {
     items: Vec<Item>,
     ansi: AnsiWriter,
+    buffer: String,
     wrapped_ansi: utils::Formatter,
     code_highlighter: CodeHighlighter,
     text_segment: TextSegment,
@@ -82,12 +82,15 @@ pub enum MarkupItem {
     EmptyLine,
 }
 
+// TODO: Use a SyntaxHighlightTheme enum.
+
 impl Markup {
     pub fn new(assets_path: PathBuf, syntax_highlight_theme: &'static str) -> Self {
         Self {
             items: Vec::new(),
             ansi: AnsiWriter::new(),
-            wrapped_ansi: utils::Formatter::new(),
+            buffer: String::new(),
+            wrapped_ansi: Formatter::new(),
             code_highlighter: CodeHighlighter::new(syntax_highlight_theme),
             text_segment: TextSegment::new(),
             scroll: 0,
@@ -429,13 +432,71 @@ impl Markup {
 
     fn process(&mut self, markup: &str, width: u16, kitty: &mut KittyGraphics) {
         self.items.clear();
+        self.buffer.clear();
         self.wrapped_ansi.clear();
         self.image_id_counter = 0;
 
+        // Convert tabs to spaces before we process markup
+        let markup = if markup.contains('\t') {
+            self.buffer.extend(
+                markup
+                    .graphemes(true)
+                    .map(|g| if g == "\t" { "    " } else { g }),
+            );
+            self.buffer.as_str()
+        } else {
+            markup
+        };
+
+        fn parse_text(
+            text: &str,
+            width: u16,
+            indent: Option<(&str, &str)>,
+            writer: &mut AnsiWriter,
+            storage: &mut Formatter,
+        ) -> Range<usize> {
+            // Convert markup to ansi
+            for event in InlineParser::new(text) {
+                match event {
+                    InlineEvent::Text(s) => writer.push_str(s),
+                    InlineEvent::Tag(tag) => {
+                        let tag = match tag {
+                            InlineTag::BoldStart => AnsiTag::Bold,
+                            InlineTag::BoldEnd => AnsiTag::NotBold,
+                            InlineTag::ItalicStart => AnsiTag::Italic,
+                            InlineTag::ItalicEnd => AnsiTag::NotItalic,
+                        };
+                        writer.push_tag(tag);
+                    }
+                }
+            }
+
+            // Break text into lines using textwrap which ignores ansi codes
+            writer.textwrap(width);
+
+            // Store result and use later with returned range
+            let range = match indent {
+                Some((first_indent, other_indent)) => {
+                    let start = storage.len();
+                    for (i, line) in writer.as_str().lines().enumerate() {
+                        let indent = if i == 0 { first_indent } else { other_indent };
+                        storage.extend([indent, line, "\n"]);
+                    }
+                    let end = storage.len();
+                    start..end
+                }
+                None => storage.push_str(writer.as_str()),
+            };
+            writer.clear();
+            range
+        }
+
+        // Process markup
         for (block, _) in BlockParser::new(markup) {
             match block {
                 BlockElement::Paragraph { text, alignment } => {
-                    let range = self.parse_text(text, width, None);
+                    let range =
+                        parse_text(text, width, None, &mut self.ansi, &mut self.wrapped_ansi);
                     self.items.push(Item::Paragraph {
                         text: range,
                         alignment,
@@ -443,8 +504,13 @@ impl Markup {
                 }
                 BlockElement::List { items } => {
                     for item in items {
-                        let range =
-                            self.parse_text(item, width.saturating_sub(4), Some(("  • ", "    ")));
+                        let range = parse_text(
+                            item,
+                            width.saturating_sub(4),
+                            Some(("  • ", "    ")),
+                            &mut self.ansi,
+                            &mut self.wrapped_ansi,
+                        );
                         self.items.push(Item::ListItem { text: range });
                     }
                 }
@@ -516,7 +582,13 @@ impl Markup {
                     }
 
                     if !description.is_empty() {
-                        let range = self.parse_text(description, width, None);
+                        let range = parse_text(
+                            description,
+                            width,
+                            None,
+                            &mut self.ansi,
+                            &mut self.wrapped_ansi,
+                        );
                         self.items.push(Item::ImageDescription { text: range });
                     }
                 }
@@ -532,40 +604,6 @@ impl Markup {
 
         // Remove last empty line
         self.items.pop();
-    }
-
-    fn parse_text(&mut self, text: &str, width: u16, indent: Option<(&str, &str)>) -> Range<usize> {
-        // Convert markup to ansi
-        for event in InlineParser::new(text) {
-            match event {
-                InlineEvent::Text(s) => self.ansi.push_str(s),
-                InlineEvent::Tag(tag) => match tag {
-                    InlineTag::BoldStart => self.ansi.push_tag(AnsiTag::Bold),
-                    InlineTag::BoldEnd => self.ansi.push_tag(AnsiTag::NotBold),
-                    InlineTag::ItalicStart => self.ansi.push_tag(AnsiTag::Italic),
-                    InlineTag::ItalicEnd => self.ansi.push_tag(AnsiTag::NotItalic),
-                },
-            }
-        }
-
-        // Break text into lines using textwrap which ignores ansi codes
-        self.ansi.textwrap(width);
-
-        // Store result and use later with returned range
-        let range = match indent {
-            Some((first_indent, other_indent)) => {
-                let start = self.wrapped_ansi.len();
-                for (i, line) in self.ansi.as_str().lines().enumerate() {
-                    let indent = if i == 0 { first_indent } else { other_indent };
-                    self.wrapped_ansi.extend([indent, line, "\n"]);
-                }
-                let end = self.wrapped_ansi.len();
-                start..end
-            }
-            None => self.wrapped_ansi.push_str(self.ansi.as_str()),
-        };
-        self.ansi.clear();
-        range
     }
 
     fn compute_total_lines(&self, kitty: &KittyGraphics) -> u16 {
