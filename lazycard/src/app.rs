@@ -27,6 +27,7 @@ pub struct App {
     kitty: KittyGraphics,
     text: TextSegment,
     shortcuts: Shortcuts,
+    is_running: bool,
 }
 
 enum AppState {
@@ -109,6 +110,7 @@ impl App {
             text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts: Shortcuts::new(),
             settings,
+            is_running: true,
         }
     }
 
@@ -121,112 +123,9 @@ impl App {
         self.render(&mut terminal)?;
 
         // Run event loop
-        loop {
-            let action = match ratatui::crossterm::event::read()? {
-                Event::Key(key_ev) => {
-                    if key_ev.kind == KeyEventKind::Press {
-                        match key_ev.code {
-                            KeyCode::Esc => Action::Quit,
-                            KeyCode::Tab | KeyCode::BackTab => match self.state {
-                                AppState::Route => {
-                                    let next_route = if key_ev.code == KeyCode::Tab {
-                                        self.route.next()
-                                    } else {
-                                        self.route.prev()
-                                    };
-                                    Action::Route(next_route)
-                                }
-                                AppState::Search => {
-                                    self.state = AppState::Route;
-                                    self.pages.search.on_exit();
-                                    Action::Render
-                                }
-                                AppState::Logs => {
-                                    self.state = AppState::Route;
-                                    self.pages.logs.on_exit();
-                                    Action::Render
-                                }
-                            },
-                            KeyCode::Char('f') => {
-                                let ctrl = key_ev.modifiers.contains(KeyModifiers::CONTROL);
-                                if ctrl {
-                                    match self.state {
-                                        AppState::Route => {
-                                            self.state = AppState::Search;
-                                            self.pages.search.on_enter(&self.database);
-                                        }
-                                        AppState::Search => {
-                                            self.state = AppState::Route;
-                                            self.pages.search.on_exit();
-                                        }
-                                        AppState::Logs => {
-                                            self.state = AppState::Search;
-                                            self.pages.logs.on_exit();
-                                            self.pages.search.on_enter(&self.database);
-                                        }
-                                    }
-                                    Action::Render
-                                } else {
-                                    self.on_input(key_ev, &mut terminal)
-                                }
-                            }
-                            KeyCode::Char('l') => {
-                                let ctrl = key_ev.modifiers.contains(KeyModifiers::CONTROL);
-                                if ctrl && !self.pages.logs.is_empty() {
-                                    match self.state {
-                                        AppState::Route => {
-                                            self.state = AppState::Logs;
-                                            self.pages.logs.on_enter();
-                                        }
-                                        AppState::Search => {
-                                            self.state = AppState::Logs;
-                                            self.pages.search.on_exit();
-                                            self.pages.logs.on_enter();
-                                        }
-                                        AppState::Logs => {
-                                            self.state = AppState::Route;
-                                            self.pages.logs.on_exit();
-                                        }
-                                    }
-                                    Action::Render
-                                } else {
-                                    self.on_input(key_ev, &mut terminal)
-                                }
-                            }
-                            _ => self.on_input(key_ev, &mut terminal),
-                        }
-                    } else {
-                        Action::None
-                    }
-                }
-                Event::Resize(_, _) => Action::Render,
-                _ => Action::None,
-            };
-
-            match action {
-                Action::None => {}
-                Action::Render => {
-                    self.render(&mut terminal)?;
-                }
-                Action::Route(route) => {
-                    self.on_exit();
-                    self.route = route;
-                    self.markup.clear();
-                    self.on_enter();
-                    self.render(&mut terminal)?;
-                }
-                Action::Log(log) => {
-                    self.pages.logs.enqueue(log);
-                    self.render(&mut terminal)?;
-                }
-                Action::ApplySettings => {
-                    self.apply_settings();
-                    self.render(&mut terminal)?;
-                }
-                Action::Quit => {
-                    break;
-                }
-            }
+        while self.is_running {
+            let action = self.read_event(&mut terminal)?;
+            self.apply_action(action, &mut terminal)?;
         }
 
         Ok(())
@@ -240,6 +139,124 @@ impl App {
         self.pages
             .review
             .set_desired_retention(self.settings.desired_retention_as_fraction());
+    }
+
+    fn read_event(&mut self, terminal: &mut Terminal) -> std::io::Result<Action> {
+        let action = match ratatui::crossterm::event::read()? {
+            Event::Key(key) => {
+                if key.kind != KeyEventKind::Press {
+                    return Ok(Action::None);
+                }
+
+                match key.code {
+                    KeyCode::Esc => Action::Quit,
+                    KeyCode::Tab | KeyCode::BackTab => match self.state {
+                        AppState::Route => {
+                            let next_route = if key.code == KeyCode::Tab {
+                                self.route.next()
+                            } else {
+                                self.route.prev()
+                            };
+                            Action::Route(next_route)
+                        }
+                        AppState::Search => {
+                            self.state = AppState::Route;
+                            self.pages.search.on_exit();
+                            Action::Render
+                        }
+                        AppState::Logs => {
+                            self.state = AppState::Route;
+                            self.pages.logs.on_exit();
+                            Action::Render
+                        }
+                    },
+                    KeyCode::Char('f') => {
+                        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                        if ctrl {
+                            match self.state {
+                                AppState::Route => {
+                                    self.state = AppState::Search;
+                                    self.pages.search.on_enter(&self.database);
+                                }
+                                AppState::Search => {
+                                    self.state = AppState::Route;
+                                    self.pages.search.on_exit();
+                                }
+                                AppState::Logs => {
+                                    self.state = AppState::Search;
+                                    self.pages.logs.on_exit();
+                                    self.pages.search.on_enter(&self.database);
+                                }
+                            }
+                            Action::Render
+                        } else {
+                            self.on_input(key, terminal)
+                        }
+                    }
+                    KeyCode::Char('l') => {
+                        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+                        if ctrl && !self.pages.logs.is_empty() {
+                            match self.state {
+                                AppState::Route => {
+                                    self.state = AppState::Logs;
+                                    self.pages.logs.on_enter();
+                                }
+                                AppState::Search => {
+                                    self.state = AppState::Logs;
+                                    self.pages.search.on_exit();
+                                    self.pages.logs.on_enter();
+                                }
+                                AppState::Logs => {
+                                    self.state = AppState::Route;
+                                    self.pages.logs.on_exit();
+                                }
+                            }
+                            Action::Render
+                        } else {
+                            self.on_input(key, terminal)
+                        }
+                    }
+                    _ => self.on_input(key, terminal),
+                }
+            }
+            Event::Resize(_, _) => Action::Render,
+            _ => Action::None,
+        };
+
+        Ok(action)
+    }
+
+    fn apply_action(
+        &mut self,
+        action: Action,
+        terminal: &mut Terminal,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match action {
+            Action::None => {}
+            Action::Render => {
+                self.render(terminal)?;
+            }
+            Action::Route(route) => {
+                self.on_exit();
+                self.route = route;
+                self.markup.clear();
+                self.on_enter();
+                self.render(terminal)?;
+            }
+            Action::Log(log) => {
+                self.pages.logs.enqueue(log);
+                self.render(terminal)?;
+            }
+            Action::ApplySettings => {
+                self.apply_settings();
+                self.render(terminal)?;
+            }
+            Action::Quit => {
+                self.is_running = false;
+            }
+        }
+
+        Ok(())
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
