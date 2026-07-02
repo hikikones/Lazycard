@@ -148,7 +148,7 @@ impl CardEditorPage {
                             return Action::Render;
                         }
                         Err(err) => {
-                            return Action::Log(Log::new(err));
+                            return Action::EnqueueLog(Log::new(err));
                         }
                     }
                 } else if !self.show_tags && !self.preview {

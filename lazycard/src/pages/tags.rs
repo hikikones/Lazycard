@@ -13,7 +13,7 @@ use widgets::{Scrollbar, Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
 
 use crate::{
     app::{Action, AppInput, AppRender},
-    pages::{CardsRoute, Route},
+    pages::{CardsParam, Route},
     settings::Colors,
     symbols,
 };
@@ -303,7 +303,7 @@ impl TagsPage {
                 }
                 KeyCode::Char('g') => {
                     if let Some(id) = self.current_tag_id() {
-                        return Action::Route(Route::Cards(Some(CardsRoute::Tag(id))));
+                        return Action::Route(Route::Cards(Some(CardsParam::Tag(id))));
                     }
                 }
                 _ => {

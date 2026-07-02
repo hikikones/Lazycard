@@ -5,7 +5,7 @@ use ratatui::{
 use widgets::{List, ListItem, Scrollbar, Shortcut, Shortcuts};
 
 use crate::{
-    app::{AppInput, AppRender},
+    app::{Action, AppInput, AppRender},
     settings::Colors,
 };
 
@@ -14,12 +14,6 @@ pub struct LogsPage {
     queue: u32,
     list: List,
     horizontal_scroll: usize,
-}
-
-pub enum LogsAction {
-    None,
-    Render,
-    Done,
 }
 
 impl LogsPage {
@@ -110,36 +104,36 @@ impl LogsPage {
         shortcuts.push(Shortcut::new("Clear", "c"));
     }
 
-    pub fn on_input(&mut self, input: AppInput) -> LogsAction {
+    pub fn on_input(&mut self, input: AppInput) -> Action {
         if self.logs.is_empty() {
-            return LogsAction::None;
+            return Action::None;
         }
 
         let key = input.key_pressed();
         match key {
             KeyCode::Right => {
                 self.horizontal_scroll += 1;
-                return LogsAction::Render;
+                return Action::Render;
             }
             KeyCode::Left => {
                 self.horizontal_scroll = self.horizontal_scroll.saturating_sub(1);
-                return LogsAction::Render;
+                return Action::Render;
             }
             KeyCode::Char('c') => {
                 self.logs.clear();
                 self.horizontal_scroll = 0;
                 self.list.set_index(0);
-                return LogsAction::Done;
+                return Action::ToggleLogs;
             }
             _ => {
                 if self.list.input(key, KeyModifiers::empty()) {
                     self.horizontal_scroll = 0;
-                    return LogsAction::Render;
+                    return Action::Render;
                 }
             }
         }
 
-        LogsAction::None
+        Action::None
     }
 
     pub fn on_exit(&self) {}

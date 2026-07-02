@@ -12,7 +12,7 @@ use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Scrollbar, Shor
 
 use crate::{
     app::{Action, AppInput, AppRender},
-    pages::{CardsRoute, Route},
+    pages::{CardsParam, Route},
     settings::Colors,
     symbols,
 };
@@ -34,11 +34,11 @@ impl CardsPage {
         }
     }
 
-    pub fn on_enter(&mut self, db: &mut Database, param: Option<CardsRoute>) {
+    pub fn on_enter(&mut self, db: &mut Database, param: Option<CardsParam>) {
         match param {
             Some(param) => {
                 match param {
-                    CardsRoute::Card(cid) => {
+                    CardsParam::Card(cid) => {
                         self.tags.clear();
                         self.tags.refresh(db);
                         db.get_tags_for_card(cid, |tid| {
@@ -47,7 +47,7 @@ impl CardsPage {
                         self.update_cards(db);
                         self.select_card(cid);
                     }
-                    CardsRoute::Tag(tid) => {
+                    CardsParam::Tag(tid) => {
                         self.tags.clear();
                         self.tags.refresh(db);
                         self.tags.includes.insert(tid);

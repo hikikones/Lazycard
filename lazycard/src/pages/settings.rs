@@ -87,12 +87,7 @@ impl SettingsPage {
 
     pub fn on_enter(&self) {}
 
-    pub fn on_render(
-        &mut self,
-        render: AppRender,
-        settings: &mut Settings,
-        shortcuts: &mut Shortcuts,
-    ) {
+    pub fn on_render(&mut self, render: AppRender, settings: &Settings, shortcuts: &mut Shortcuts) {
         let mut area = render.area().centered_horizontally(Constraint::Max(80));
         let buf = render.buffer();
         let colors = settings.colors();
@@ -269,7 +264,7 @@ impl SettingsPage {
                             return Action::Render;
                         }
                         Err(err) => {
-                            return Action::Log(Log::new(err));
+                            return Action::EnqueueLog(Log::new(err));
                         }
                     }
                 } else {
@@ -331,7 +326,7 @@ impl SettingsPage {
                         }
                         Err(err) => {
                             let log = Log::new(err);
-                            return Action::Log(log);
+                            return Action::EnqueueLog(log);
                         }
                     }
                 } else if self.primary.input(key, modifiers) {
@@ -350,7 +345,7 @@ impl SettingsPage {
                         }
                         Err(err) => {
                             let log = Log::new(err);
-                            return Action::Log(log);
+                            return Action::EnqueueLog(log);
                         }
                     }
                 } else if self.secondary.input(key, modifiers) {
@@ -369,7 +364,7 @@ impl SettingsPage {
                         }
                         Err(err) => {
                             let log = Log::new(err);
-                            return Action::Log(log);
+                            return Action::EnqueueLog(log);
                         }
                     }
                 } else if self.neutral.input(key, modifiers) {

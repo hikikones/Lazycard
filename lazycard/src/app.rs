@@ -5,42 +5,37 @@ use ratatui::{
     CompletedFrame,
     buffer::Buffer,
     crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
-    layout::{Alignment, Margin, Rect},
-    style::{Color, Style},
+    layout::{Margin, Rect},
+    style::Color,
 };
-use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts, TextSegment};
+use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts};
 
 use crate::{
-    pages::*,
-    settings::{Colors, Settings},
+    pages::{Log, Pages, Route},
+    settings::Settings,
     symbols,
     terminal::Terminal,
 };
 
 pub struct App {
-    route: Route,
-    state: AppState,
     pages: Pages,
     database: Database,
     settings: Settings,
     markup: Markup,
     kitty: KittyGraphics,
-    text: TextSegment,
     shortcuts: Shortcuts,
     is_running: bool,
-}
-
-enum AppState {
-    Route,
-    Search,
-    Logs,
 }
 
 pub enum Action {
     None,
     Render,
+    NextRoute,
+    PreviousRoute,
     Route(Route),
-    Log(Log),
+    ToggleSearch,
+    ToggleLogs,
+    EnqueueLog(Log),
     ApplySettings,
     Quit,
 }
@@ -78,36 +73,32 @@ impl<'a> AppRender<'a> {
 
 impl App {
     pub fn new(
-        database: Database,
+        mut database: Database,
         cell_size: CellSize,
         assets_dir: PathBuf,
         settings_path: Option<PathBuf>,
     ) -> Self {
-        let mut logs = LogsPage::new();
+        let mut settings_err = None;
 
         let settings = Settings::read(settings_path.clone())
-            .inspect_err(|err| logs.enqueue(Log::new(err)))
+            .inspect_err(|err| {
+                settings_err = Some(Log::new(err));
+            })
             .unwrap_or_default()
             .with_path(settings_path);
 
-        let pages = Pages {
-            review: ReviewPage::new(),
-            editor: CardEditorPage::new(),
-            cards: CardsPage::new(),
-            tags: TagsPage::new(&database),
-            settings: SettingsPage::new(&settings),
-            search: SearchPage::new(),
-            logs,
-        };
+        let mut markup = Markup::new(assets_dir, settings.syntax_highlight_theme());
+        let mut pages = Pages::new(Route::DEFAULT, &settings, &mut database, &mut markup);
+
+        if let Some(log) = settings_err {
+            pages.enqueue_log(log);
+        }
 
         Self {
-            route: Route::default(),
-            state: AppState::Route,
             pages,
             database,
-            markup: Markup::new(assets_dir, settings.syntax_highlight_theme()),
+            markup,
             kitty: KittyGraphics::new(cell_size),
-            text: TextSegment::new().with_alignment(Alignment::Center),
             shortcuts: Shortcuts::new(),
             settings,
             is_running: true,
@@ -119,7 +110,6 @@ impl App {
         self.apply_settings();
 
         // Render default page
-        self.on_enter();
         self.render(&mut terminal)?;
 
         // Run event loop
@@ -136,9 +126,7 @@ impl App {
     }
 
     const fn apply_settings(&mut self) {
-        self.pages
-            .review
-            .set_desired_retention(self.settings.desired_retention_as_fraction());
+        self.pages.apply_settings(&self.settings);
     }
 
     fn read_event(&mut self, terminal: &mut Terminal) -> std::io::Result<Action> {
@@ -150,68 +138,20 @@ impl App {
 
                 match key.code {
                     KeyCode::Esc => Action::Quit,
-                    KeyCode::Tab | KeyCode::BackTab => match self.state {
-                        AppState::Route => {
-                            let next_route = if key.code == KeyCode::Tab {
-                                self.route.next()
-                            } else {
-                                self.route.prev()
-                            };
-                            Action::Route(next_route)
-                        }
-                        AppState::Search => {
-                            self.state = AppState::Route;
-                            self.pages.search.on_exit();
-                            Action::Render
-                        }
-                        AppState::Logs => {
-                            self.state = AppState::Route;
-                            self.pages.logs.on_exit();
-                            Action::Render
-                        }
-                    },
+                    KeyCode::Tab => Action::NextRoute,
+                    KeyCode::BackTab => Action::PreviousRoute,
                     KeyCode::Char('f') => {
                         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                         if ctrl {
-                            match self.state {
-                                AppState::Route => {
-                                    self.state = AppState::Search;
-                                    self.pages.search.on_enter(&self.database);
-                                }
-                                AppState::Search => {
-                                    self.state = AppState::Route;
-                                    self.pages.search.on_exit();
-                                }
-                                AppState::Logs => {
-                                    self.state = AppState::Search;
-                                    self.pages.logs.on_exit();
-                                    self.pages.search.on_enter(&self.database);
-                                }
-                            }
-                            Action::Render
+                            Action::ToggleSearch
                         } else {
                             self.on_input(key, terminal)
                         }
                     }
                     KeyCode::Char('l') => {
                         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-                        if ctrl && !self.pages.logs.is_empty() {
-                            match self.state {
-                                AppState::Route => {
-                                    self.state = AppState::Logs;
-                                    self.pages.logs.on_enter();
-                                }
-                                AppState::Search => {
-                                    self.state = AppState::Logs;
-                                    self.pages.search.on_exit();
-                                    self.pages.logs.on_enter();
-                                }
-                                AppState::Logs => {
-                                    self.state = AppState::Route;
-                                    self.pages.logs.on_exit();
-                                }
-                            }
-                            Action::Render
+                        if ctrl && !self.pages.is_logs_empty() {
+                            Action::ToggleLogs
                         } else {
                             self.on_input(key, terminal)
                         }
@@ -236,15 +176,29 @@ impl App {
             Action::Render => {
                 self.render(terminal)?;
             }
-            Action::Route(route) => {
-                self.on_exit();
-                self.route = route;
-                self.markup.clear();
-                self.on_enter();
+            Action::NextRoute => {
+                self.pages.next(&mut self.database, &mut self.markup);
                 self.render(terminal)?;
             }
-            Action::Log(log) => {
-                self.pages.logs.enqueue(log);
+            Action::PreviousRoute => {
+                self.pages.previous(&mut self.database, &mut self.markup);
+                self.render(terminal)?;
+            }
+            Action::Route(route) => {
+                self.pages
+                    .set_route(route, &mut self.database, &mut self.markup);
+                self.render(terminal)?;
+            }
+            Action::ToggleSearch => {
+                self.pages.toggle_search(&mut self.database);
+                self.render(terminal)?;
+            }
+            Action::ToggleLogs => {
+                self.pages.toggle_logs();
+                self.render(terminal)?;
+            }
+            Action::EnqueueLog(log) => {
+                self.pages.enqueue_log(log);
                 self.render(terminal)?;
             }
             Action::ApplySettings => {
@@ -268,25 +222,7 @@ impl App {
 
             // Navigation
             if area.height > 0 {
-                const SPACING: &str = "   ";
-                for (route, name, spacing) in [
-                    (Route::Review, "Review", SPACING),
-                    (Route::Editor(None), "Editor", SPACING),
-                    (Route::Cards(None), "Cards", SPACING),
-                    (Route::Tags, "Tags", SPACING),
-                    (Route::Settings, "Settings", ""),
-                ] {
-                    let is_current =
-                        std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
-                    let style = if is_current {
-                        Style::new().fg(colors.primary).bold()
-                    } else {
-                        Style::new()
-                    };
-                    self.text.extend([(name, style), (spacing, Style::new())]);
-                }
-                self.text.render(area, buf);
-                self.text.clear();
+                self.pages.render_navigation(area, buf, colors);
 
                 area.height = area.height.saturating_sub(1);
                 area.y += 1;
@@ -318,7 +254,7 @@ impl App {
                     area,
                     widgets::Alignment::CenterHorizontal,
                 );
-                self.on_render(body, buf, colors);
+                self.on_render(body, buf);
 
                 let body_height = body.height + MARGIN * 2;
                 area.height = area.height.saturating_sub(body_height);
@@ -344,9 +280,9 @@ impl App {
                     Shortcut::new("Find", symbols::ctrl!("f")),
                 ]);
 
-                if !self.pages.logs.is_empty() {
+                if !self.pages.is_logs_empty() {
                     let key = symbols::ctrl!("l");
-                    let new_logs = self.pages.logs.queue_len();
+                    let new_logs = self.pages.logs_queue_len();
                     if new_logs > 0 {
                         utils::format_int(new_logs, |new_logs| {
                             self.shortcuts.push_iter(["Logs(", new_logs, ")"], key);
@@ -366,144 +302,29 @@ impl App {
         })
     }
 
-    fn on_render(&mut self, body: Rect, buf: &mut Buffer, colors: &Colors) {
+    fn on_render(&mut self, body: Rect, buf: &mut Buffer) {
         let render = AppRender {
             area: body,
             buffer: buf,
         };
-
-        match self.state {
-            AppState::Route => match self.route {
-                Route::Review => {
-                    self.pages.review.on_render(
-                        render,
-                        &self.database,
-                        colors,
-                        &mut self.markup,
-                        &mut self.kitty,
-                        &mut self.shortcuts,
-                    );
-                }
-                Route::Editor(_) => {
-                    self.pages.editor.on_render(
-                        render,
-                        &self.database,
-                        colors,
-                        &mut self.markup,
-                        &mut self.kitty,
-                        &mut self.shortcuts,
-                    );
-                }
-                Route::Cards(_) => {
-                    self.pages.cards.on_render(
-                        render,
-                        &self.database,
-                        colors,
-                        &mut self.markup,
-                        &mut self.kitty,
-                        &mut self.shortcuts,
-                    );
-                }
-                Route::Tags => {
-                    self.pages
-                        .tags
-                        .on_render(render, colors, &mut self.shortcuts);
-                }
-                Route::Settings => {
-                    self.pages
-                        .settings
-                        .on_render(render, &mut self.settings, &mut self.shortcuts);
-                }
-            },
-            AppState::Search => {
-                self.pages.search.on_render(
-                    render,
-                    colors,
-                    &mut self.markup,
-                    &mut self.kitty,
-                    &mut self.shortcuts,
-                );
-            }
-            AppState::Logs => {
-                self.pages
-                    .logs
-                    .on_render(render, colors, &mut self.shortcuts);
-            }
-        }
-    }
-
-    fn on_enter(&mut self) {
-        match self.route {
-            Route::Review => self.pages.review.on_enter(&self.database, &mut self.markup),
-            Route::Editor(id) => self.pages.editor.on_enter(id, &self.database),
-            Route::Cards(id) => self.pages.cards.on_enter(&mut self.database, id),
-            Route::Tags => self.pages.tags.on_enter(),
-            Route::Settings => self.pages.settings.on_enter(),
-        }
-    }
-
-    fn on_exit(&mut self) {
-        match self.route {
-            Route::Review => self.pages.review.on_exit(),
-            Route::Editor(_) => self.pages.editor.on_exit(),
-            Route::Cards(_) => self.pages.cards.on_exit(),
-            Route::Tags => self.pages.tags.on_exit(),
-            Route::Settings => self.pages.settings.on_exit(),
-        }
+        self.pages.on_render(
+            render,
+            &self.settings,
+            &mut self.database,
+            &mut self.markup,
+            &mut self.kitty,
+            &mut self.shortcuts,
+        );
     }
 
     fn on_input(&mut self, key_event: KeyEvent, terminal: &mut Terminal) -> Action {
         let input = AppInput(key_event);
-        match self.state {
-            AppState::Route => match self.route {
-                Route::Review => {
-                    self.pages
-                        .review
-                        .on_input(input, &mut self.markup, &mut self.database)
-                }
-                Route::Editor(_) => self.pages.editor.on_input(
-                    input,
-                    &mut self.markup,
-                    &mut self.database,
-                    terminal,
-                ),
-                Route::Cards(_) => {
-                    self.pages
-                        .cards
-                        .on_input(input, &mut self.markup, &mut self.database)
-                }
-                Route::Tags => self.pages.tags.on_input(input, &self.database),
-                Route::Settings => self.pages.settings.on_input(input, &mut self.settings),
-            },
-            AppState::Search => {
-                match self
-                    .pages
-                    .search
-                    .on_input(input, &self.database, &mut self.markup)
-                {
-                    SearchAction::None => Action::None,
-                    SearchAction::Render => Action::Render,
-                    SearchAction::Edit(id) => {
-                        self.state = AppState::Route;
-                        self.pages.search.on_exit();
-                        Action::Route(Route::Editor(Some(id)))
-                    }
-                    SearchAction::Goto(id) => {
-                        self.state = AppState::Route;
-                        self.pages.search.on_exit();
-                        Action::Route(Route::Cards(Some(CardsRoute::Card(id))))
-                    }
-                }
-            }
-            AppState::Logs => match self.pages.logs.on_input(input) {
-                LogsAction::None => Action::None,
-                LogsAction::Render => Action::Render,
-                LogsAction::Done => {
-                    self.state = AppState::Route;
-                    self.pages.logs.on_exit();
-                    Action::Render
-                }
-            },
-        }
+        self.pages.on_input(
+            input,
+            &mut self.database,
+            &mut self.markup,
+            terminal,
+            &mut self.settings,
+        )
     }
 }

@@ -25,7 +25,7 @@ enum ReviewState {
 }
 
 impl ReviewPage {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             total: 0,
             progress: 0,

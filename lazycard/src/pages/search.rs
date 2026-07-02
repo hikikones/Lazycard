@@ -7,7 +7,11 @@ use ratatui::{
 use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput};
 
 use crate::{
-    app::{AppInput, AppRender},
+    app::{Action, AppInput, AppRender},
+    pages::{
+        CardsParam,
+        Route::{self, Cards},
+    },
     settings::Colors,
     symbols,
 };
@@ -28,13 +32,6 @@ pub struct SearchPage {
 enum State {
     Search,
     Browse,
-}
-
-pub enum SearchAction {
-    None,
-    Render,
-    Edit(CardId),
-    Goto(CardId),
 }
 
 impl SearchPage {
@@ -188,14 +185,9 @@ impl SearchPage {
         }
     }
 
-    pub fn on_input(
-        &mut self,
-        input: AppInput,
-        db: &Database,
-        markup: &mut Markup,
-    ) -> SearchAction {
+    pub fn on_input(&mut self, input: AppInput, db: &Database, markup: &mut Markup) -> Action {
         if self.is_empty {
-            return SearchAction::None;
+            return Action::None;
         }
 
         let (key, modifiers) = input.key_pressed_and_modifiers();
@@ -214,19 +206,19 @@ impl SearchPage {
                             self.highlight(id, db);
                             self.state = State::Browse;
                         }
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
                 KeyCode::Down => {
                     if !self.results.is_empty() {
                         self.state = State::Browse;
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
                 KeyCode::Up => {}
                 _ => {
                     if self.search.input(key, modifiers) {
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
             },
@@ -234,9 +226,9 @@ impl SearchPage {
                 KeyCode::Up => {
                     if markup.scroll_index() == 0 {
                         self.state = State::Search;
-                        return SearchAction::Render;
+                        return Action::Render;
                     } else if markup.scroll(ScrollMove::Up) {
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
                 KeyCode::Right => {
@@ -244,7 +236,7 @@ impl SearchPage {
                         self.index = (self.index + 1) % self.results.len();
                         self.highlight(self.current_card().unwrap(), db);
                         markup.scroll(ScrollMove::Start);
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
                 KeyCode::Left => {
@@ -256,32 +248,32 @@ impl SearchPage {
                         }
                         self.highlight(self.current_card().unwrap(), db);
                         markup.scroll(ScrollMove::Start);
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
                 KeyCode::Char('e') => {
                     if let Some(id) = self.current_card() {
-                        return SearchAction::Edit(id);
+                        return Action::Route(Route::Editor(Some(id)));
                     }
                 }
                 KeyCode::Char('g') => {
                     if let Some(id) = self.current_card() {
-                        return SearchAction::Goto(id);
+                        return Action::Route(Cards(Some(CardsParam::Card(id))));
                     }
                 }
                 KeyCode::Char('s') => {
                     self.state = State::Search;
-                    return SearchAction::Render;
+                    return Action::Render;
                 }
                 _ => {
                     if markup.input(key) {
-                        return SearchAction::Render;
+                        return Action::Render;
                     }
                 }
             },
         }
 
-        SearchAction::None
+        Action::None
     }
 
     pub fn on_exit(&self) {}
