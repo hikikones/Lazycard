@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // If already exists, make sure it is actually a dir
     else if !assets_dir.is_dir() {
         return Err(format!(
-            "Specified assets directory {} is not a directory",
+            "Specified assets directory \"{}\" is not a directory",
             assets_dir.display()
         ))?;
     }
