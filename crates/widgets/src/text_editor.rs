@@ -162,10 +162,7 @@ impl TextEditor {
             KeyCode::Backspace => return self.delete(CursorDelete::Back),
             KeyCode::Delete => return self.delete(CursorDelete::Forward),
             KeyCode::Enter => {
-                #[cfg(target_os = "windows")]
-                self.push_str("\r\n");
-                #[cfg(not(target_os = "windows"))]
-                self.push_char('\n');
+                self.push_newline();
                 return true;
             }
             KeyCode::Char(c) => match c {
@@ -200,6 +197,13 @@ impl TextEditor {
         }
         self.input.insert_str(self.cursor, s);
         self.cursor += s.len();
+    }
+
+    pub fn push_newline(&mut self) {
+        #[cfg(target_os = "windows")]
+        self.push_str("\r\n");
+        #[cfg(not(target_os = "windows"))]
+        self.push_char('\n');
     }
 
     pub fn move_cursor(&mut self, cm: CursorMove, shift: bool) -> bool {

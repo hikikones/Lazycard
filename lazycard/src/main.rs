@@ -12,7 +12,10 @@ const APP_ORGANIZATION: &str = "hikikones";
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Args = clap::Parser::parse();
 
-    let cell_size = widgets::CellSize::query()?.unwrap();
+    let cell_size = match widgets::CellSize::query() {
+        Ok(cell_size) => cell_size,
+        Err(err) => return Err(format!("Failed to get cell size due to {}", err))?,
+    };
 
     let Some(database_file) = args.database.or_else(|| get_database_file()) else {
         return Err("No database file specified or a \

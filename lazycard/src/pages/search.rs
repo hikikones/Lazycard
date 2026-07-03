@@ -8,10 +8,7 @@ use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput}
 
 use crate::{
     app::{Action, AppInput, AppRender},
-    pages::{
-        CardsParam,
-        Route::{self, Cards},
-    },
+    pages::{CardsParam, Route},
     settings::Colors,
     symbols,
 };
@@ -258,7 +255,7 @@ impl SearchPage {
                 }
                 KeyCode::Char('g') => {
                     if let Some(id) = self.current_card() {
-                        return Action::Route(Cards(Some(CardsParam::Card(id))));
+                        return Action::Route(Route::Cards(Some(CardsParam::Card(id))));
                     }
                 }
                 KeyCode::Char('s') => {

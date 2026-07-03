@@ -133,7 +133,7 @@ impl Scrollbar {
     }
 
     pub fn is_scrollable(total_lines: usize, area: &mut Rect) -> Option<Rect> {
-        Self::is_scrollable_with_options(total_lines, area, 10, 2)
+        Self::is_scrollable_with_options(total_lines, area, 10, 1)
     }
 
     pub fn is_scrollable_with_options(

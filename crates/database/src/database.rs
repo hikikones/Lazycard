@@ -4,6 +4,8 @@ use crate::{scheduler::*, sqlite::*};
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
 
+// TODO: Add tests.
+
 pub struct Database {
     sqlite: Sqlite,
     scheduler: Scheduler,

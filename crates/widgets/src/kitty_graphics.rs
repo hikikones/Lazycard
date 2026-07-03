@@ -482,7 +482,7 @@ impl CellSize {
         height: 20,
     };
 
-    pub fn query() -> std::io::Result<Option<Self>> {
+    pub fn query() -> Result<CellSize, CellSizeError> {
         use std::io::{Read, Write};
 
         ratatui::crossterm::terminal::enable_raw_mode()?;
@@ -516,8 +516,10 @@ impl CellSize {
             .flatten();
 
         match (height, width) {
-            (Some(Ok(height)), Some(Ok(width))) => Ok(Some(Self { width, height })),
-            _ => Ok(None),
+            (Some(Ok(height)), Some(Ok(width))) => Ok(Self { width, height }),
+            _ => Err(CellSizeError::Parsing(format!(
+                "unknown height and width from \"{s}\""
+            ))),
         }
     }
 
@@ -555,6 +557,29 @@ impl CellSize {
 impl Default for CellSize {
     fn default() -> Self {
         Self::DEFAULT
+    }
+}
+
+#[derive(Debug)]
+pub enum CellSizeError {
+    Io(std::io::Error),
+    Parsing(String),
+}
+
+impl std::fmt::Display for CellSizeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CellSizeError::Io(err) => err.fmt(f),
+            CellSizeError::Parsing(s) => f.write_str(s),
+        }
+    }
+}
+
+impl std::error::Error for CellSizeError {}
+
+impl From<std::io::Error> for CellSizeError {
+    fn from(error: std::io::Error) -> Self {
+        Self::Io(error)
     }
 }
 
@@ -724,13 +749,10 @@ struct KittyCrop {
 
 impl std::fmt::Display for KittyCrop {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let Self {
-            x,
-            y,
-            width,
-            height,
-        } = *self;
-        f.write_fmt(format_args!("x={},y={},w={},h={}", x, y, width, height))
+        f.write_fmt(format_args!(
+            "x={},y={},w={},h={}",
+            self.x, self.y, self.width, self.height
+        ))
     }
 }
 

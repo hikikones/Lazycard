@@ -121,20 +121,20 @@ impl TextSegment {
         self.total_width = 0;
     }
 
-    pub fn render(&self, line: Rect, buf: &mut Buffer) {
-        if buf.cell((line.x, line.y)).is_none() {
+    pub fn render(&self, area: Rect, buf: &mut Buffer) {
+        if area.is_empty() || buf.cell(area.as_position()).is_none() {
             return;
         }
 
-        let line = match self.alignment {
-            Alignment::Left => line,
+        let area = match self.alignment {
+            Alignment::Left => area,
             Alignment::Center => Rect {
-                x: line.x + (line.width.saturating_sub(self.width())) / 2,
-                ..line
+                x: area.x + (area.width.saturating_sub(self.width())) / 2,
+                ..area
             },
             Alignment::Right => Rect {
-                x: line.x + line.width.saturating_sub(self.width()),
-                ..line
+                x: area.x + area.width.saturating_sub(self.width()),
+                ..area
             },
         };
         let mut start = 0;
@@ -143,7 +143,7 @@ impl TextSegment {
             y,
             mut width,
             ..
-        } = line;
+        } = area;
 
         for (len, style) in self.segments.iter().copied() {
             if width == 0 {

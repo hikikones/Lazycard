@@ -10,6 +10,7 @@ pub fn format_int2(i1: impl itoa::Integer, i2: impl itoa::Integer, mut f: impl F
     f(b1.format(i1), b2.format(i2))
 }
 
+#[derive(Debug)]
 pub struct Formatter(String);
 
 impl Formatter {
