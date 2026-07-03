@@ -75,7 +75,7 @@ impl Route {
     }
 }
 
-pub enum PageState {
+enum PageState {
     Route,
     Search,
     Logs,
