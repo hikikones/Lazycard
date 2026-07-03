@@ -81,19 +81,19 @@ fn get_assets_dir() -> Option<std::path::PathBuf> {
 #[derive(Debug, clap::Parser)]
 #[command(version, about, styles = CLAP_STYLING)]
 struct Args {
-    /// The path for your database file. If not set,
+    /// Optional path for your database file. By default,
     /// the location will be determined by the conventions of your operating system.
-    #[arg(long, value_name = "DATABASE_FILE.db", value_hint = clap::ValueHint::FilePath)]
+    #[arg(long, value_name = "FILE.db", value_hint = clap::ValueHint::FilePath)]
     database: Option<std::path::PathBuf>,
 
-    /// The directory for your assets. If not set,
+    /// Optional path for your assets directory. By default,
     /// the location will be determined by the conventions of your operating system.
-    #[arg(long, value_name = "ASSETS_DIR", value_hint = clap::ValueHint::DirPath)]
+    #[arg(long, value_name = "DIR", value_hint = clap::ValueHint::DirPath)]
     assets: Option<std::path::PathBuf>,
 
-    /// The path for your settings file. If not set,
+    /// Optional path for your settings file. By default,
     /// the location will be determined by the conventions of your operating system.
-    #[arg(long, value_name = "SETTINGS_FILE.toml", value_hint = clap::ValueHint::FilePath)]
+    #[arg(long, value_name = "FILE.toml", value_hint = clap::ValueHint::FilePath)]
     settings: Option<std::path::PathBuf>,
 }
 
