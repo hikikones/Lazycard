@@ -1,6 +1,6 @@
 use ratatui::{
     buffer::Buffer,
-    layout::Rect,
+    layout::{Rect, Size},
     style::{Color, Style},
 };
 
@@ -11,22 +11,17 @@ pub struct Scrollbar {
 impl Scrollbar {
     pub const fn new() -> Self {
         Self {
-            colors: ScrollbarColors::new(Color::DarkGray, None),
+            colors: ScrollbarColors::DEFAULT,
         }
     }
 
     pub const fn with_colors(mut self, colors: ScrollbarColors) -> Self {
-        self.set_colors(colors);
-        self
-    }
-
-    pub const fn set_colors(&mut self, colors: ScrollbarColors) -> &mut Self {
         self.colors = colors;
         self
     }
 
     pub fn render(
-        &self,
+        self,
         vertical_line: Rect,
         buf: &mut Buffer,
         current_scroll: usize,
@@ -83,7 +78,7 @@ impl Scrollbar {
         }
     }
 
-    pub fn calculate_scroll(
+    pub const fn calculate_scroll(
         total_lines: usize,
         viewport_height: u16,
         current_index: usize,
@@ -100,7 +95,7 @@ impl Scrollbar {
         )
     }
 
-    pub fn calculate_scroll_with_margins(
+    pub const fn calculate_scroll_with_margins(
         total_lines: usize,
         viewport_height: u16,
         current_index: usize,
@@ -109,12 +104,16 @@ impl Scrollbar {
         margin_bottom: usize,
         padding_bottom: usize,
     ) -> usize {
+        const fn min(a: usize, b: usize) -> usize {
+            if a < b { a } else { b }
+        }
+
         let height = viewport_height as usize;
         let max_offset = (total_lines + padding_bottom).saturating_sub(height);
 
         let available = height.saturating_sub(1);
-        let margin_top = margin_top.min(available);
-        let margin_bottom = margin_bottom.min(available - margin_top);
+        let margin_top = min(margin_top, available);
+        let margin_bottom = min(margin_bottom, available - margin_top);
 
         let top_boundary = current_scroll + margin_top;
         let bottom_boundary = current_scroll + height.saturating_sub(margin_bottom + 1);
@@ -125,42 +124,52 @@ impl Scrollbar {
         } else if current_index > bottom_boundary {
             // Scroll down
             let delta = current_index - bottom_boundary;
-            (current_scroll + delta).min(max_offset)
+            min(current_scroll + delta, max_offset)
         } else {
             // No scroll
             current_scroll
         }
     }
 
-    pub fn is_scrollable(total_lines: usize, area: &mut Rect) -> Option<Rect> {
-        Self::is_scrollable_with_options(total_lines, area, 10, 1)
+    pub const fn is_scrollable(total_lines: usize, viewport_size: Size) -> bool {
+        Self::is_scrollable_with_options(total_lines, viewport_size, 15)
     }
 
-    pub fn is_scrollable_with_options(
+    pub const fn is_scrollable_with_options(
         total_lines: usize,
-        area: &mut Rect,
+        viewport_size: Size,
         min_width: u16,
-        scrollbar_gap: u16,
-    ) -> Option<Rect> {
-        let scrollable = total_lines > area.height as usize && area.width > min_width;
-        scrollable.then(|| {
-            let scroll_area = Rect {
-                x: area.x + area.width.saturating_sub(1),
-                width: 1,
-                ..*area
-            };
-            area.width = area.width.saturating_sub(1 + scrollbar_gap);
-            scroll_area
-        })
+    ) -> bool {
+        total_lines > viewport_size.height as usize && viewport_size.width > min_width
+    }
+
+    pub const fn make_scroll_area(area: &mut Rect) -> Rect {
+        Self::make_scroll_area_with_margin(area, 1)
+    }
+
+    pub const fn make_scroll_area_with_margin(area: &mut Rect, margin: u16) -> Rect {
+        let scroll_area = Rect {
+            x: area.x + area.width.saturating_sub(1),
+            width: 1,
+            ..*area
+        };
+        area.width = area.width.saturating_sub(1 + margin);
+        scroll_area
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ScrollbarColors {
     pub thumb: Color,
     pub track: Option<Color>,
 }
 
 impl ScrollbarColors {
+    pub const DEFAULT: Self = Self {
+        thumb: Color::DarkGray,
+        track: None,
+    };
+
     pub const fn new(thumb: Color, track: Option<Color>) -> Self {
         Self { thumb, track }
     }
@@ -168,6 +177,6 @@ impl ScrollbarColors {
 
 impl Default for ScrollbarColors {
     fn default() -> Self {
-        Self::new(Color::DarkGray, None)
+        Self::DEFAULT
     }
 }

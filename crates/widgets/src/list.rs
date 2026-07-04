@@ -4,6 +4,8 @@ use ratatui::{
     layout::Rect,
 };
 
+use crate::{Scrollbar, ScrollbarColors};
+
 pub struct List {
     index: usize,
     selector: Option<usize>,
@@ -11,6 +13,7 @@ pub struct List {
     margin_top: usize,
     margin_bottom: usize,
     padding_bottom: usize,
+    scrollbar: Option<ScrollbarColors>,
     len: usize,
     height: u16,
 }
@@ -41,6 +44,7 @@ impl List {
             margin_top: 0,
             margin_bottom: 0,
             padding_bottom: 0,
+            scrollbar: None,
             len: 0,
             height: 0,
         }
@@ -102,6 +106,11 @@ impl List {
 
     pub const fn set_padding(&mut self, bottom: usize) -> &mut Self {
         self.padding_bottom = bottom;
+        self
+    }
+
+    pub const fn set_scrollbar(&mut self, colors: ScrollbarColors) -> &mut Self {
+        self.scrollbar = Some(colors);
         self
     }
 
@@ -211,7 +220,7 @@ impl List {
 
     pub fn render<T>(
         &mut self,
-        area: Rect,
+        mut area: Rect,
         buf: &mut Buffer,
         items: impl IntoIterator<Item = T, IntoIter: ExactSizeIterator>,
         mut render_line: impl FnMut(Rect, &mut Buffer, T, ListItem),
@@ -242,6 +251,19 @@ impl List {
 
         self.len = items.len();
         self.height = area.height;
+
+        // Scrollbar
+        if let Some(colors) = self.scrollbar {
+            if Scrollbar::is_scrollable(items.len(), area.as_size()) {
+                let scroll_area = Scrollbar::make_scroll_area(&mut area);
+                Scrollbar::new().with_colors(colors).render(
+                    scroll_area,
+                    buf,
+                    self.scroll,
+                    items.len(),
+                );
+            }
+        }
 
         // Render
         let selection = self.selection_inclusive();

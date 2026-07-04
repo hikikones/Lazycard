@@ -4,7 +4,7 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     prelude::*,
 };
-use widgets::{CursorMove, List, ListItem, Scrollbar, Shortcut, Shortcuts, TextInput, TextSegment};
+use widgets::{CursorMove, List, ListItem, Shortcut, Shortcuts, TextInput};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -19,7 +19,6 @@ pub struct SettingsPage {
     saved_hash: u64,
     is_saved: bool,
     list: List,
-    text: TextSegment,
     primary: ColorSetting,
     secondary: ColorSetting,
     neutral: ColorSetting,
@@ -78,7 +77,6 @@ impl SettingsPage {
             saved_hash: hash,
             is_saved: true,
             list: List::new().with_index(selected).with_margins(3, 3),
-            text: TextSegment::new().with_alignment(Alignment::Center),
             primary: ColorSetting::new(colors.primary),
             secondary: ColorSetting::new(colors.secondary),
             neutral: ColorSetting::new(colors.neutral),
@@ -88,30 +86,29 @@ impl SettingsPage {
     pub fn on_enter(&self) {}
 
     pub fn on_render(&mut self, render: AppRender, settings: &Settings, shortcuts: &mut Shortcuts) {
-        let mut area = render.area().centered_horizontally(Constraint::Max(80));
+        let area = render.area().centered_horizontally(Constraint::Max(80));
         let buf = render.buffer();
         let colors = settings.colors();
 
-        // Scrollbar
-        let scroll_area = Scrollbar::is_scrollable(SETTINGS.len(), &mut area);
-
-        let mut setting_area = Rect {
-            width: area.width / 2,
-            ..area
-        };
-        let mut input_area = Rect {
-            x: setting_area.x + setting_area.width + 1,
-            width: setting_area.width.saturating_sub(1),
-            ..setting_area
-        };
         let mut last_y = area.y;
         let current_setting = self.current();
 
-        self.list
-            .render(area, buf, SETTINGS, |line, buf, setting, index| {
-                setting_area.y = line.y;
-                input_area.y = line.y;
+        self.list.set_scrollbar(colors.scrollbar()).render(
+            area,
+            buf,
+            SETTINGS,
+            |line, buf, setting, index| {
                 last_y = line.y;
+
+                let setting_area = Rect {
+                    width: line.width / 2,
+                    ..line
+                };
+                let input_area = Rect {
+                    x: setting_area.x + setting_area.width + 1,
+                    width: setting_area.width.saturating_sub(1),
+                    ..setting_area
+                };
 
                 let (symbol, style) = if index == ListItem::Selected {
                     (
@@ -181,19 +178,8 @@ impl SettingsPage {
                     }
                     Setting::Empty => {}
                 }
-
-                self.text.clear();
-            });
-
-        // Render scrollbar
-        if let Some(scroll_area) = scroll_area {
-            Scrollbar::new().with_colors(colors.scrollbar()).render(
-                scroll_area,
-                buf,
-                self.list.scroll(),
-                SETTINGS.len(),
-            );
-        }
+            },
+        );
 
         // Description and shortcuts
         const COLOR_DESCRIPTION: &str = "Set color by name, hex code or indexed value";

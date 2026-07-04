@@ -2,7 +2,7 @@ use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     style::Style,
 };
-use widgets::{List, ListItem, Scrollbar, Shortcut, Shortcuts};
+use widgets::{List, ListItem, Shortcut, Shortcuts};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -70,12 +70,12 @@ impl LogsPage {
         area.height = area.height.saturating_sub(2);
         area.y += 2;
 
-        // Scrollbar
-        let scroll_area = Scrollbar::is_scrollable(self.logs.len(), &mut area);
-
         // Render logs
-        self.list
-            .render(area, buf, self.logs.iter(), |line, buf, log, item| {
+        self.list.set_scrollbar(colors.scrollbar()).render(
+            area,
+            buf,
+            self.logs.iter(),
+            |line, buf, log, item| {
                 let (scroll, style) = if item == ListItem::Selected {
                     let max_scroll = log.width.saturating_sub(line.width as usize);
                     self.horizontal_scroll = max_scroll.min(self.horizontal_scroll);
@@ -88,17 +88,8 @@ impl LogsPage {
                 };
 
                 widgets::print_text(line, buf, &log.message[scroll..], style, true, None);
-            });
-
-        // Render scrollbar
-        if let Some(scroll_area) = scroll_area {
-            Scrollbar::new().with_colors(colors.scrollbar()).render(
-                scroll_area,
-                buf,
-                self.list.scroll(),
-                self.logs.len(),
-            );
-        }
+            },
+        );
 
         // Shortcuts
         shortcuts.push(Shortcut::new("Clear", "c"));

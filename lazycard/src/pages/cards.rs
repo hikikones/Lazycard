@@ -8,7 +8,7 @@ use ratatui::{
     style::{Color, Style},
 };
 use utils::Formatter;
-use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Scrollbar, Shortcut, Shortcuts};
+use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Shortcut, Shortcuts};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -383,12 +383,12 @@ impl TagsSidebar {
         area.y += 2;
         area.height = area.height.saturating_sub(2);
 
-        // Scrollbar
-        let scroll_area = Scrollbar::is_scrollable(self.tags.len(), &mut area);
-
         // Render tags
-        self.list
-            .render(area, buf, self.tags.iter(), |line, buf, tag, item| {
+        self.list.set_scrollbar(colors.scrollbar()).render(
+            area,
+            buf,
+            self.tags.iter(),
+            |line, buf, tag, item| {
                 let id = tag.id;
                 let name = self.names.slice(tag.name.clone());
                 let symbol = match item {
@@ -405,17 +405,8 @@ impl TagsSidebar {
                 };
 
                 widgets::print_texts(line, buf, [symbol, name], color, false, None);
-            });
-
-        // Render scrollbar
-        if let Some(scroll_area) = scroll_area {
-            Scrollbar::new().with_colors(colors.scrollbar()).render(
-                scroll_area,
-                buf,
-                self.list.scroll(),
-                self.tags.len(),
-            );
-        }
+            },
+        );
     }
 }
 

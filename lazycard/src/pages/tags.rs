@@ -9,7 +9,7 @@ use ratatui::{
     widgets::Widget,
 };
 use utils::Formatter;
-use widgets::{Scrollbar, Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
+use widgets::{Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
 
 use crate::{
     app::{Action, AppInput, AppRender},
@@ -85,14 +85,8 @@ impl TagsPage {
                     return;
                 }
 
-                // Process list before render
-                self.list.process_items(area, self.tags.iter());
-
-                // Scrollbar
-                let scroll_area = Scrollbar::is_scrollable(self.list.lines(), &mut area);
-
                 // Render tags
-                self.list.render(
+                self.list.set_scrollbar(colors.scrollbar()).render(
                     area,
                     buf,
                     self.tags.iter(),
@@ -106,16 +100,6 @@ impl TagsPage {
                         Span::styled(name, style).render(area, buf);
                     },
                 );
-
-                // Render scrollbar
-                if let Some(scroll_area) = scroll_area {
-                    Scrollbar::new().with_colors(colors.scrollbar()).render(
-                        scroll_area,
-                        buf,
-                        self.list.scroll(),
-                        self.list.lines(),
-                    );
-                }
 
                 shortcuts.extend([
                     Shortcut::new("New", "n"),
