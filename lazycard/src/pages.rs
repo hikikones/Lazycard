@@ -33,7 +33,7 @@ pub struct Pages {
     search: SearchPage,
     logs: LogsPage,
     route: Route,
-    state: PageState,
+    state: State,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,7 +75,15 @@ impl Route {
     }
 }
 
-enum PageState {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PageState {
+    Route(Route),
+    Search,
+    Logs,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum State {
     Route,
     Search,
     Logs,
@@ -91,116 +99,90 @@ impl Pages {
             settings: SettingsPage::new(&settings),
             search: SearchPage::new(),
             logs: LogsPage::new(),
-            route: Route::Review,
-            state: PageState::Route,
+            route,
+            state: State::Route,
         };
-        pages.call_on_enter(route, db, markup);
+        pages.on_enter(route, db, markup);
         pages
     }
 
-    pub fn next(&mut self, db: &mut Database, markup: &mut Markup) {
+    pub const fn forward(&self) -> PageState {
         match self.state {
-            PageState::Route => {
-                self.set_route(self.route.next(), db, markup);
-            }
-            PageState::Search => {
-                self.search.on_exit();
-                self.state = PageState::Route;
-            }
-            PageState::Logs => {
-                self.logs.on_exit();
-                self.state = PageState::Route;
-            }
+            State::Route => PageState::Route(self.route.next()),
+            State::Search => PageState::Search,
+            State::Logs => PageState::Logs,
         }
     }
 
-    pub fn previous(&mut self, db: &mut Database, markup: &mut Markup) {
+    pub const fn backward(&self) -> PageState {
         match self.state {
-            PageState::Route => {
-                self.set_route(self.route.prev(), db, markup);
-            }
-            PageState::Search => {
-                self.search.on_exit();
-                self.state = PageState::Route;
-            }
-            PageState::Logs => {
-                self.logs.on_exit();
-                self.state = PageState::Route;
-            }
+            State::Route => PageState::Route(self.route.prev()),
+            State::Search => PageState::Search,
+            State::Logs => PageState::Logs,
         }
     }
 
-    pub fn set_route(&mut self, route: Route, db: &mut Database, markup: &mut Markup) {
-        match self.state {
-            PageState::Route => {
+    pub fn set_state(&mut self, state: PageState, db: &mut Database, markup: &mut Markup) {
+        match (self.state, state) {
+            (State::Route, PageState::Route(route)) => {
                 if self.route == route {
                     return;
                 }
 
-                self.call_on_exit(self.route);
-                self.route = route;
-                self.call_on_enter(route, db, markup);
+                self.set_route(route, db, markup);
             }
-            PageState::Search => {
+            (State::Route, PageState::Search) => {
+                self.search.on_enter(db);
+                self.state = State::Search;
+            }
+            (State::Route, PageState::Logs) => {
+                self.logs.on_enter();
+                self.state = State::Logs;
+            }
+            (State::Search, PageState::Route(route)) => {
                 self.search.on_exit();
-                self.state = PageState::Route;
+                self.state = State::Route;
 
                 if self.route != route {
-                    self.call_on_exit(self.route);
-                    self.route = route;
-                    self.call_on_enter(route, db, markup);
+                    self.set_route(route, db, markup);
                 }
             }
-            PageState::Logs => {
+            (State::Search, PageState::Search) => {
+                self.search.on_exit();
+                self.state = State::Route;
+            }
+            (State::Search, PageState::Logs) => {
+                self.search.on_exit();
+                self.logs.on_enter();
+                self.state = State::Logs;
+            }
+            (State::Logs, PageState::Route(route)) => {
                 self.logs.on_exit();
-                self.state = PageState::Route;
+                self.state = State::Route;
 
                 if self.route != route {
-                    self.call_on_exit(self.route);
-                    self.route = route;
-                    self.call_on_enter(route, db, markup);
+                    self.set_route(route, db, markup);
                 }
             }
-        }
-    }
-
-    pub fn toggle_search(&mut self, db: &mut Database) {
-        match self.state {
-            PageState::Route => {
-                self.search.on_enter(db);
-                self.state = PageState::Search;
-            }
-            PageState::Search => {
-                self.search.on_exit();
-                self.state = PageState::Route;
-            }
-            PageState::Logs => {
+            (State::Logs, PageState::Search) => {
                 self.logs.on_exit();
                 self.search.on_enter(db);
-                self.state = PageState::Search;
+                self.state = State::Search;
             }
-        }
-    }
-
-    pub fn toggle_logs(&mut self) {
-        match self.state {
-            PageState::Route => {
-                self.logs.on_enter();
-                self.state = PageState::Logs;
-            }
-            PageState::Search => {
-                self.search.on_exit();
-                self.logs.on_enter();
-                self.state = PageState::Logs;
-            }
-            PageState::Logs => {
+            (State::Logs, PageState::Logs) => {
                 self.logs.on_exit();
-                self.state = PageState::Route;
+                self.state = State::Route;
             }
         }
     }
 
-    fn call_on_enter(&mut self, route: Route, db: &mut Database, markup: &mut Markup) {
+    fn set_route(&mut self, route: Route, db: &mut Database, markup: &mut Markup) {
+        self.on_exit(self.route);
+        self.route = route;
+        self.on_enter(route, db, markup);
+    }
+
+    fn on_enter(&mut self, route: Route, db: &mut Database, markup: &mut Markup) {
         match route {
             Route::Review => self.review.on_enter(db, markup),
             Route::Editor(id) => self.editor.on_enter(id, db),
@@ -210,7 +192,7 @@ impl Pages {
         };
     }
 
-    fn call_on_exit(&mut self, route: Route) {
+    fn on_exit(&mut self, route: Route) {
         match route {
             Route::Review => self.review.on_exit(),
             Route::Editor(_) => self.editor.on_exit(),
@@ -230,7 +212,7 @@ impl Pages {
         shortcuts: &mut Shortcuts,
     ) {
         match self.state {
-            PageState::Route => match self.route {
+            State::Route => match self.route {
                 Route::Review => {
                     self.review
                         .on_render(render, db, settings.colors(), markup, kitty, shortcuts)
@@ -246,11 +228,11 @@ impl Pages {
                 Route::Tags => self.tags.on_render(render, settings.colors(), shortcuts),
                 Route::Settings => self.settings.on_render(render, settings, shortcuts),
             },
-            PageState::Search => {
+            State::Search => {
                 self.search
                     .on_render(render, settings.colors(), markup, kitty, shortcuts)
             }
-            PageState::Logs => self.logs.on_render(render, settings.colors(), shortcuts),
+            State::Logs => self.logs.on_render(render, settings.colors(), shortcuts),
         }
     }
 
@@ -263,15 +245,15 @@ impl Pages {
         settings: &mut Settings,
     ) -> Action {
         match self.state {
-            PageState::Route => match self.route {
+            State::Route => match self.route {
                 Route::Review => self.review.on_input(input, markup, db),
                 Route::Editor(_) => self.editor.on_input(input, markup, db, terminal),
                 Route::Cards(_) => self.cards.on_input(input, markup, db),
                 Route::Tags => self.tags.on_input(input, db),
                 Route::Settings => self.settings.on_input(input, settings),
             },
-            PageState::Search => self.search.on_input(input, db, markup),
-            PageState::Logs => self.logs.on_input(input),
+            State::Search => self.search.on_input(input, db, markup),
+            State::Logs => self.logs.on_input(input),
         }
     }
 
@@ -291,7 +273,8 @@ impl Pages {
             .map(|(route, name, spacing)| {
                 let is_current =
                     std::mem::discriminant(&route) == std::mem::discriminant(&self.route);
-                let style = if is_current {
+                let is_route = self.state == State::Route;
+                let style = if is_current && is_route {
                     Style::new().fg(colors.primary).bold()
                 } else {
                     Style::new()

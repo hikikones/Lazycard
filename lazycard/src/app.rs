@@ -11,7 +11,7 @@ use ratatui::{
 use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts};
 
 use crate::{
-    pages::{Log, Pages, Route},
+    pages::{Log, PageState, Pages, Route},
     settings::Settings,
     symbols,
     terminal::Terminal,
@@ -30,8 +30,8 @@ pub struct App {
 pub enum Action {
     None,
     Render,
-    NextRoute,
-    PreviousRoute,
+    Forward,
+    Backward,
     Route(Route),
     ToggleSearch,
     ToggleLogs,
@@ -140,8 +140,8 @@ impl App {
 
                 match key.code {
                     KeyCode::Esc => Action::Quit,
-                    KeyCode::Tab => Action::NextRoute,
-                    KeyCode::BackTab => Action::PreviousRoute,
+                    KeyCode::Tab => Action::Forward,
+                    KeyCode::BackTab => Action::Backward,
                     KeyCode::Char('f') => {
                         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
                         if ctrl {
@@ -161,7 +161,10 @@ impl App {
                     _ => self.on_input(key, terminal),
                 }
             }
-            Event::Resize(_, _) => Action::Render,
+            Event::Resize(_, _) => {
+                // TODO: Somehow pass a was_window_resized bool to markup render.
+                Action::Render
+            }
             _ => Action::None,
         }
     }
@@ -176,25 +179,24 @@ impl App {
             Action::Render => {
                 self.render(terminal)?;
             }
-            Action::NextRoute => {
-                self.pages.next(&mut self.database, &mut self.markup);
+            Action::Forward => {
+                self.set_page(self.pages.forward());
                 self.render(terminal)?;
             }
-            Action::PreviousRoute => {
-                self.pages.previous(&mut self.database, &mut self.markup);
+            Action::Backward => {
+                self.set_page(self.pages.backward());
                 self.render(terminal)?;
             }
             Action::Route(route) => {
-                self.pages
-                    .set_route(route, &mut self.database, &mut self.markup);
+                self.set_page(PageState::Route(route));
                 self.render(terminal)?;
             }
             Action::ToggleSearch => {
-                self.pages.toggle_search(&mut self.database);
+                self.set_page(PageState::Search);
                 self.render(terminal)?;
             }
             Action::ToggleLogs => {
-                self.pages.toggle_logs();
+                self.set_page(PageState::Logs);
                 self.render(terminal)?;
             }
             Action::EnqueueLog(log) => {
@@ -211,6 +213,12 @@ impl App {
         }
 
         Ok(())
+    }
+
+    fn set_page(&mut self, state: PageState) {
+        self.markup.clear();
+        self.pages
+            .set_state(state, &mut self.database, &mut self.markup);
     }
 
     fn render<'a>(&'a mut self, terminal: &'a mut Terminal) -> std::io::Result<CompletedFrame<'a>> {
