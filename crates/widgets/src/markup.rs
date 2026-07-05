@@ -260,6 +260,7 @@ impl Markup {
         Ok(())
     }
 
+    // TODO: Rework this by returning a custom iterator.
     pub fn parse_items(markup: &str, v: &mut Vec<MarkupItem>) {
         for (block, _) in BlockParser::new(markup) {
             match block {
