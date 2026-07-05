@@ -1,5 +1,5 @@
 use std::{
-    ops::Range,
+    ops::{Range, RangeInclusive},
     path::{Path, PathBuf},
 };
 
@@ -254,10 +254,7 @@ impl Markup {
 
     pub fn delete_images(&mut self, kitty: &KittyGraphics) -> std::io::Result<()> {
         if self.kitty.has_rendered {
-            kitty.delete_range(
-                self.kitty.id_start,
-                self.kitty.id_start + self.kitty.id_counter.saturating_sub(1),
-            )?;
+            kitty.delete_range(self.kitty.range())?;
             self.kitty.has_rendered = false;
         }
         Ok(())
@@ -731,6 +728,11 @@ impl MarkupKitty {
 
     const fn increment_id(&mut self) {
         self.id_counter += 1;
+    }
+
+    const fn range(&self) -> RangeInclusive<u32> {
+        let end = self.id_start + self.id_counter.saturating_sub(1);
+        self.id_start..=end
     }
 }
 

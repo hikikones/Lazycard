@@ -301,18 +301,17 @@ impl KittyGraphics {
         match transmit(image_area.as_position(), self.formatter.as_str()) {
             Ok(_) => {}
             Err(err) => {
-                let color = Color::Red;
                 let block = Block::bordered()
                     .title(" ERROR ")
                     .title_alignment(Alignment::Center)
-                    .style(color);
-                let inner = block.inner(image_area);
-                block.render(image_area, buf);
+                    .style(Color::Red);
+                let inner = block.inner(area);
+                block.render(area, buf);
                 crate::utils::print_text(
                     inner,
                     buf,
                     format!("{err}"),
-                    color,
+                    Color::Red,
                     false,
                     Some(crate::Alignment::Center),
                 );
@@ -333,9 +332,7 @@ impl KittyGraphics {
             KittyId(id),
             self.kitty_verbosity
         )?;
-        stdout.flush()?;
-
-        Ok(())
+        stdout.flush()
     }
 
     pub fn delete_ids<I>(&self, ids: I) -> std::io::Result<()>
@@ -360,26 +357,22 @@ impl KittyGraphics {
                 self.kitty_verbosity
             )?;
         }
-        stdout.flush()?;
-
-        Ok(())
+        stdout.flush()
     }
 
-    pub fn delete_range(&self, min_inclusive: u32, max_inclusive: u32) -> std::io::Result<()> {
+    pub fn delete_range(&self, range: std::ops::RangeInclusive<u32>) -> std::io::Result<()> {
         use std::io::Write;
 
-        debug_assert!(min_inclusive <= max_inclusive);
+        let (start_id, end_id_inclusive) = range.into_inner();
 
         let mut stdout = std::io::stdout();
         write!(
             stdout,
             "{KITTY_START}{},{}{KITTY_END}",
-            KittyAction::Delete(KittyDelete::Range(min_inclusive, max_inclusive)),
+            KittyAction::Delete(KittyDelete::Range(start_id, end_id_inclusive)),
             self.kitty_verbosity
         )?;
-        stdout.flush()?;
-
-        Ok(())
+        stdout.flush()
     }
 
     pub fn delete_all(&self) -> std::io::Result<()> {
@@ -392,9 +385,7 @@ impl KittyGraphics {
             KittyAction::Delete(KittyDelete::AllVisible),
             self.kitty_verbosity
         )?;
-        stdout.flush()?;
-
-        Ok(())
+        stdout.flush()
     }
 
     pub const fn width(&self, columns: u16) -> u32 {
