@@ -587,6 +587,7 @@ enum MarkupPlain {
     EmptyLine,
 }
 
+// TODO: Remove ImageItem. Just use ImageError variant in plain enum.
 #[derive(Debug, Clone)]
 enum ImageItem {
     Ok { id: u32, dims: Dimensions },
