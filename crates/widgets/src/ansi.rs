@@ -1,6 +1,8 @@
 /// ANSI writer and parser for most Select Graphic Rendition (SGR) attributes.
 use std::{fmt::Write, ops::Range, str::CharIndices};
 
+use ratatui::style::{Color, Modifier, Style};
+
 const ANSI_START: char = '\x1b';
 const ANSI_START2: char = '[';
 const ANSI_END: char = 'm';
@@ -20,9 +22,9 @@ pub enum AnsiTag {
     Reverse,
     Conceal,
     CrossedOut,
-    Framed,
-    Encircled,
-    Overlined,
+    // Framed,
+    // Encircled,
+    // Overlined,
 
     // Style off
     NotBold,
@@ -32,8 +34,8 @@ pub enum AnsiTag {
     NotReverse,
     Reveal,
     NotCrossedOut,
-    NotFramedOrEncircled,
-    NotOverlined,
+    // NotFramedOrEncircled,
+    // NotOverlined,
 
     // Foreground colors
     FgBlack,
@@ -125,12 +127,13 @@ impl AnsiTag {
 
             49 => Self::BgDefault,
 
-            51 => Self::Framed,
-            52 => Self::Encircled,
-            53 => Self::Overlined,
-            54 => Self::NotFramedOrEncircled,
-            55 => Self::NotOverlined,
+            // 51 => Self::Framed,
+            // 52 => Self::Encircled,
+            // 53 => Self::Overlined,
+            // 54 => Self::NotFramedOrEncircled,
+            // 55 => Self::NotOverlined,
 
+            //
             90 => Self::FgBrightBlack,
             91 => Self::FgBrightRed,
             92 => Self::FgBrightGreen,
@@ -170,10 +173,11 @@ impl std::fmt::Display for AnsiTag {
             Self::Reverse => f.write_char('7'),
             Self::Conceal => f.write_char('8'),
             Self::CrossedOut => f.write_char('9'),
-            Self::Framed => f.write_str("51"),
-            Self::Encircled => f.write_str("52"),
-            Self::Overlined => f.write_str("53"),
+            // Self::Framed => f.write_str("51"),
+            // Self::Encircled => f.write_str("52"),
+            // Self::Overlined => f.write_str("53"),
 
+            //
             Self::NotBold => f.write_str("22"),
             Self::NotItalic => f.write_str("23"),
             Self::NotUnderline => f.write_str("24"),
@@ -181,9 +185,10 @@ impl std::fmt::Display for AnsiTag {
             Self::NotReverse => f.write_str("27"),
             Self::Reveal => f.write_str("28"),
             Self::NotCrossedOut => f.write_str("29"),
-            Self::NotFramedOrEncircled => f.write_str("54"),
-            Self::NotOverlined => f.write_str("55"),
+            // Self::NotFramedOrEncircled => f.write_str("54"),
+            // Self::NotOverlined => f.write_str("55"),
 
+            //
             Self::FgBlack => f.write_str("30"),
             Self::FgRed => f.write_str("31"),
             Self::FgGreen => f.write_str("32"),
@@ -335,6 +340,10 @@ impl<'a> AnsiParser<'a> {
         }
     }
 
+    pub const fn with_style(self) -> AnsiParserWithStyle<'a> {
+        AnsiParserWithStyle::from_parser(self)
+    }
+
     fn parse_ansi_code(&mut self) -> Option<(usize, AnsiTag)> {
         let Some((i, ANSI_START2)) = self.chars.next() else {
             return None;
@@ -440,5 +449,222 @@ impl<'a> Iterator for AnsiParser<'a> {
         } else {
             Some(AnsiEvent::Text(remaining))
         }
+    }
+}
+
+// TODO: Add ansi parser with style and `continue_with` for lines.
+
+pub struct AnsiParserWithStyle<'a> {
+    parser: AnsiParser<'a>,
+    style: Style,
+}
+
+impl<'a> AnsiParserWithStyle<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            parser: AnsiParser::new(input),
+            style: Style::new(),
+        }
+    }
+
+    pub const fn from_parser(parser: AnsiParser<'a>) -> Self {
+        Self {
+            parser,
+            style: Style::new(),
+        }
+    }
+
+    pub fn continue_with(&mut self, input: &'a str) -> &mut Self {
+        self.parser = AnsiParser::new(input);
+        self
+    }
+}
+
+impl<'a> Iterator for AnsiParserWithStyle<'a> {
+    type Item = (&'a str, Style);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(event) = self.parser.next() {
+            match event {
+                AnsiEvent::Text(s) => {
+                    return Some((s, self.style));
+                }
+                AnsiEvent::Tag(tag) => match tag {
+                    AnsiTag::Reset => {
+                        self.style = Style::new();
+                    }
+                    AnsiTag::Bold => {
+                        self.style.add_modifier.insert(Modifier::BOLD);
+                    }
+                    AnsiTag::Faint => {
+                        self.style.add_modifier.insert(Modifier::DIM);
+                    }
+                    AnsiTag::Italic => {
+                        self.style.add_modifier.insert(Modifier::ITALIC);
+                    }
+                    AnsiTag::Underline => {
+                        self.style.add_modifier.insert(Modifier::UNDERLINED);
+                    }
+                    AnsiTag::SlowBlink => {
+                        self.style.add_modifier.insert(Modifier::SLOW_BLINK);
+                    }
+                    AnsiTag::RapidBlink => {
+                        self.style.add_modifier.insert(Modifier::RAPID_BLINK);
+                    }
+                    AnsiTag::Reverse => {
+                        self.style.add_modifier.insert(Modifier::REVERSED);
+                    }
+                    AnsiTag::Conceal => {
+                        self.style.add_modifier.insert(Modifier::HIDDEN);
+                    }
+                    AnsiTag::CrossedOut => {
+                        self.style.add_modifier.insert(Modifier::CROSSED_OUT);
+                    }
+                    // AnsiTag::Framed => todo!(),
+                    // AnsiTag::Encircled => todo!(),
+                    // AnsiTag::Overlined => todo!(),
+                    AnsiTag::NotBold => {
+                        self.style.add_modifier.remove(Modifier::BOLD);
+                    }
+                    AnsiTag::NotItalic => {
+                        self.style.add_modifier.remove(Modifier::ITALIC);
+                    }
+                    AnsiTag::NotUnderline => {
+                        self.style.add_modifier.remove(Modifier::UNDERLINED);
+                    }
+                    AnsiTag::NotBlink => {
+                        self.style.add_modifier.remove(Modifier::SLOW_BLINK);
+                        self.style.add_modifier.remove(Modifier::RAPID_BLINK);
+                    }
+                    AnsiTag::NotReverse => {
+                        self.style.add_modifier.remove(Modifier::REVERSED);
+                    }
+                    AnsiTag::Reveal => {
+                        self.style.add_modifier.remove(Modifier::HIDDEN);
+                    }
+                    AnsiTag::NotCrossedOut => {
+                        self.style.add_modifier.remove(Modifier::CROSSED_OUT);
+                    }
+                    // AnsiTag::NotFramedOrEncircled => todo!(),
+                    // AnsiTag::NotOverlined => todo!(),
+                    AnsiTag::FgBlack => {
+                        self.style.fg = Some(Color::Black);
+                    }
+                    AnsiTag::FgRed => {
+                        self.style.fg = Some(Color::Red);
+                    }
+                    AnsiTag::FgGreen => {
+                        self.style.fg = Some(Color::Green);
+                    }
+                    AnsiTag::FgYellow => {
+                        self.style.fg = Some(Color::Yellow);
+                    }
+                    AnsiTag::FgBlue => {
+                        self.style.fg = Some(Color::Blue);
+                    }
+                    AnsiTag::FgMagenta => {
+                        self.style.fg = Some(Color::Magenta);
+                    }
+                    AnsiTag::FgCyan => {
+                        self.style.fg = Some(Color::Cyan);
+                    }
+                    AnsiTag::FgWhite => {
+                        self.style.fg = Some(Color::Gray);
+                    }
+                    AnsiTag::FgBrightBlack => {
+                        self.style.fg = Some(Color::DarkGray);
+                    }
+                    AnsiTag::FgBrightRed => {
+                        self.style.fg = Some(Color::LightRed);
+                    }
+                    AnsiTag::FgBrightGreen => {
+                        self.style.fg = Some(Color::LightGreen);
+                    }
+                    AnsiTag::FgBrightYellow => {
+                        self.style.fg = Some(Color::LightYellow);
+                    }
+                    AnsiTag::FgBrightBlue => {
+                        self.style.fg = Some(Color::LightBlue);
+                    }
+                    AnsiTag::FgBrightMagenta => {
+                        self.style.fg = Some(Color::LightMagenta);
+                    }
+                    AnsiTag::FgBrightCyan => {
+                        self.style.fg = Some(Color::LightCyan);
+                    }
+                    AnsiTag::FgBrightWhite => {
+                        self.style.fg = Some(Color::White);
+                    }
+                    AnsiTag::FgDefault => {
+                        self.style.fg = Some(Color::Reset);
+                    }
+                    AnsiTag::BgBlack => {
+                        self.style.bg = Some(Color::Black);
+                    }
+                    AnsiTag::BgRed => {
+                        self.style.bg = Some(Color::Red);
+                    }
+                    AnsiTag::BgGreen => {
+                        self.style.bg = Some(Color::Green);
+                    }
+                    AnsiTag::BgYellow => {
+                        self.style.bg = Some(Color::Yellow);
+                    }
+                    AnsiTag::BgBlue => {
+                        self.style.bg = Some(Color::Blue);
+                    }
+                    AnsiTag::BgMagenta => {
+                        self.style.bg = Some(Color::Magenta);
+                    }
+                    AnsiTag::BgCyan => {
+                        self.style.bg = Some(Color::Cyan);
+                    }
+                    AnsiTag::BgWhite => {
+                        self.style.bg = Some(Color::Gray);
+                    }
+                    AnsiTag::BgBrightBlack => {
+                        self.style.bg = Some(Color::DarkGray);
+                    }
+                    AnsiTag::BgBrightRed => {
+                        self.style.bg = Some(Color::LightRed);
+                    }
+                    AnsiTag::BgBrightGreen => {
+                        self.style.bg = Some(Color::LightGreen);
+                    }
+                    AnsiTag::BgBrightYellow => {
+                        self.style.bg = Some(Color::LightYellow);
+                    }
+                    AnsiTag::BgBrightBlue => {
+                        self.style.bg = Some(Color::LightBlue);
+                    }
+                    AnsiTag::BgBrightMagenta => {
+                        self.style.bg = Some(Color::LightMagenta);
+                    }
+                    AnsiTag::BgBrightCyan => {
+                        self.style.bg = Some(Color::LightCyan);
+                    }
+                    AnsiTag::BgBrightWhite => {
+                        self.style.bg = Some(Color::White);
+                    }
+                    AnsiTag::BgDefault => {
+                        self.style.bg = Some(Color::Reset);
+                    }
+                    AnsiTag::Fg256(i) => {
+                        self.style.fg = Some(Color::Indexed(i));
+                    }
+                    AnsiTag::Bg256(i) => {
+                        self.style.bg = Some(Color::Indexed(i));
+                    }
+                    AnsiTag::FgTrueColor(r, g, b) => {
+                        self.style.fg = Some(Color::Rgb(r, g, b));
+                    }
+                    AnsiTag::BgTrueColor(r, g, b) => {
+                        self.style.bg = Some(Color::Rgb(r, g, b));
+                    }
+                },
+            }
+        }
+
+        None
     }
 }

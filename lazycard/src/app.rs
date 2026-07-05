@@ -114,7 +114,8 @@ impl App {
 
         // Run event loop
         while self.is_running {
-            let action = self.read_event(&mut terminal)?;
+            let event = ratatui::crossterm::event::read()?;
+            let action = self.read_event(event, &mut terminal);
             self.apply_action(action, &mut terminal)?;
         }
 
@@ -126,14 +127,15 @@ impl App {
     }
 
     const fn apply_settings(&mut self) {
+        self.markup.set_scrollbar(self.settings.colors.scrollbar());
         self.pages.apply_settings(&self.settings);
     }
 
-    fn read_event(&mut self, terminal: &mut Terminal) -> std::io::Result<Action> {
-        let action = match ratatui::crossterm::event::read()? {
+    fn read_event(&mut self, event: Event, terminal: &mut Terminal) -> Action {
+        match event {
             Event::Key(key) => {
                 if key.kind != KeyEventKind::Press {
-                    return Ok(Action::None);
+                    return Action::None;
                 }
 
                 match key.code {
@@ -161,9 +163,7 @@ impl App {
             }
             Event::Resize(_, _) => Action::Render,
             _ => Action::None,
-        };
-
-        Ok(action)
+        }
     }
 
     fn apply_action(

@@ -3,7 +3,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ratatui::{crossterm::event::KeyCode, prelude::*};
+use ratatui::{
+    buffer::Buffer,
+    crossterm::event::KeyCode,
+    layout::{Alignment, Rect, Size},
+    style::Style,
+};
 use syntect::{
     easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::LinesWithEndings,
 };
@@ -11,53 +16,35 @@ use unicode_segmentation::UnicodeSegmentation;
 use utils::Formatter;
 
 use crate::{
-    ansi::{AnsiEvent, AnsiParser, AnsiTag, AnsiWriter},
+    Scrollbar, ScrollbarColors,
+    ansi::{AnsiParser, AnsiTag, AnsiWriter},
     kitty_graphics::{Dimensions, KittyGraphics, ResizeMode},
     text_segment::TextSegment,
 };
 
 pub struct Markup {
-    items: Vec<Item>,
+    markup_items: Vec<Item>,
+    markup_buf: Formatter,
+    items: Vec<MarkupRender>,
     ansi: AnsiWriter,
     buffer: String,
-    wrapped_ansi: utils::Formatter,
+    wrapped_ansi: Formatter,
     code_highlighter: CodeHighlighter,
     text_segment: TextSegment,
     scroll: u16,
     desired_scroll: Option<ScrollMove>,
+    max_lines: u16,
     total_lines: u16,
+    scrollbar: Option<ScrollbarColors>,
+    scroll_area: Option<Rect>,
     max_items: Option<usize>,
     image_id_start: u32,
     image_id_counter: u32,
     image_has_rendered: bool,
     assets_path: PathBuf,
+    size: Size,
     area: Rect,
     hash: u64,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SyntaxHighlightTheme {
-    Base16OceanDark,
-    Base16OceanLight,
-    Base16MochaDark,
-    Base16EightiesDark,
-    InspiredGitHub,
-    SolarizedDark,
-    SolarizedLight,
-}
-
-impl SyntaxHighlightTheme {
-    const fn as_str(self) -> &'static str {
-        match self {
-            SyntaxHighlightTheme::Base16OceanDark => "base16-ocean.dark",
-            SyntaxHighlightTheme::Base16OceanLight => "base16-ocean.light",
-            SyntaxHighlightTheme::Base16MochaDark => "base16-mocha.dark",
-            SyntaxHighlightTheme::Base16EightiesDark => "base16-eighties.dark",
-            SyntaxHighlightTheme::InspiredGitHub => "InspiredGitHub",
-            SyntaxHighlightTheme::SolarizedDark => "Solarized (dark)",
-            SyntaxHighlightTheme::SolarizedLight => "Solarized (light)",
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -103,6 +90,20 @@ enum Item {
 }
 
 #[derive(Debug, Clone)]
+enum MarkupRender {
+    Text {
+        range: Range<usize>,
+        alignment: Alignment,
+    },
+    Image {
+        id: u32,
+        dims: Dimensions,
+    },
+    Break,
+    EmptyLine,
+}
+
+#[derive(Debug, Clone)]
 enum ImageItem {
     Ok { id: u32, dims: Dimensions },
     Err { text: Range<usize> },
@@ -111,6 +112,8 @@ enum ImageItem {
 impl Markup {
     pub fn new(assets: PathBuf, theme: SyntaxHighlightTheme) -> Self {
         Self {
+            markup_items: Vec::new(),
+            markup_buf: Formatter::new(),
             items: Vec::new(),
             ansi: AnsiWriter::new(),
             buffer: String::new(),
@@ -119,15 +122,24 @@ impl Markup {
             text_segment: TextSegment::new(),
             scroll: 0,
             desired_scroll: None,
+            max_lines: 0,
             total_lines: 0,
+            scrollbar: None,
+            scroll_area: None,
             max_items: None,
             image_id_start: 90,
             image_id_counter: 0,
             image_has_rendered: false,
             assets_path: assets,
+            size: Size::ZERO,
             area: Rect::ZERO,
             hash: 0,
         }
+    }
+
+    pub const fn with_scrollbar(mut self, colors: ScrollbarColors) -> Self {
+        self.scrollbar = Some(colors);
+        self
     }
 
     pub const fn scroll_index(&self) -> u16 {
@@ -136,6 +148,11 @@ impl Markup {
 
     pub const fn set_desired_scroll(&mut self, sm: ScrollMove) -> &mut Self {
         self.desired_scroll = Some(sm);
+        self
+    }
+
+    pub const fn set_scrollbar(&mut self, colors: ScrollbarColors) -> &mut Self {
+        self.scrollbar = Some(colors);
         self
     }
 
@@ -162,13 +179,13 @@ impl Markup {
         self.scroll = match sm {
             ScrollMove::Up => self.scroll.saturating_sub(1),
             ScrollMove::Down => {
-                (self.scroll + 1).min(self.total_lines.saturating_sub(self.area.height))
+                (self.scroll + 1).min(self.max_lines.saturating_sub(self.size.height))
             }
-            ScrollMove::PageUp => self.scroll.saturating_sub(self.area.height),
-            ScrollMove::PageDown => (self.scroll + self.area.height)
-                .min(self.total_lines.saturating_sub(self.area.height)),
+            ScrollMove::PageUp => self.scroll.saturating_sub(self.size.height),
+            ScrollMove::PageDown => (self.scroll + self.size.height)
+                .min(self.max_lines.saturating_sub(self.size.height)),
             ScrollMove::Start => 0,
-            ScrollMove::End => self.total_lines.saturating_sub(self.area.height),
+            ScrollMove::End => self.max_lines.saturating_sub(self.size.height),
         };
 
         self.scroll != old_scroll
@@ -178,91 +195,55 @@ impl Markup {
         &mut self,
         mut area: Rect,
         buf: &mut Buffer,
-        text: &str,
+        markup: &str,
         kitty: &mut KittyGraphics,
     ) {
-        let hash = utils::hash_fast(text);
-        if self.area != area || self.hash != hash {
+        if area.is_empty() {
+            return;
+        }
+
+        let hash = utils::hash_fast(markup);
+        if self.size != area.as_size() || self.hash != hash {
+            self.size = area.as_size();
             self.area = area;
             self.hash = hash;
-            self.process(text, area.width, kitty);
-        }
+            self.scroll_area = None;
 
-        fn is_in_viewport(curr_line: u16, top: u16, bot: u16) -> bool {
-            curr_line >= top && curr_line < bot
-        }
+            self.parse_and_load(markup, kitty);
+            self.process_layout(area.width, kitty);
 
-        fn render_ansi_text(
-            area: &mut Rect,
-            buf: &mut Buffer,
-            text: &str,
-            current_line: &mut u16,
-            viewport_top: u16,
-            viewport_bot: u16,
-            text_segment: &mut TextSegment,
-            alignment: Alignment,
-        ) {
-            let mut style = Style::new();
-            text_segment.set_alignment(alignment);
-
-            for line in text.lines() {
-                if is_in_viewport(*current_line, viewport_top, viewport_bot) {
-                    for event in AnsiParser::new(line) {
-                        match event {
-                            AnsiEvent::Text(s) => {
-                                text_segment.push_str(s, style);
-                            }
-                            AnsiEvent::Tag(tag) => match tag {
-                                AnsiTag::Reset => {
-                                    style = Style::new();
-                                }
-                                AnsiTag::Bold => {
-                                    style.add_modifier.insert(Modifier::BOLD);
-                                }
-                                AnsiTag::Italic => {
-                                    style.add_modifier.insert(Modifier::ITALIC);
-                                }
-                                AnsiTag::Reverse => {
-                                    style.add_modifier.insert(Modifier::REVERSED);
-                                }
-                                AnsiTag::NotBold => {
-                                    style.add_modifier.remove(Modifier::BOLD);
-                                }
-                                AnsiTag::NotItalic => {
-                                    style.add_modifier.remove(Modifier::ITALIC);
-                                }
-                                AnsiTag::NotReverse => {
-                                    style.add_modifier.remove(Modifier::REVERSED);
-                                }
-                                AnsiTag::FgRed => {
-                                    style.fg = Some(Color::Red);
-                                }
-                                AnsiTag::FgTrueColor(r, g, b) => {
-                                    style.fg = Some(Color::Rgb(r, g, b));
-                                }
-                                _ => {}
-                            },
-                        }
-                    }
-                    text_segment.render(*area, buf);
-                    text_segment.clear();
-
-                    area.y += 1;
-                    area.height = area.height.saturating_sub(1);
-                }
-
-                *current_line += 1;
+            if self.scrollbar.is_some()
+                && Scrollbar::is_scrollable(self.total_lines as usize, area.as_size())
+            {
+                let scroll_area = Scrollbar::make_scroll_area(&mut area);
+                self.process_layout(area.width, kitty);
+                self.area = area;
+                self.scroll_area = Some(scroll_area);
             }
         }
 
+        const fn is_in_viewport(curr_line: u16, top: u16, bot: u16) -> bool {
+            curr_line >= top && curr_line < bot
+        }
+
+        let mut area = self.area;
+
         // Update scroll
-        self.total_lines = self.compute_total_lines(kitty);
+        self.max_lines = self.compute_lines(area.width, self.max_items(), kitty);
         if let Some(sm) = self.desired_scroll.take() {
             self.scroll(sm);
         } else {
-            self.scroll = self
-                .scroll
-                .min(self.total_lines.saturating_sub(area.height));
+            self.scroll = self.scroll.min(self.max_lines.saturating_sub(area.height));
+        }
+
+        // Scrollbar
+        if let Some((scroll_area, colors)) = self.scroll_area.zip(self.scrollbar) {
+            Scrollbar::new().with_colors(colors).render(
+                scroll_area,
+                buf,
+                self.scroll as usize,
+                self.total_lines as usize,
+            );
         }
 
         // Setup
@@ -278,120 +259,84 @@ impl Markup {
             }
 
             match item {
-                Item::Paragraph { text, alignment } => {
-                    render_ansi_text(
-                        &mut area,
-                        buf,
-                        self.wrapped_ansi.slice(text),
-                        &mut current_line,
-                        viewport_top,
-                        viewport_bot,
-                        &mut self.text_segment,
-                        alignment,
-                    );
-                }
-                Item::ListItem { text } => {
-                    render_ansi_text(
-                        &mut area,
-                        buf,
-                        self.wrapped_ansi.slice(text),
-                        &mut current_line,
-                        viewport_top,
-                        viewport_bot,
-                        &mut self.text_segment,
-                        Alignment::Left,
-                    );
-                }
-                Item::Code { text, .. } => {
-                    render_ansi_text(
-                        &mut area,
-                        buf,
-                        self.wrapped_ansi.slice(text),
-                        &mut current_line,
-                        viewport_top,
-                        viewport_bot,
-                        &mut self.text_segment,
-                        Alignment::Left,
-                    );
-                }
-                Item::Image(image) => match image {
-                    ImageItem::Ok { id, dims } => {
-                        let max_width = kitty.width(area.width);
-                        let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
-                        let resized_area = kitty.area(resized_dims);
+                MarkupRender::Text { range, alignment } => {
+                    let mut ansi_parser = AnsiParser::new("").with_style();
+                    self.text_segment.set_alignment(alignment);
 
-                        if is_in_viewport(
-                            current_line,
-                            viewport_top.saturating_sub(resized_area.rows - 1),
-                            viewport_bot,
-                        ) {
-                            let is_at_top = area.y == top_y;
-                            let rows_outside_top = if is_at_top {
-                                current_line.abs_diff(self.scroll)
-                            } else {
-                                0
-                            };
-                            let image_rows =
-                                (resized_area.rows - rows_outside_top).min(area.height);
-                            let image_area = Rect {
-                                height: image_rows,
-                                ..area
-                            };
-                            kitty.render(
-                                image_area,
-                                buf,
-                                id,
-                                dims,
-                                ResizeMode::FitWidthCropHeight { rows_outside_top },
-                                crate::utils::Alignment::CenterHorizontal,
-                            );
-                            self.image_has_rendered = true;
+                    for line in self.wrapped_ansi.slice(range).lines() {
+                        let is_in_viewport =
+                            is_in_viewport(current_line, viewport_top, viewport_bot);
 
-                            area.y += image_rows;
-                            area.height = area.height.saturating_sub(image_rows);
+                        for (s, style) in ansi_parser.continue_with(line) {
+                            if is_in_viewport {
+                                self.text_segment.push_str(s, style);
+                            }
                         }
 
-                        current_line += resized_area.rows;
+                        if is_in_viewport {
+                            self.text_segment.render(area, buf);
+                            self.text_segment.clear();
+
+                            area.y += 1;
+                            area.height = area.height.saturating_sub(1);
+                        }
+
+                        current_line += 1;
                     }
-                    ImageItem::Err { text } => {
-                        render_ansi_text(
-                            &mut area,
-                            buf,
-                            self.wrapped_ansi.slice(text),
-                            &mut current_line,
-                            viewport_top,
-                            viewport_bot,
-                            &mut self.text_segment,
-                            Alignment::Center,
-                        );
-                    }
-                },
-                Item::ImageDescription { text } => {
-                    render_ansi_text(
-                        &mut area,
-                        buf,
-                        self.wrapped_ansi.slice(text),
-                        &mut current_line,
-                        viewport_top,
-                        viewport_bot,
-                        &mut self.text_segment,
-                        Alignment::Center,
-                    );
                 }
-                Item::Break => {
+                MarkupRender::Image { id, dims } => {
+                    let max_width = kitty.width(area.width);
+                    let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
+                    let resized_rows = kitty.rows(resized_dims.height);
+
+                    if is_in_viewport(
+                        current_line,
+                        viewport_top.saturating_sub(resized_rows - 1),
+                        viewport_bot,
+                    ) {
+                        let is_at_top = area.y == top_y;
+                        let rows_outside_top = if is_at_top {
+                            current_line.abs_diff(self.scroll)
+                        } else {
+                            0
+                        };
+                        let image_rows = (resized_rows - rows_outside_top).min(area.height);
+                        let image_area = Rect {
+                            height: image_rows,
+                            ..area
+                        };
+                        kitty.render(
+                            image_area,
+                            buf,
+                            id,
+                            dims,
+                            ResizeMode::FitWidthCropHeight { rows_outside_top },
+                            crate::utils::Alignment::CenterHorizontal,
+                        );
+                        self.image_has_rendered = true;
+
+                        area.y += image_rows;
+                        area.height = area.height.saturating_sub(image_rows);
+                    }
+
+                    current_line += resized_rows;
+                }
+                MarkupRender::Break => {
                     if is_in_viewport(current_line, viewport_top, viewport_bot) {
                         let half = area.width / 2;
                         let mut x = area.x + half / 2;
+
                         for _ in 0..half {
                             (x, _) = buf.set_stringn(x, area.y, "—", 1, Style::new());
                         }
+
                         area.y += 1;
                         area.height = area.height.saturating_sub(1);
                     }
 
                     current_line += 1;
                 }
-                Item::EmptyLine => {
+                MarkupRender::EmptyLine => {
                     if is_in_viewport(current_line, viewport_top, viewport_bot) {
                         area.y += 1;
                         area.height = area.height.saturating_sub(1);
@@ -404,13 +349,20 @@ impl Markup {
     }
 
     pub fn clear(&mut self) {
+        self.markup_items.clear();
+        self.markup_buf.clear();
+        self.buffer.clear();
         self.items.clear();
         self.wrapped_ansi.clear();
         self.scroll = 0;
         self.desired_scroll = None;
+        self.max_items = None;
+        self.max_lines = 0;
+        self.total_lines = 0;
+        self.scroll_area = None;
+        self.size = Size::ZERO;
         self.area = Rect::ZERO;
         self.hash = 0;
-        self.total_lines = 0;
     }
 
     pub fn delete_images(&mut self, kitty: &KittyGraphics) -> std::io::Result<()> {
@@ -454,13 +406,13 @@ impl Markup {
         v.pop();
     }
 
-    fn process(&mut self, markup: &str, width: u16, kitty: &mut KittyGraphics) {
-        self.items.clear();
+    fn parse_and_load(&mut self, markup: &str, kitty: &mut KittyGraphics) {
+        self.markup_items.clear();
+        self.markup_buf.clear();
         self.buffer.clear();
-        self.wrapped_ansi.clear();
         self.image_id_counter = 0;
 
-        // Convert tabs to spaces before we process markup
+        // Convert tabs to spaces before we load markup
         let markup = if markup.contains('\t') {
             self.buffer.extend(
                 markup
@@ -472,92 +424,27 @@ impl Markup {
             markup
         };
 
-        fn parse_text(
-            text: &str,
-            width: u16,
-            indent: Option<(&str, &str)>,
-            writer: &mut AnsiWriter,
-            storage: &mut Formatter,
-        ) -> Range<usize> {
-            // Convert markup to ansi
-            for event in InlineParser::new(text) {
-                match event {
-                    InlineEvent::Text(s) => writer.push_str(s),
-                    InlineEvent::Tag(tag) => {
-                        let tag = match tag {
-                            InlineTag::BoldStart => AnsiTag::Bold,
-                            InlineTag::BoldEnd => AnsiTag::NotBold,
-                            InlineTag::ItalicStart => AnsiTag::Italic,
-                            InlineTag::ItalicEnd => AnsiTag::NotItalic,
-                        };
-                        writer.push_tag(tag);
-                    }
-                }
-            }
-
-            // Break text into lines using textwrap which ignores ansi codes
-            writer.textwrap(width);
-
-            // Store result and use later with returned range
-            let range = match indent {
-                Some((first_indent, other_indent)) => {
-                    let start = storage.len();
-                    for (i, line) in writer.as_str().lines().enumerate() {
-                        let indent = if i == 0 { first_indent } else { other_indent };
-                        storage.extend([indent, line, "\n"]);
-                    }
-                    let end = storage.len();
-                    start..end
-                }
-                None => storage.push_str(writer.as_str()),
-            };
-            writer.clear();
-            range
-        }
-
-        // Process markup
+        // Load markup
         for (block, _) in BlockParser::new(markup) {
             match block {
                 BlockElement::Paragraph { text, alignment } => {
-                    let range =
-                        parse_text(text, width, None, &mut self.ansi, &mut self.wrapped_ansi);
-                    self.items.push(Item::Paragraph {
-                        text: range,
+                    self.markup_items.push(Item::Paragraph {
+                        text: self.markup_buf.push_str(text),
                         alignment,
                     });
                 }
                 BlockElement::List { items } => {
                     for item in items {
-                        let range = parse_text(
-                            item,
-                            width.saturating_sub(4),
-                            Some(("  • ", "    ")),
-                            &mut self.ansi,
-                            &mut self.wrapped_ansi,
-                        );
-                        self.items.push(Item::ListItem { text: range });
+                        self.markup_items.push(Item::ListItem {
+                            text: self.markup_buf.push_str(item),
+                        });
                     }
                 }
                 BlockElement::Code { language, text } => {
-                    self.code_highlighter
-                        .highlight(language, text, |span, color| match color {
-                            Some((r, g, b)) => {
-                                self.ansi.push_tag(AnsiTag::FgTrueColor(r, g, b));
-                                self.ansi.push_str(span);
-                                self.ansi.push_tag(AnsiTag::Reset);
-                            }
-                            None => {
-                                self.ansi.push_str(span);
-                            }
-                        });
-
-                    let (lang_range, code_range) =
-                        self.wrapped_ansi.push_str2(language, self.ansi.as_str());
-                    self.items.push(Item::Code {
-                        _language: lang_range,
-                        text: code_range,
+                    self.markup_items.push(Item::Code {
+                        text: self.markup_buf.push_str(text),
+                        _language: self.markup_buf.push_str(language),
                     });
-                    self.ansi.clear();
                 }
                 BlockElement::Image { description, path } => {
                     let image_path = Path::new(path)
@@ -592,82 +479,136 @@ impl Markup {
                     let id = self.image_id_start + self.image_id_counter;
                     match load_and_encode_image(image_path, id, kitty) {
                         Ok(dims) => {
-                            self.items.push(Item::Image(ImageItem::Ok { id, dims }));
+                            self.markup_items
+                                .push(Item::Image(ImageItem::Ok { id, dims }));
                             self.image_id_counter += 1;
                         }
                         Err(err) => {
-                            self.ansi.push_tag(AnsiTag::FgRed);
-                            self.ansi.extend(["ERROR\n", &err]);
-                            self.ansi.textwrap(width);
-                            let range = self.wrapped_ansi.push_str(self.ansi.as_str());
-                            self.ansi.clear();
-                            self.items.push(Item::Image(ImageItem::Err { text: range }));
+                            self.markup_items.push(Item::Image(ImageItem::Err {
+                                text: self.markup_buf.extend(["ERROR\n", err.as_str()]),
+                            }));
                         }
                     }
 
                     if !description.is_empty() {
-                        let range = parse_text(
-                            description,
-                            width,
-                            None,
-                            &mut self.ansi,
-                            &mut self.wrapped_ansi,
-                        );
-                        self.items.push(Item::ImageDescription { text: range });
+                        self.markup_items.push(Item::ImageDescription {
+                            text: self.markup_buf.push_str(description),
+                        });
                     }
                 }
                 BlockElement::Break => {
-                    self.items.push(Item::Break);
+                    self.markup_items.push(Item::Break);
                 }
                 BlockElement::Comment { .. } => continue,
             }
 
             // Add empty line between each block element
-            self.items.push(Item::EmptyLine);
+            self.markup_items.push(Item::EmptyLine);
         }
 
         // Remove last empty line
-        self.items.pop();
+        self.markup_items.pop();
     }
 
-    fn compute_total_lines(&self, kitty: &KittyGraphics) -> u16 {
-        let mut total_lines = 0;
+    fn process_layout(&mut self, width: u16, kitty: &KittyGraphics) {
+        self.items.clear();
+        self.wrapped_ansi.clear();
 
-        for item in self.items.iter().cloned().take(self.max_items()) {
-            match item {
-                Item::Paragraph { text, .. } => {
-                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
-                }
-                Item::ListItem { text } => {
-                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
-                }
-                Item::Code { text, .. } => {
-                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
+        // Process loaded markup
+        self.items
+            .extend(self.markup_items.iter().cloned().map(|item| match item {
+                Item::Paragraph { text, alignment } => MarkupRender::Text {
+                    range: markup_to_wrapped_ansi(
+                        self.markup_buf.slice(text),
+                        width,
+                        None,
+                        &mut self.ansi,
+                        &mut self.wrapped_ansi,
+                    ),
+                    alignment,
+                },
+                Item::ListItem { text } => MarkupRender::Text {
+                    range: markup_to_wrapped_ansi(
+                        self.markup_buf.slice(text),
+                        width.saturating_sub(4),
+                        Some(("  • ", "    ")),
+                        &mut self.ansi,
+                        &mut self.wrapped_ansi,
+                    ),
+                    alignment: Alignment::Left,
+                },
+                Item::Code { text, _language } => {
+                    let lang = self.markup_buf.slice(_language);
+                    let code = self.markup_buf.slice(text);
+
+                    self.code_highlighter
+                        .highlight(lang, code, |span, color| match color {
+                            Some((r, g, b)) => {
+                                self.ansi.push_tag(AnsiTag::FgTrueColor(r, g, b));
+                                self.ansi.push_str(span);
+                                self.ansi.push_tag(AnsiTag::Reset);
+                            }
+                            None => {
+                                self.ansi.push_str(span);
+                            }
+                        });
+
+                    let range = self.wrapped_ansi.push_str(self.ansi.as_str());
+                    self.ansi.clear();
+
+                    MarkupRender::Text {
+                        range,
+                        alignment: Alignment::Left,
+                    }
                 }
                 Item::Image(image) => match image {
-                    ImageItem::Ok { dims, .. } => {
-                        let max_width = kitty.width(self.area.width);
-                        let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
-                        let resized_area = kitty.area(resized_dims);
-                        total_lines += resized_area.rows;
-                    }
-                    ImageItem::Err { text } => {
-                        total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
-                    }
+                    ImageItem::Ok { id, dims } => MarkupRender::Image { id, dims },
+                    ImageItem::Err { text } => MarkupRender::Text {
+                        range: markup_to_wrapped_ansi(
+                            self.markup_buf.slice(text),
+                            width,
+                            None,
+                            &mut self.ansi,
+                            &mut self.wrapped_ansi,
+                        ),
+                        alignment: Alignment::Center,
+                    },
                 },
-                Item::ImageDescription { text } => {
-                    total_lines += self.wrapped_ansi.slice(text).lines().count() as u16;
-                }
-                Item::Break => {
-                    total_lines += 1;
-                }
-                Item::EmptyLine => {
-                    total_lines += 1;
-                }
-            }
-        }
+                Item::ImageDescription { text } => MarkupRender::Text {
+                    range: markup_to_wrapped_ansi(
+                        self.markup_buf.slice(text),
+                        width,
+                        None,
+                        &mut self.ansi,
+                        &mut self.wrapped_ansi,
+                    ),
+                    alignment: Alignment::Center,
+                },
+                Item::Break => MarkupRender::Break,
+                Item::EmptyLine => MarkupRender::EmptyLine,
+            }));
 
-        total_lines
+        // Compute total lines
+        self.total_lines = self.compute_lines(width, self.items.len(), kitty);
+    }
+
+    fn compute_lines(&self, width: u16, max_items: usize, kitty: &KittyGraphics) -> u16 {
+        self.items
+            .iter()
+            .cloned()
+            .take(max_items)
+            .map(|item| match item {
+                MarkupRender::Text { range, .. } => {
+                    self.wrapped_ansi.slice(range).lines().count() as u16
+                }
+                MarkupRender::Image { dims, .. } => {
+                    let max_width = kitty.width(width);
+                    let resized_dims = KittyGraphics::resize(dims, dims.with_width(max_width));
+                    kitty.rows(resized_dims.height)
+                }
+                MarkupRender::Break | MarkupRender::EmptyLine => 1,
+            })
+            .sum()
     }
 
     const fn max_items(&self) -> usize {
@@ -676,6 +617,41 @@ impl Markup {
             None => self.items.len(),
         }
     }
+}
+
+fn markup_to_wrapped_ansi(
+    markup: &str,
+    width: u16,
+    indent: Option<(&str, &str)>,
+    writer: &mut AnsiWriter,
+    storage: &mut Formatter,
+) -> Range<usize> {
+    // Convert markup to ansi
+    for event in InlineParser::new(markup) {
+        match event {
+            InlineEvent::Text(s) => writer.push_str(s),
+            InlineEvent::Tag(tag) => writer.push_tag(tag.into_ansi()),
+        }
+    }
+
+    // Break text into lines using textwrap which ignores ansi codes
+    writer.textwrap(width);
+
+    // Store result for later usage
+    let range = match indent {
+        Some((first_indent, other_indent)) => {
+            let start = storage.len();
+            for (i, line) in writer.as_str().lines().enumerate() {
+                let indent = if i == 0 { first_indent } else { other_indent };
+                storage.extend([indent, line, "\n"]);
+            }
+            let end = storage.len();
+            start..end
+        }
+        None => storage.push_str(writer.as_str()),
+    };
+    writer.clear();
+    range
 }
 
 #[derive(Debug)]
@@ -951,6 +927,31 @@ impl<'a> Iterator for ListItems<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SyntaxHighlightTheme {
+    Base16OceanDark,
+    Base16OceanLight,
+    Base16MochaDark,
+    Base16EightiesDark,
+    InspiredGitHub,
+    SolarizedDark,
+    SolarizedLight,
+}
+
+impl SyntaxHighlightTheme {
+    const fn as_str(self) -> &'static str {
+        match self {
+            SyntaxHighlightTheme::Base16OceanDark => "base16-ocean.dark",
+            SyntaxHighlightTheme::Base16OceanLight => "base16-ocean.light",
+            SyntaxHighlightTheme::Base16MochaDark => "base16-mocha.dark",
+            SyntaxHighlightTheme::Base16EightiesDark => "base16-eighties.dark",
+            SyntaxHighlightTheme::InspiredGitHub => "InspiredGitHub",
+            SyntaxHighlightTheme::SolarizedDark => "Solarized (dark)",
+            SyntaxHighlightTheme::SolarizedLight => "Solarized (light)",
+        }
+    }
+}
+
 struct CodeHighlighter {
     syntax_set: SyntaxSet,
     theme_set: ThemeSet,
@@ -1004,6 +1005,17 @@ enum InlineTag {
     BoldEnd,
     ItalicStart,
     ItalicEnd,
+}
+
+impl InlineTag {
+    const fn into_ansi(self) -> AnsiTag {
+        match self {
+            InlineTag::BoldStart => AnsiTag::Bold,
+            InlineTag::BoldEnd => AnsiTag::NotBold,
+            InlineTag::ItalicStart => AnsiTag::Italic,
+            InlineTag::ItalicEnd => AnsiTag::NotItalic,
+        }
+    }
 }
 
 struct InlineParser<'a> {
