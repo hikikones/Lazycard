@@ -220,6 +220,7 @@ impl Markup {
                 }
                 MarkupRich::Break => {
                     if is_in_viewport(current_line, viewport_top, viewport_bot) {
+                        // TODO: Change symbol. Draw over entire line with margin.
                         let half = area.width / 2;
                         let mut x = area.x + half / 2;
 
@@ -362,15 +363,13 @@ impl Markup {
                     let id = self.kitty.current_id();
                     match load_and_encode_image(image_path, id, kitty) {
                         Ok(dims) => {
-                            self.plain
-                                .items
-                                .push(MarkupPlain::Image(ImageItem::Ok { id, dims }));
+                            self.plain.items.push(MarkupPlain::Image { id, dims });
                             self.kitty.increment_id();
                         }
                         Err(err) => {
-                            self.plain.items.push(MarkupPlain::Image(ImageItem::Err {
+                            self.plain.items.push(MarkupPlain::ImageError {
                                 text: self.plain.formatter.extend(["ERROR\n", err.as_str()]),
-                            }));
+                            });
                         }
                     }
 
@@ -446,23 +445,21 @@ impl Markup {
                         alignment: Alignment::Left,
                     }
                 }
-                MarkupPlain::Image(image) => match image {
-                    ImageItem::Ok { id, dims } => MarkupRich::Image { id, dims },
-                    ImageItem::Err { text } => {
-                        self.rich.writer.push_tag(AnsiTag::FgRed);
-                        self.rich.writer.push_str(self.plain.formatter.slice(text));
+                MarkupPlain::Image { id, dims } => MarkupRich::Image { id, dims },
+                MarkupPlain::ImageError { text } => {
+                    self.rich.writer.push_tag(AnsiTag::FgRed);
+                    self.rich.writer.push_str(self.plain.formatter.slice(text));
 
-                        self.rich.writer.textwrap(width);
+                    self.rich.writer.textwrap(width);
 
-                        let range = self.rich.formatter.push_str(self.rich.writer.as_str());
-                        self.rich.writer.clear();
+                    let range = self.rich.formatter.push_str(self.rich.writer.as_str());
+                    self.rich.writer.clear();
 
-                        MarkupRich::Text {
-                            range,
-                            alignment: Alignment::Center,
-                        }
+                    MarkupRich::Text {
+                        range,
+                        alignment: Alignment::Center,
                     }
-                },
+                }
                 MarkupPlain::ImageDescription { text } => MarkupRich::Text {
                     range: markup_to_rich_ansi(
                         self.plain.formatter.slice(text),
@@ -579,19 +576,18 @@ enum MarkupPlain {
         text: Range<usize>,
         _language: Range<usize>,
     },
-    Image(ImageItem),
+    Image {
+        id: u32,
+        dims: Dimensions,
+    },
+    ImageError {
+        text: Range<usize>,
+    },
     ImageDescription {
         text: Range<usize>,
     },
     Break,
     EmptyLine,
-}
-
-// TODO: Remove ImageItem. Just use ImageError variant in plain enum.
-#[derive(Debug, Clone)]
-enum ImageItem {
-    Ok { id: u32, dims: Dimensions },
-    Err { text: Range<usize> },
 }
 
 struct MarkupPlainData {
