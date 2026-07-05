@@ -6,6 +6,8 @@ use ratatui::{
 
 use crate::{Scrollbar, ScrollbarColors};
 
+// TODO: Add render_with_splits or with_splits for horizontal split of the area.
+
 pub struct List {
     index: usize,
     selector: Option<usize>,
