@@ -452,8 +452,6 @@ impl<'a> Iterator for AnsiParser<'a> {
     }
 }
 
-// TODO: Add ansi parser with style and `continue_with` for lines.
-
 pub struct AnsiParserWithStyle<'a> {
     parser: AnsiParser<'a>,
     style: Style,
