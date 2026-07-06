@@ -1,14 +1,4 @@
-mod app;
-mod database;
-mod pages;
-mod settings;
-mod symbols;
-mod terminal;
-
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
-const _APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-const APP_QUALIFIER: &str = "org";
-const APP_ORGANIZATION: &str = "hikikones";
+use lazycard::{app::App, database::Database, terminal::Terminal};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Args = clap::Parser::parse();
@@ -45,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ))?;
     }
 
-    let db = match database::Database::open(&database_file) {
+    let db = match Database::open(&database_file) {
         Ok(db) => db,
         Err(err) => {
             return Err(format!(
@@ -56,27 +46,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let terminal = terminal::Terminal::init()?;
+    let terminal = Terminal::init()?;
 
-    let mut app = app::App::new(db, cell_size, assets_dir, args.settings);
+    let mut app = App::new(db, cell_size, assets_dir, args.settings);
     let res = app.run(terminal);
     app.quit()?;
 
-    terminal::Terminal::restore()?;
+    Terminal::restore()?;
 
     res
 }
 
 fn get_database_file() -> Option<std::path::PathBuf> {
     const FILENAME: &str = "database.db";
-    directories::ProjectDirs::from(APP_QUALIFIER, APP_ORGANIZATION, APP_NAME)
-        .map(|project_dirs| project_dirs.config_dir().join(FILENAME))
+    directories::ProjectDirs::from(
+        lazycard::APP_QUALIFIER,
+        lazycard::APP_ORGANIZATION,
+        lazycard::APP_NAME,
+    )
+    .map(|project_dirs| project_dirs.config_dir().join(FILENAME))
 }
 
 fn get_assets_dir() -> Option<std::path::PathBuf> {
     const DIRNAME: &str = "assets";
-    directories::ProjectDirs::from(APP_QUALIFIER, APP_ORGANIZATION, APP_NAME)
-        .map(|project_dirs| project_dirs.config_dir().join(DIRNAME))
+    directories::ProjectDirs::from(
+        lazycard::APP_QUALIFIER,
+        lazycard::APP_ORGANIZATION,
+        lazycard::APP_NAME,
+    )
+    .map(|project_dirs| project_dirs.config_dir().join(DIRNAME))
 }
 
 #[derive(Debug, clap::Parser)]
