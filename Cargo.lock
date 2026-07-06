@@ -600,18 +600,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "database"
-version = "0.1.0"
-dependencies = [
- "constcat",
- "fsrs",
- "itoa",
- "ron",
- "rusqlite",
- "serde",
-]
-
-[[package]]
 name = "deltae"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1172,11 +1160,14 @@ dependencies = [
  "clap",
  "clap-cargo",
  "constcat",
- "database",
  "directories",
  "edit",
+ "fsrs",
+ "itoa",
  "nucleo-matcher",
  "ratatui",
+ "ron",
+ "rusqlite",
  "serde",
  "terminal-colorsaurus",
  "toml",
@@ -2796,6 +2787,7 @@ version = "0.1.0"
 dependencies = [
  "ahash",
  "itoa",
+ "rusqlite",
  "seahash",
  "unicode-segmentation",
 ]

@@ -1,6 +1,10 @@
 use std::path::Path;
 
-use crate::{scheduler::*, sqlite::*};
+use utils::sqlite::*;
+
+mod scheduler;
+
+pub use scheduler::*;
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
 
@@ -416,7 +420,8 @@ impl Database {
         let version = self.sqlite.version();
         match version {
             0 => {
-                self.sqlite.execute_batch(include_str!("schema_v1.sql"))?;
+                self.sqlite
+                    .execute_batch(include_str!("database/schema_v1.sql"))?;
                 self.sqlite.set_version(VERSION);
                 add_test_data(self);
             }

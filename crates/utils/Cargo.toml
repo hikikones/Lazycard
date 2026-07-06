@@ -7,5 +7,6 @@ license.workspace = true
 [dependencies]
 ahash = { workspace = true }
 itoa = { workspace = true }
+rusqlite = { workspace = true }
 seahash = { workspace = true }
 unicode-segmentation = { workspace = true }

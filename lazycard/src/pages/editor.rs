@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use database::{CardId, Database, TagId};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers},
@@ -11,6 +10,7 @@ use widgets::{CursorMove, KittyGraphics, List, ListItem, Markup, Shortcut, Short
 
 use crate::{
     app::{Action, AppInput, AppRender},
+    database::{CardId, Database, TagId},
     pages::Log,
     settings::Colors,
     symbols,

@@ -1,4 +1,5 @@
 mod app;
+mod database;
 mod pages;
 mod settings;
 mod symbols;

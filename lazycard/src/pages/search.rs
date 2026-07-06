@@ -1,4 +1,3 @@
-use database::{CardId, Database};
 use ratatui::{
     crossterm::event::KeyCode,
     prelude::*,
@@ -8,6 +7,7 @@ use widgets::{KittyGraphics, Markup, ScrollMove, Shortcut, Shortcuts, TextInput}
 
 use crate::{
     app::{Action, AppInput, AppRender},
+    database::{CardId, Database},
     pages::{CardsParam, Route},
     settings::Colors,
     symbols,

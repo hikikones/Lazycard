@@ -14,12 +14,12 @@ pub use search::*;
 pub use settings::*;
 pub use tags::*;
 
-use database::{CardId, Database, TagId};
 use ratatui::{buffer::Buffer, layout::Rect, style::Style};
 use widgets::{KittyGraphics, Markup, Shortcuts};
 
 use crate::{
     app::{Action, AppInput, AppRender},
+    database::{CardId, Database, TagId},
     settings::{Colors, Settings},
     terminal::Terminal,
 };

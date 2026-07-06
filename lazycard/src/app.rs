@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use database::Database;
 use ratatui::{
     CompletedFrame,
     buffer::Buffer,
@@ -11,6 +10,7 @@ use ratatui::{
 use widgets::{CellSize, KittyGraphics, Markup, Shortcut, Shortcuts};
 
 use crate::{
+    database::Database,
     pages::{Log, PageState, Pages, Route},
     settings::Settings,
     symbols,

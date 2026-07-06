@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use database::{CardId, Database, TagId};
 use ratatui::{
     buffer::Buffer,
     crossterm::event::KeyCode,
@@ -12,6 +11,7 @@ use widgets::{KittyGraphics, List, ListItem, Markup, ScrollMove, Shortcut, Short
 
 use crate::{
     app::{Action, AppInput, AppRender},
+    database::{CardId, Database, TagId},
     pages::{CardsParam, Route},
     settings::Colors,
     symbols,

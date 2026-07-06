@@ -27,7 +27,6 @@ clap = {
 }
 clap-cargo = { version = "0.18", default-features = false }
 constcat = { version = "0.6", default-features = false }
-database = { path = "crates/database", default-features = false }
 directories = { version = "6.0", default-features = false }
 edit = { version = "0.1", default-features = false, features = ["better-path"] }
 fsrs = { version = "6.6", default-features = false }

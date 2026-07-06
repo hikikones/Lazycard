@@ -1,6 +1,5 @@
 use std::ops::Range;
 
-use database::{Database, TagId};
 use ratatui::{
     crossterm::event::{KeyCode, KeyModifiers},
     layout::Rect,
@@ -13,6 +12,7 @@ use widgets::{Shortcut, Shortcuts, TextInput, TokenItem, TokenList};
 
 use crate::{
     app::{Action, AppInput, AppRender},
+    database::{Database, TagId},
     pages::{CardsParam, Route},
     settings::Colors,
     symbols,
